@@ -1,6 +1,6 @@
 # Product Overview — AI Employees
 
-> A platform of hireable, specialized AI employees that perform like domain experts on *any* LLM you bring — including cheap models like Gemini Flash or open-weight models.
+> A platform of hireable, specialized AI employees that perform like domain experts on _any_ LLM you bring — including cheap models like Gemini Flash or open-weight models.
 
 ---
 
@@ -24,8 +24,9 @@ The gap isn't smarter models. It's the lack of well-engineered, specialized agen
 Each employee is engineered so the surrounding system — curated knowledge, expert playbooks, structured workflows, disciplined retrieval — carries the quality, rather than relying on a top-tier model to do the heavy lifting. The result: an employee that performs like a specialist even on a modest model.
 
 ### What makes an "employee" different from a chatbot
+
 - **Identity & voice** — a consistent persona and communication style
-- **Expertise** — domain knowledge plus *procedural* know-how (how an expert actually solves recurring problems)
+- **Expertise** — domain knowledge plus _procedural_ know-how (how an expert actually solves recurring problems)
 - **Abilities (tools)** — connect the tools each role needs; add your own via MCP or HTTP
 - **Memory** — remembers the user, past decisions, and preferences across sessions
 
@@ -35,9 +36,10 @@ Each employee is engineered so the surrounding system — curated knowledge, exp
 
 > **Any LLM, expert performance.** The model is a commodity; the engineering around it is the product.
 
-This is the whole thesis, and it's backed by current research: models wrapped in a structured, validated environment reach roughly 80% of frontier-model performance even when using open-weight models, and structured workflows cut errors by 60–80% versus one-shot prompting. Most agent failures are *context* failures, not model failures.
+This is the whole thesis, and it's backed by current research: models wrapped in a structured, validated environment reach roughly 80% of frontier-model performance even when using open-weight models, and structured workflows cut errors by 60–80% versus one-shot prompting. Most agent failures are _context_ failures, not model failures.
 
 Practically, this means customers can:
+
 - Run capable employees on **cheap or open models**, cutting cost dramatically
 - **Own the brain** — their key, their model choice, their data path
 - Trust that quality is **proven, not promised** — every employee is validated across model tiers (frontier / mid / cheap) before it ships
@@ -48,13 +50,13 @@ Competitors treat model-agnosticism as a checkbox. Here it's the entire design g
 
 ## 4. The launch employees
 
-| Employee | Role | Example abilities |
-|---|---|---|
-| **Customer Support** | Resolves tickets, de-escalates, interprets policy | Knowledge-base lookup, draft reply, escalate |
-| **Content Writer** | Drafts on-brand content with the right tone | Web search, SEO outline, tone presets |
-| **Research Analyst** | Investigates topics and summarizes with citations | Web search, URL fetch, summarize-and-cite |
-| **Financial Analyst** | Analyzes numbers and explains the "why" | Calculator, CSV/spreadsheet analysis, market data |
-| **Team Organizer** | Turns goals into plans and agendas | Task breakdown, meeting-agenda builder, calendar draft |
+| Employee              | Role                                              | Example abilities                                      |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| **Customer Support**  | Resolves tickets, de-escalates, interprets policy | Knowledge-base lookup, draft reply, escalate           |
+| **Content Writer**    | Drafts on-brand content with the right tone       | Web search, SEO outline, tone presets                  |
+| **Research Analyst**  | Investigates topics and summarizes with citations | Web search, URL fetch, summarize-and-cite              |
+| **Financial Analyst** | Analyzes numbers and explains the "why"           | Calculator, CSV/spreadsheet analysis, market data      |
+| **Team Organizer**    | Turns goals into plans and agendas                | Task breakdown, meeting-agenda builder, calendar draft |
 
 More roles (DevOps, Designer, and others) follow once the pattern is proven — each new employee is a configuration and content exercise, not new engineering.
 
@@ -83,7 +85,7 @@ More roles (DevOps, Designer, and others) follow once the pattern is proven — 
 - Enterprise adoption of task-specific agents is accelerating sharply, with agents moving from pilots into production.
 - The field has consolidated around "context engineering" — strong evidence that the scaffolding around a model, not the model itself, determines reliability.
 - BYOK is increasingly attractive as buyers seek control over cost and data.
-- Yet the market is crowded with generic "AI employee" platforms and vendor-locked agents. A platform that is genuinely model-agnostic *and* genuinely expert is still an open position.
+- Yet the market is crowded with generic "AI employee" platforms and vendor-locked agents. A platform that is genuinely model-agnostic _and_ genuinely expert is still an open position.
 
 ---
 
@@ -98,7 +100,7 @@ More roles (DevOps, Designer, and others) follow once the pattern is proven — 
 ## 9. Roadmap beyond MVP
 
 - **Automation workflows** — run employees continuously as event-driven automations (after dedicated research).
-- **Agent marketplace** — open the agent-definition *format* now; let the community build and sell employees later, with a revenue share.
+- **Agent marketplace** — open the agent-definition _format_ now; let the community build and sell employees later, with a revenue share.
 - **Fine-tuned specialist brains** — optional per-employee models, once usage data shows where fine-tuning genuinely helps.
 - **Multi-agent teams** — employees that collaborate and delegate.
 - **Deeper enterprise controls** — richer permissions, audit trails, and compliance features.

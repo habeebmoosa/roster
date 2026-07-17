@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* Design tokens — the seed of Roster's design system. Extend phase by phase. */
+@theme {
+  --color-brand: #4f46e5;
+  --color-brand-fg: #ffffff;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 antialiased;
+}
