@@ -5,6 +5,9 @@ const VALID = {
   DATABASE_URL: "postgresql://roster:roster@localhost:5432/roster?schema=public",
   DIRECT_URL: "postgresql://roster:roster@localhost:5432/roster?schema=public",
   NODE_ENV: "test",
+  AUTH_SECRET: "test-secret",
+  GOOGLE_CLIENT_ID: "test-client-id",
+  GOOGLE_CLIENT_SECRET: "test-client-secret",
 } satisfies Record<string, string | undefined>;
 
 describe("parseEnv", () => {
@@ -38,5 +41,18 @@ describe("parseEnv", () => {
 
   it("rejects an invalid NODE_ENV", () => {
     expect(() => parseEnv({ ...VALID, NODE_ENV: "staging" })).toThrow();
+  });
+
+  it("requires AUTH_SECRET", () => {
+    const { AUTH_SECRET: _omitted, ...rest } = VALID;
+    void _omitted;
+    expect(() => parseEnv(rest)).toThrow(/AUTH_SECRET/);
+  });
+
+  it("requires Google OAuth credentials", () => {
+    const { GOOGLE_CLIENT_ID: _id, GOOGLE_CLIENT_SECRET: _secret, ...rest } = VALID;
+    void _id;
+    void _secret;
+    expect(() => parseEnv(rest)).toThrow(/GOOGLE_CLIENT/);
   });
 });

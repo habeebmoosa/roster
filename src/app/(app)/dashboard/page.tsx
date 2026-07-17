@@ -1,17 +1,21 @@
+import { auth } from "@/server/auth";
 import { Card, CardDescription, CardTitle, Container } from "@/ui";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await auth();
+  const name = session?.user?.name ?? session?.user?.email ?? "there";
+
   return (
-    <Container className="py-16">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+    <Container className="py-12">
+      <h1 className="text-2xl font-bold tracking-tight">Welcome, {name}</h1>
       <p className="mt-2 text-neutral-600">
-        The authenticated app shell arrives in Phase 2 (Google OAuth + protected routes).
+        You&apos;re signed in. Your AI employees arrive in the coming phases.
       </p>
       <Card className="mt-8">
-        <CardTitle>Foundation is live</CardTitle>
+        <CardTitle>Foundation &amp; auth are live</CardTitle>
         <CardDescription>
-          Next.js + TypeScript, a configurable Postgres with pgvector, and the quality gates are in
-          place. Check <code className="text-brand font-mono">/api/health</code> for status.
+          Next up (Phase 3): connect your own LLM provider keys and stream your first completion
+          through the Vercel AI SDK.
         </CardDescription>
       </Card>
     </Container>

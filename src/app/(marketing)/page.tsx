@@ -24,8 +24,8 @@ export default function HomePage() {
         </p>
 
         <div className="mt-8">
-          <Link href="/dashboard">
-            <Button>Go to dashboard</Button>
+          <Link href="/signin">
+            <Button>Sign in</Button>
           </Link>
         </div>
 

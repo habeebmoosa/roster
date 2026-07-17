@@ -1,0 +1,24 @@
+import { expect, test } from "@playwright/test";
+
+test("unauthenticated dashboard redirects to sign-in", async ({ page }) => {
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/signin/);
+  await expect(page.getByTestId("google-signin")).toBeVisible();
+});
+
+test("unauthenticated settings redirects to sign-in", async ({ page }) => {
+  await page.goto("/settings");
+  await expect(page).toHaveURL(/\/signin/);
+});
+
+test("sign-in page renders the Google button", async ({ page }) => {
+  await page.goto("/signin");
+  await expect(page.getByRole("heading", { name: /sign in to roster/i })).toBeVisible();
+  await expect(page.getByTestId("google-signin")).toBeVisible();
+});
+
+test("landing CTA leads to sign-in", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/signin/);
+});

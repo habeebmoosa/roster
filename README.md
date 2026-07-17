@@ -6,9 +6,9 @@ because the expertise is engineered into the agent, not the model.
 See [`Product-Overview.md`](./Product-Overview.md) for the pitch, [`MVP-Plan.md`](./MVP-Plan.md)
 for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
 
-> **Status: Phase 1 — Foundation.** Next.js + TypeScript, a configurable Postgres with
-> pgvector via Prisma, the folder structure, and the quality gates (lint, typecheck, unit,
-> integration, e2e, CI) are in place.
+> **Status: Phase 2 — Auth & app shell.** On top of the Phase 1 foundation: Google
+> sign-in via Auth.js v5 (+ Prisma adapter), middleware-protected routes, and an
+> authenticated app shell (nav, dashboard, settings). Foundation is now end-to-end.
 
 ## Tech stack
 
@@ -30,8 +30,11 @@ for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
 # 1. Install
 npm install
 
-# 2. Configure — copy the example and adjust if needed
+# 2. Configure — copy the example and fill in the values
 cp .env.example .env
+#    - AUTH_SECRET:  openssl rand -base64 33
+#    - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: from the Google Cloud console,
+#      with redirect URI  http://localhost:3000/api/auth/callback/google
 
 # 3. Start the local database (Postgres 16 + pgvector)
 npm run db:up
