@@ -6,9 +6,10 @@ because the expertise is engineered into the agent, not the model.
 See [`Product-Overview.md`](./Product-Overview.md) for the pitch, [`MVP-Plan.md`](./MVP-Plan.md)
 for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
 
-> **Status: Phase 2 — Auth & app shell.** On top of the Phase 1 foundation: Google
-> sign-in via Auth.js v5 (+ Prisma adapter), middleware-protected routes, and an
-> authenticated app shell (nav, dashboard, settings). Foundation is now end-to-end.
+> **Status: Phase 3 — LLM provider layer & BYOK vault.** On top of auth: bring your
+> own LLM keys (native OpenAI/Anthropic/Google + any OpenAI-compatible endpoint via
+> base URL), validated on save and encrypted at rest (AES-256-GCM), with a streaming
+> playground. BYOK is proven end-to-end through the Vercel AI SDK.
 
 ## Tech stack
 

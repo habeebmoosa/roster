@@ -8,6 +8,7 @@ const VALID = {
   AUTH_SECRET: "test-secret",
   GOOGLE_CLIENT_ID: "test-client-id",
   GOOGLE_CLIENT_SECRET: "test-client-secret",
+  ENCRYPTION_KEY: "Gzco8e3Z8RUeMNsiTuqVEwwhQnT4jmR1BS6mzxt953g=", // 32 bytes, base64
 } satisfies Record<string, string | undefined>;
 
 describe("parseEnv", () => {
@@ -54,5 +55,9 @@ describe("parseEnv", () => {
     void _id;
     void _secret;
     expect(() => parseEnv(rest)).toThrow(/GOOGLE_CLIENT/);
+  });
+
+  it("rejects an ENCRYPTION_KEY that is not 32 bytes", () => {
+    expect(() => parseEnv({ ...VALID, ENCRYPTION_KEY: "too-short" })).toThrow(/ENCRYPTION_KEY/);
   });
 });

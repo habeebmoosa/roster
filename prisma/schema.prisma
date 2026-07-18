@@ -33,10 +33,36 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  providerKeys  ProviderKey[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// BYOK (Phase 3) — a user's LLM provider credentials.
+// The API key is stored AES-256-GCM encrypted; `config` holds provider-specific
+// settings (custom headers, org id, azure deployment/api-version, …) as data,
+// so new OpenAI-compatible providers rarely need code. One config per provider
+// per user (distinct catalog ids cover Groq, DeepSeek, a custom endpoint, etc.).
+// ─────────────────────────────────────────────────────────────
+model ProviderKey {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String // catalog id, e.g. "openai", "anthropic", "groq", "custom"
+  label        String?
+  encryptedKey String
+  baseUrl      String?
+  config       Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("provider_keys")
 }
 
 model Account {

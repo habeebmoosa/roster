@@ -23,7 +23,21 @@ export const envSchema = z.object({
   // Google OAuth credentials (from the Google Cloud console).
   GOOGLE_CLIENT_ID: z.string().min(1, { message: "required for Google sign-in" }),
   GOOGLE_CLIENT_SECRET: z.string().min(1, { message: "required for Google sign-in" }),
+
+  // Server-side secret for the BYOK vault (AES-256-GCM). Must decode to 32 bytes.
+  // Generate with `openssl rand -base64 32`.
+  ENCRYPTION_KEY: z.string().refine((v) => decodesTo32Bytes(v), {
+    message: "must be 32 bytes, base64-encoded — run `openssl rand -base64 32`",
+  }),
 });
+
+function decodesTo32Bytes(value: string): boolean {
+  try {
+    return Buffer.from(value, "base64").length === 32;
+  } catch {
+    return false;
+  }
+}
 
 export type Env = z.infer<typeof envSchema>;
 

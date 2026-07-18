@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardDescription, CardTitle, Container } from "@/ui";
 
 export default function SettingsPage() {
@@ -9,7 +10,10 @@ export default function SettingsPage() {
           <CardTitle>Provider keys</CardTitle>
           <CardDescription>
             Bring your own LLM keys (OpenAI, Anthropic, Google, and more), with custom base URLs and
-            per-provider config. Coming in Phase 3.
+            per-provider config.{" "}
+            <Link href="/settings/providers" className="text-brand hover:underline">
+              Manage providers →
+            </Link>
           </CardDescription>
         </Card>
         <Card>

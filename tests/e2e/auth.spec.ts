@@ -11,6 +11,16 @@ test("unauthenticated settings redirects to sign-in", async ({ page }) => {
   await expect(page).toHaveURL(/\/signin/);
 });
 
+test("unauthenticated playground redirects to sign-in", async ({ page }) => {
+  await page.goto("/playground");
+  await expect(page).toHaveURL(/\/signin/);
+});
+
+test("unauthenticated provider settings redirects to sign-in", async ({ page }) => {
+  await page.goto("/settings/providers");
+  await expect(page).toHaveURL(/\/signin/);
+});
+
 test("sign-in page renders the Google button", async ({ page }) => {
   await page.goto("/signin");
   await expect(page.getByRole("heading", { name: /sign in to roster/i })).toBeVisible();
