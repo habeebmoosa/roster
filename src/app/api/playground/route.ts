@@ -1,15 +1,18 @@
 import { z } from "zod";
-import { ByokError, mapProviderError, streamCompletion } from "@/core/providers";
+import { ByokError, mapProviderError } from "@/core/providers";
+import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
 import { auth } from "@/server/auth";
-import { getResolveInputForUser } from "@/server/providers/service";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const bodySchema = z.object({
+  agentId: z.string().min(1),
   provider: z.string().min(1),
   model: z.string().min(1),
-  prompt: z.string().min(1),
+  messages: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1) }))
+    .min(1),
 });
 
 export async function POST(req: Request) {
@@ -23,16 +26,17 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: "Invalid request." } }, { status: 400 });
   }
 
-  // Pre-stream failures (no key, unknown provider, bad base URL) → clean 400.
-  let result: ReturnType<typeof streamCompletion>;
+  // Pre-stream failures (missing agent, no key, bad base URL) → clean status code.
+  let result: Awaited<ReturnType<typeof streamAgentChat>>;
   try {
-    const input = await getResolveInputForUser(
-      session.user.id,
-      parsed.data.provider,
-      parsed.data.model,
-    );
-    result = streamCompletion(input, parsed.data.prompt);
+    result = await streamAgentChat({ userId: session.user.id, ...parsed.data });
   } catch (err) {
+    if (err instanceof AgentNotFoundError) {
+      return Response.json(
+        { error: { code: "agent_not_found", message: "That agent doesn't exist." } },
+        { status: 404 },
+      );
+    }
     const byok = err instanceof ByokError ? err : mapProviderError(err);
     return Response.json(
       { error: { code: byok.code, message: byok.userMessage } },
@@ -40,7 +44,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Stream tokens; if the provider errors mid-stream, append a friendly note.
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {

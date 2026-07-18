@@ -1,6 +1,8 @@
+import type { LanguageModel } from "ai";
 import {
   ByokError,
   getProvider,
+  resolveModel,
   validateProviderCredentials,
   type ResolveModelInput,
 } from "@/core/providers";
@@ -81,6 +83,15 @@ export async function getResolveInputForUser(
     baseUrl: record.baseUrl,
     headers: extractHeaders(record.config),
   };
+}
+
+/** Resolve a ready-to-use AI SDK model for a user's stored provider (decrypts here). */
+export async function getModelForUser(
+  userId: string,
+  provider: string,
+  model: string,
+): Promise<LanguageModel> {
+  return resolveModel(await getResolveInputForUser(userId, provider, model));
 }
 
 function extractHeaders(config?: Record<string, unknown>): Record<string, string> | undefined {

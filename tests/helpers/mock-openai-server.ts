@@ -3,15 +3,19 @@ import { createServer } from "node:http";
 export interface MockServer {
   /** Base URL including the /v1 suffix, e.g. http://127.0.0.1:PORT/v1 */
   url: string;
+  /** Parsed request bodies received, in order (for assertions). */
+  requests: Array<Record<string, unknown>>;
   close: () => Promise<void>;
 }
 
 /**
- * Minimal OpenAI-compatible endpoint for offline BYOK tests. Implements
- * /chat/completions for both non-streaming (validation ping) and streaming
- * (SSE) requests, and returns 401 for a wrong API key.
+ * Minimal OpenAI-compatible endpoint for offline tests. Implements
+ * /chat/completions for non-streaming (validation ping) and streaming (SSE)
+ * requests, returns 401 for a wrong API key, and records request bodies.
  */
 export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<MockServer> {
+  const requests: Array<Record<string, unknown>> = [];
+
   const server = createServer((req, res) => {
     if (!req.url?.endsWith("/chat/completions")) {
       res.writeHead(404);
@@ -31,6 +35,7 @@ export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<M
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       const json = body ? JSON.parse(body) : {};
+      requests.push(json);
       const model = json.model ?? "mock-model";
 
       if (json.stream) {
@@ -74,6 +79,7 @@ export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<M
 
   return {
     url: `http://127.0.0.1:${port}/v1`,
+    requests,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }

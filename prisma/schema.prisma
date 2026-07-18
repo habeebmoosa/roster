@@ -108,6 +108,22 @@ model VerificationToken {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Agent (Phase 4) — an employee, seeded from its YAML definition file.
+// The full portable definition is stored as JSON; name/role are denormalized
+// for cheap listing. `id` is the definition's kebab-case id (not a cuid).
+// ─────────────────────────────────────────────────────────────
+model Agent {
+  id         String   @id
+  name       String
+  role       String
+  definition Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("agents")
+}
+
+// ─────────────────────────────────────────────────────────────
 // Foundation smoke model (Phase 1).
 // Proves the full Prisma + pgvector pipeline end-to-end: migrations,
 // repository read/write, and cosine-distance (<=>) similarity search.
