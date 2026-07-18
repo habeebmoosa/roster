@@ -124,6 +124,26 @@ model Agent {
 }
 
 // ─────────────────────────────────────────────────────────────
+// EvalRun (Phase 5) — one row per (agent, tier) eval run. The eval harness is
+// the moat made measurable: track success rate across model tiers over time.
+// ─────────────────────────────────────────────────────────────
+model EvalRun {
+  id           String   @id @default(cuid())
+  agentId      String
+  modelTier    String // frontier | mid | cheap
+  modelLabel   String
+  total        Int
+  passed       Int
+  successRate  Float
+  avgTokens    Float
+  avgLatencyMs Float
+  createdAt    DateTime @default(now())
+
+  @@index([agentId, modelTier])
+  @@map("eval_runs")
+}
+
+// ─────────────────────────────────────────────────────────────
 // Foundation smoke model (Phase 1).
 // Proves the full Prisma + pgvector pipeline end-to-end: migrations,
 // repository read/write, and cosine-distance (<=>) similarity search.

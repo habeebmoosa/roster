@@ -26,6 +26,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
+    "eval": "tsx scripts/eval.ts",
+    "eval:gate": "tsx scripts/eval.ts --gate",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

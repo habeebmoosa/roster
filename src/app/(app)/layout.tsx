@@ -30,6 +30,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <Link href="/playground" className="hover:text-neutral-900">
                 Playground
               </Link>
+              <Link href="/evals" className="hover:text-neutral-900">
+                Evals
+              </Link>
               <Link href="/settings/providers" className="hover:text-neutral-900">
                 Providers
               </Link>

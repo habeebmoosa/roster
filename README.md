@@ -6,10 +6,10 @@ because the expertise is engineered into the agent, not the model.
 See [`Product-Overview.md`](./Product-Overview.md) for the pitch, [`MVP-Plan.md`](./MVP-Plan.md)
 for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
 
-> **Status: Phase 4 — Agent definition spec & `runAgent()` skeleton.** Employees are
-> portable YAML definitions (seeded into the DB); `runAgent()` is the single entry
-> point that builds the persona system prompt, resolves the BYOK model, and streams a
-> reply. The playground is now a persona chat with the Customer Support agent.
+> **Status: Phase 5 — Eval harness.** Labeled eval sets run through `runAgent()`
+> across three model tiers (frontier / mid / cheap) with deterministic graders,
+> persisted `EvalRun` rows, a results view, and a pure gate that blocks regressions.
+> Run it with `npm run eval` (configure `EVAL_*` tiers). The moat, made measurable.
 
 ## Tech stack
 
