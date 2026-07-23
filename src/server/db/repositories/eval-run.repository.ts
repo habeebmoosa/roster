@@ -1,4 +1,8 @@
-import type { EvalTierResult } from "@/core/eval";
+import {
+  computeLatestOverallSuccessRate,
+  type EvalTierResult,
+  type OverallSuccessRate,
+} from "@/core/eval";
 import { prisma } from "@/server/db/prisma";
 
 export interface EvalRunRow {
@@ -35,4 +39,12 @@ export function listEvalRuns(agentId?: string, limit = 30): Promise<EvalRunRow[]
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+/** Dashboard "Eval success rate" tile — null when no evals have run yet. */
+export async function getLatestOverallSuccessRate(): Promise<OverallSuccessRate | null> {
+  const rows = await prisma.evalRun.findMany({
+    select: { agentId: true, modelTier: true, successRate: true, createdAt: true },
+  });
+  return computeLatestOverallSuccessRate(rows);
 }

@@ -1,0 +1,32 @@
+import type { RosterPreviewRow } from "./types";
+
+/**
+ * Fixtures for metrics we don't track yet (conversations, spend, per-agent
+ * model/activity). Deterministic per agent id (a stable hash), so every
+ * future agent gets plausible-looking numbers with zero fixture maintenance
+ * — no per-agent entries to keep in sync as employees are added in Phase 9.
+ */
+const FIXTURE_MODELS = ["gpt-4o-mini", "claude-sonnet-5", "gemini-2.0-flash"];
+const FIXTURE_ACTIVITY = ["12m ago", "1h ago", "3h ago", "Yesterday", "2d ago"];
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+export function fixtureMetricsForAgent(
+  agentId: string,
+): Pick<RosterPreviewRow, "model" | "lastActivity" | "spendUsd"> {
+  const hash = hashString(agentId);
+  return {
+    model: FIXTURE_MODELS[hash % FIXTURE_MODELS.length]!,
+    lastActivity: FIXTURE_ACTIVITY[(hash >> 3) % FIXTURE_ACTIVITY.length]!,
+    spendUsd: 4 + (hash % 42),
+  };
+}
+
+export const FIXTURE_CONVERSATIONS_30D = 128;
+export const FIXTURE_SPEND_THIS_MONTH_USD = 86.4;

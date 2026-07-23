@@ -1,23 +1,60 @@
-import { auth } from "@/server/auth";
-import { Card, CardDescription, CardTitle, Container } from "@/ui";
+import {
+  FIXTURE_CONVERSATIONS_30D,
+  FIXTURE_SPEND_THIS_MONTH_USD,
+  QuickActions,
+  RosterPreview,
+  StatTiles,
+  UsageCost,
+  fixtureMetricsForAgent,
+  getGreeting,
+  type RosterPreviewRow,
+} from "@/features/dashboard";
+import { listAgentSummaries } from "@/server/db/repositories/agent.repository";
+import { getLatestOverallSuccessRate } from "@/server/db/repositories/eval-run.repository";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  const name = session?.user?.name ?? session?.user?.email ?? "there";
+  const [agents, overallSuccessRate] = await Promise.all([
+    listAgentSummaries(),
+    getLatestOverallSuccessRate(),
+  ]);
+
+  // No pause/disable concept yet, so every seeded agent counts as "active".
+  const activeEmployees = agents.length;
+  const totalEmployees = agents.length;
+
+  const rosterRows: RosterPreviewRow[] = agents.map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    role: agent.role,
+    status: "Active",
+    ...fixtureMetricsForAgent(agent.id),
+  }));
 
   return (
-    <Container className="py-12">
-      <h1 className="text-2xl font-bold tracking-tight">Welcome, {name}</h1>
-      <p className="mt-2 text-neutral-600">
-        You&apos;re signed in. Your AI employees arrive in the coming phases.
-      </p>
-      <Card className="mt-8">
-        <CardTitle>Foundation &amp; auth are live</CardTitle>
-        <CardDescription>
-          Next up (Phase 3): connect your own LLM provider keys and stream your first completion
-          through the Vercel AI SDK.
-        </CardDescription>
-      </Card>
-    </Container>
+    <div className="px-6 py-6">
+      <h1 className="text-text text-2xl font-bold tracking-tight">{getGreeting()}</h1>
+      <p className="text-text-muted mt-1">Here&apos;s what your roster is up to today.</p>
+
+      <div className="mt-6">
+        <StatTiles
+          activeEmployees={activeEmployees}
+          totalEmployees={totalEmployees}
+          conversations30d={FIXTURE_CONVERSATIONS_30D}
+          spendThisMonthUsd={FIXTURE_SPEND_THIS_MONTH_USD}
+          evalSuccessRatePct={overallSuccessRate ? overallSuccessRate.rate * 100 : null}
+        />
+      </div>
+
+      <div className="mt-6">
+        <QuickActions />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RosterPreview rows={rosterRows} />
+        </div>
+        <UsageCost entries={rosterRows.map((r) => ({ name: r.name, spendUsd: r.spendUsd }))} />
+      </div>
+    </div>
   );
 }
