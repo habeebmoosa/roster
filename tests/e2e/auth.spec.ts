@@ -11,8 +11,8 @@ test("unauthenticated settings redirects to sign-in", async ({ page }) => {
   await expect(page).toHaveURL(/\/signin/);
 });
 
-test("unauthenticated playground redirects to sign-in", async ({ page }) => {
-  await page.goto("/playground");
+test("unauthenticated chat redirects to sign-in", async ({ page }) => {
+  await page.goto("/chat");
   await expect(page).toHaveURL(/\/signin/);
 });
 

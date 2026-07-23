@@ -14,8 +14,8 @@ export default async function ProvidersSettingsPage() {
     <Container className="py-12">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Provider keys</h1>
-        <Link href="/playground" className="text-brand text-sm hover:underline">
-          Open playground →
+        <Link href="/chat" className="text-brand text-sm hover:underline">
+          Open chat →
         </Link>
       </div>
       <p className="mt-2 text-neutral-600">

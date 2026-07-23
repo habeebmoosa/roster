@@ -6,6 +6,7 @@ export { Select } from "./select";
 export { Card, CardTitle, CardDescription } from "./card";
 export { Container } from "./container";
 export { Avatar } from "./avatar";
+export type { AvatarSize, AvatarProps } from "./avatar";
 export { Badge } from "./badge";
 export type { BadgeVariant, BadgeProps } from "./badge";
 export { Switch } from "./switch";

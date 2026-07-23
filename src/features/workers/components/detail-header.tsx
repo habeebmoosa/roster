@@ -11,7 +11,7 @@ export function DetailHeader({
 }) {
   return (
     <Card className="flex items-center gap-4">
-      <Avatar name={name} className="h-12 w-12 text-lg" />
+      <Avatar name={name} size="lg" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h1 className="text-text truncate text-xl font-bold tracking-tight">{name}</h1>

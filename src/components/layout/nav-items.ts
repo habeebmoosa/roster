@@ -24,8 +24,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Overview", Icon: IconOverview, enabled: true },
       { href: "/workers", label: "Workers", Icon: IconWorkers, enabled: true },
-      // Chat lives at /playground until its sub-phase (6.7) moves it to /chat.
-      { href: "/playground", label: "Chat", Icon: IconChat, enabled: true },
+      { href: "/chat", label: "Chat", Icon: IconChat, enabled: true },
     ],
   },
   {

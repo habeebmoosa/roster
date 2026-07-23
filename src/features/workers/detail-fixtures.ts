@@ -1,4 +1,4 @@
-import { hashString } from "./fixtures";
+import { hashString } from "@/lib/hash";
 import type { WorkerDetailFixtures } from "./detail-types";
 
 const PROVIDERS = [

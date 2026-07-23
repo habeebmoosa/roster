@@ -1,3 +1,4 @@
+import { hashString } from "@/lib/hash";
 import type { WorkerRow } from "./types";
 
 /**
@@ -8,15 +9,6 @@ import type { WorkerRow } from "./types";
  */
 const FIXTURE_MODELS = ["gpt-4o-mini", "claude-sonnet-5", "gemini-2.0-flash"];
 const FIXTURE_ACTIVITY = ["12m ago", "1h ago", "3h ago", "Yesterday", "2d ago"];
-
-/** Exported so other fixture generators (e.g. detail-fixtures.ts) stay in sync. */
-export function hashString(input: string): number {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-  }
-  return hash;
-}
 
 export function fixtureMetricsForAgent(
   agentId: string,
