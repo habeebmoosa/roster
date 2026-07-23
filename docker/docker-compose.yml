@@ -14,10 +14,10 @@ services:
       POSTGRES_USER: roster
       POSTGRES_PASSWORD: roster
       POSTGRES_DB: roster
-    # Host port 5433 (not 5432) to avoid clashing with any Postgres already
-    # running locally on 5432. Container still listens on 5432 internally.
+    # Host port 5434 (not 5432/5433) to avoid clashing with other local
+    # Postgres instances. Container still listens on 5432 internally.
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - roster-pgdata:/var/lib/postgresql/data
     healthcheck:

@@ -17,7 +17,7 @@ jobs:
           POSTGRES_PASSWORD: roster
           POSTGRES_DB: roster
         ports:
-          - 5433:5432
+          - 5434:5432
         options: >-
           --health-cmd "pg_isready -U roster -d roster"
           --health-interval 5s
@@ -25,8 +25,8 @@ jobs:
           --health-retries 20
 
     env:
-      DATABASE_URL: postgresql://roster:roster@localhost:5433/roster?schema=public
-      DIRECT_URL: postgresql://roster:roster@localhost:5433/roster?schema=public
+      DATABASE_URL: postgresql://roster:roster@localhost:5434/roster?schema=public
+      DIRECT_URL: postgresql://roster:roster@localhost:5434/roster?schema=public
       NODE_ENV: test
 
     steps:

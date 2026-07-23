@@ -10,13 +10,13 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "list" : "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3005",
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "npm run start",
-    url: "http://localhost:3000",
+    url: "http://localhost:3005",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

@@ -35,7 +35,7 @@ npm install
 cp .env.example .env
 #    - AUTH_SECRET:  openssl rand -base64 33
 #    - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: from the Google Cloud console,
-#      with redirect URI  http://localhost:3000/api/auth/callback/google
+#      with redirect URI  http://localhost:3005/api/auth/callback/google
 
 # 3. Start the local database (Postgres 16 + pgvector)
 npm run db:up
@@ -47,7 +47,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Then open http://localhost:3000 and check http://localhost:3000/api/health — it should report
+Then open http://localhost:3005 and check http://localhost:3005/api/health — it should report
 `{ "status": "ok", "checks": { "db": true, "pgvector": true } }`.
 
 ## Using a different Postgres
@@ -56,7 +56,7 @@ The database is fully configurable — point `DATABASE_URL` (and `DIRECT_URL` fo
 any Postgres (self-hosted on EC2, Supabase, Neon, RDS, …). The only requirement is that the
 `pgvector` extension can be installed. No code changes needed.
 
-> The local Docker Postgres is published on host port **5433** (not 5432) so it
+> The local Docker Postgres is published on host port **5434** (not 5432) so it
 > won't clash with any Postgres you already run locally.
 
 ## Scripts

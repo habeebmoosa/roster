@@ -98,7 +98,10 @@ roster/
 │  │  ├─ crypto/                   # AES-256-GCM vault
 │  │  └─ ratelimit/                # Upstash/Redis limiter
 │  │
-│  ├─ ui/                          # hand-rolled Tailwind components (the light kit)
+│  ├─ ui/                          # DESIGN SYSTEM — presentational Tailwind primitives (+ theme)
+│  ├─ components/                  # shared app chrome (layout: app-shell, sidebar, topbar)
+│  ├─ features/                    # feature modules (dashboard, roster, chat, connectors, settings, hire)
+│  ├─ hooks/                       # shared React hooks
 │  ├─ lib/                         # shared utils, env (zod), shared types
 │  └─ config/                      # constants, model-tier definitions
 │
@@ -120,6 +123,8 @@ roster/
 ```
 
 > **Why `agents/` and `core/` are separate from `app/`:** the agent definitions are our future open/marketplace spec, and the engine is the moat. Keeping both out of the Next.js layer means they stay portable, independently testable, and reusable from the REST API, the eval harness, and (later) automation runners — without dragging in web framework code.
+
+> **Frontend layering** (built out in Phase 6, §6.1): `ui/` = pure design-system primitives (reused everywhere, kills repetition), `components/` = shared app chrome, `features/*` = self-contained domain modules (components + hooks + fixtures + types), and `app/` route files stay thin — they just compose feature modules. Enterprise hybrid of feature-based + colocation.
 
 ---
 
@@ -158,11 +163,11 @@ Managed via Prisma migrations. Vector columns via the custom-migration approach 
 
 > **BYOK security:** encrypt with AES-256-GCM using a server-side secret before storing. Never store raw, never log. Decrypt only inside the request that uses it. Validate keys with a cheap ~1-token ping on save. The `config` JSON + `baseUrl` make each provider entry fully self-describing (an OpenAI-compatible endpoint, an Azure deployment, a Bedrock region, a local Ollama URL — all just data).
 
-> **Governance:** `AgentKnowledge.permissions` scopes what each agent may recall. What enters the context window matters more than the retrieval mechanism — permission-scoping is built in from day one (Phase 6).
+> **Governance:** `AgentKnowledge.permissions` scopes what each agent may recall. What enters the context window matters more than the retrieval mechanism — permission-scoping is built in from day one (Phase 7).
 
 ---
 
-## 7. The Agent Engine (conceptual — implemented across Phases 4–7)
+## 7. The Agent Engine (conceptual — implemented across Phases 4–5, 7–9)
 
 This is the product. The phases below build it piece by piece; this section is the target design.
 
@@ -190,11 +195,13 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ## 8. The phased build plan
 
-**~11 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent engine built and measured capability-by-capability (4–7) → the five employees (8) → access surfaces (9–10) → ship (11). Each phase is independently testable and leaves `main` in a working state.
+**~12 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–9) → chat real-time & access surfaces (10–11) → ship (12). Each phase is independently testable and leaves `main` in a working state.
+
+> **Progress:** ✅ Phases 1–5 complete · ⬜ Phase 6 (Frontend — design system & application UI) is next · ⬜ Phases 7–12 remaining.
 
 ---
 
-### Phase 1 — Project foundation & tooling
+### Phase 1 — Project foundation & tooling ✅ COMPLETE
 
 **Goal:** A running, strict, well-structured Next.js app connected to a configurable Postgres, with the folder structure and quality gates in place.
 
@@ -226,7 +233,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 2 — Auth & core app shell (foundation, end-to-end)
+### Phase 2 — Auth & core app shell (foundation, end-to-end) ✅ COMPLETE
 
 **Goal:** A real user can sign in with Google and land in an authenticated app. Foundation is now complete end-to-end.
 
@@ -255,7 +262,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 3 — LLM provider layer & BYOK vault (AI proven end-to-end)
+### Phase 3 — LLM provider layer & BYOK vault (AI proven end-to-end) ✅ COMPLETE
 
 **Goal:** A user can add their own provider credentials (key + baseURL + config), and we can stream a real completion through the Vercel AI SDK using them. BYOK is proven end-to-end before any agent complexity.
 
@@ -287,7 +294,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 4 — Agent definition spec & `runAgent()` skeleton
+### Phase 4 — Agent definition spec & `runAgent()` skeleton ✅ COMPLETE
 
 **Goal:** The core entry point exists. We can chat with a persona-driven agent (Customer Support) defined by a file — no retrieval or workflow yet.
 
@@ -316,7 +323,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 5 — Eval harness (built early, on purpose)
+### Phase 5 — Eval harness (built early, on purpose) ✅ COMPLETE
 
 **Goal:** The moat, made measurable — _before_ we build retrieval and workflow, so every subsequent capability is validated across model tiers as it lands.
 
@@ -324,7 +331,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 - Labeled eval set for Customer Support in `evals/` (realistic tasks + expected outcomes/graders).
 - **Eval runner** in `core/eval/`: runs a set through `runAgent()` across **three tiers** (frontier / mid / cheap), using configured providers.
-- Scorers: task success rate, tokens per successful task, latency, cost. (Retrieval precision/recall added in Phase 6.)
+- Scorers: task success rate, tokens per successful task, latency, cost. (Retrieval precision/recall added in Phase 7.)
 - `EvalRun` persistence + a simple results view (compare tiers over time).
 - **CI eval gate**: a change is accepted only if success rate holds or improves across all three tiers.
 
@@ -345,7 +352,91 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 6 — Memory & retrieval pipeline
+### Phase 6 — Frontend: design system & application UI ⬅️ NEXT
+
+**Goal:** Build the full, design-faithful product UI from the **RosterAI platform design** — a component-based Tailwind frontend covering every screen — wired to the backend that already exists (auth, providers/BYOK, agent chat, evals) and backed by clearly-marked typed fixtures for features whose backend lands later (usage analytics, connectors, abilities, API keys, billing, knowledge sources). Every subsequent backend phase then "lights up" its screen by swapping a fixture for a real repository/API, with no UI rework.
+
+**Why here:** The design is ready, and a real UX de-risks everything downstream — retrieval, workflow, tools, and the employees are all easier to build and demo against real screens. It also front-loads the "outstanding, enterprise-grade" surface the product is judged on. Crucially, it is **additive**: the engine (Phases 7–9) is unaffected because the UI talks to it only through the existing `runAgent()`/service boundaries.
+
+**Design source of truth:** imported from the Claude Design project _RosterAI platform design_ (`RosterAI.dc.html`). Fonts **Public Sans** (UI) + **IBM Plex Mono** (code/tags). Full **light/dark** token system in OKLCH: `bg` / `bg-elevated` / `bg-subtle`, `border`, `text` / `text-muted` / `text-faint`, `accent` (violet, ~280 hue) + `accent-soft` / `accent-contrast`, `success` / `warning` / `danger` (each with `-soft`), `shadow-sm` / `shadow-md`. These map 1:1 into the Tailwind v4 `@theme`.
+
+#### 6.1 Frontend architecture (enterprise, component-based)
+
+Hybrid **feature-based + colocation** structure (the current Next.js consensus): a shared design system, shared app chrome, thin route files that compose self-contained feature modules. No repetition — screens are assembled from primitives + feature components.
+
+```
+src/
+  app/                              # routes ONLY — thin; compose features
+    (marketing)/                    # landing + signin (exist)
+    (app)/                          # authenticated shell
+      layout.tsx                    # <AppShell> (sidebar + topbar + theme)
+      overview/page.tsx             # Dashboard
+      roster/page.tsx               # Employee list
+      roster/[employeeId]/page.tsx  # Employee detail (stats, about, API access)
+      chat/page.tsx                 # Employee chat
+      connectors/page.tsx           # Tool/integration catalog
+      settings/page.tsx             # Tabbed settings
+      hire/page.tsx                 # "Hire a new employee" wizard
+  ui/                               # DESIGN SYSTEM — presentational primitives, no domain logic
+    button · input · textarea · select · card · badge · avatar (gradient)
+    switch · tabs · table · modal · drawer · dropdown-menu · tooltip
+    stat-tile · steps (wizard stepper) · empty-state · skeleton · toast
+    theme/  { theme-provider, theme-toggle, tokens in globals.css @theme }
+  components/                       # shared APP chrome (composite, cross-feature)
+    layout/  { app-shell, sidebar, topbar, workspace-switcher, profile-menu }
+  features/                         # FEATURE MODULES — domain UI, colocated
+    dashboard/  { components/, hooks/, fixtures.ts, types.ts }
+    roster/     { components/ (employee-card, employee-table, filters, detail/*), … }
+    chat/       { components/ (thread, message, composer, history-drawer, employee-switcher), hooks/use-chat-stream.ts }
+    connectors/ { components/, fixtures.ts, types.ts }
+    settings/   { components/ (workspace, profile, providers, api-keys, billing tabs) }
+    hire/       { components/ (step-role, step-basics, step-knowledge, step-abilities, step-model, step-review), hooks/use-hire-wizard.ts, types.ts }
+  hooks/                            # shared hooks (use-theme, use-media-query, use-toast)
+  lib/                              # shared utils (cn, formatters, env)
+```
+
+Rules: `ui/` is pure/presentational and reused everywhere (kills repetition); `features/*` own their domain components + fixtures + types; route files stay thin (fetch on the server, render a feature component); `core/` and `server/` are untouched by the UI.
+
+#### 6.2 Design system (do this first)
+
+- **Tokens & theme:** port the exact OKLCH light/dark tokens into `globals.css` `@theme`; wire fonts via `next/font` (self-hosted, no runtime network). A `ThemeProvider` toggles `data-theme` on `<html>` and persists the choice (cookie/localStorage; SSR-safe, no flash).
+- **Primitives:** build the `ui/` kit listed above with variants + sizes + all states (hover/focus/disabled/loading), fully keyboard-accessible. This is the anti-repetition layer — every screen composes these.
+
+#### 6.3 App chrome
+
+Collapsible **Sidebar** (grouped nav: _Operate_ → Overview, Roster, Chat; _Configure_ → Connectors, Settings) with workspace switcher, profile menu (docs, upgrade, theme toggle, sign out), and the **Hire employee** CTA. **Topbar** per page. Responsive (sidebar collapses to icons / drawer on mobile).
+
+#### 6.4 Screens (all from the design)
+
+- **Overview / Dashboard** — greeting; stat tiles (active employees, conversations · 30d, spend this month, eval success rate); "Your roster" preview; "Usage & cost" per-employee breakdown; recent activity; quick actions (hire / add connector / open settings). _Wire now:_ eval success from `EvalRun`; agents from DB. _Fixtures:_ spend/convos/tokens analytics.
+- **Roster** — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
+- **Employee detail** (`/roster/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
+- **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 10).
+- **Connectors** — tools grouped by category, connector cards (icon, name, desc, connect/manage), "synced" status. _Fixtures now_ (real tools/MCP arrive Phase 9).
+- **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 11); **Billing** (plan, payment, invoices — fixtures now).
+- **Hire a new employee** (`/hire`) — 6-step wizard with a stepper: (1) role, (2) basic details, (3) knowledge base (upload / connect source), (4) abilities (tool toggles), (5) provider & model (BYOK), (6) review & create + live preview. Back / Continue / Save & exit. _Wire now:_ provider/model from the real catalog + saved keys; create writes an `Agent` (definition). _Fixtures:_ knowledge upload, abilities catalog (real in Phases 7 & 9).
+
+#### 6.5 Data strategy
+
+Every screen reads through a typed module boundary. Where the backend exists (auth/session, providers CRUD, agent chat, agents list, eval runs) it calls the real thing; everything else imports a **typed fixture** from `features/*/fixtures.ts` that matches the eventual API shape. Fixtures are the seam later phases replace — swap the import, keep the component. All fixtures are clearly marked so nothing masquerades as real data.
+
+**Definition of Done**
+
+- Every screen from the design is implemented, component-based, pixel-close in both light and dark themes, and responsive.
+- Real data flows where the backend exists (sign-in, providers, agent chat, agents, eval success); fixtures elsewhere, cleanly swappable.
+- The `ui/` design system is the single source of visual truth — no ad-hoc styling in features.
+
+**How we test it**
+
+- Unit: `ui` primitives (variants/states) + pure formatters/hooks.
+- E2E (Playwright): public routes render; theme toggle persists; the hire wizard navigates all 6 steps; nav routes resolve. (Authenticated screens verified manually + via component tests, consistent with earlier phases.)
+- Visual: render each screen light/dark and compare against the design reference.
+
+> **How we match the design exactly:** (1) port the design's OKLCH tokens + fonts verbatim into the Tailwind theme so color/type are identical; (2) keep `RosterAI.dc.html` and its reference screenshots as the visual source of truth (imported via the Claude Design MCP); (3) rebuild each screen from `ui/` primitives, matching spacing, radii, shadows, and states; (4) screenshot our build per screen (light/dark) and diff against the reference, iterating until they match. Optionally keep the `ui/` library in sync with the Design project via the `/design-sync` MCP flow.
+
+---
+
+### Phase 7 — Memory & retrieval pipeline
 
 **Goal:** Grounded answers from curated context. Semantic + procedural + episodic memory, hybrid retrieval, re-ranking, hard cap, permission-scoping — all measured by the Phase 5 harness.
 
@@ -376,7 +467,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 7 — Structured workflow engine
+### Phase 8 — Structured workflow engine
 
 **Goal:** Turn one big prompt into a disciplined loop — decompose → execute → validate → rollback — closing the gap on weaker models.
 
@@ -385,7 +476,7 @@ This is the product. The phases below build it piece by piece; this section is t
 - Workflow engine in `core/workflow/`: decompose a task into verifiable sub-steps; per step assemble minimal context → call the model → **validate** output.
 - Retry / rollback on validation failure; **compression** of intermediate results before folding into the next step.
 - Validation hooks (schema checks, groundedness checks, tool-result checks).
-- Workflow integrated into `runAgent()`; visible step boundaries exposed for the chat UI (Phase 9).
+- Workflow integrated into `runAgent()`; visible step boundaries exposed for the chat UI (built in Phase 6; step visibility wired in Phase 10).
 
 **Key decisions**
 
@@ -400,11 +491,11 @@ This is the product. The phases below build it piece by piece; this section is t
 
 - Unit: decomposition, validation hooks, rollback logic.
 - Integration: end-to-end multi-step task; forced-failure path recovers.
-- Eval: measurable error reduction vs Phase 6 across all tiers.
+- Eval: measurable error reduction vs Phase 7 across all tiers.
 
 ---
 
-### Phase 8 — The five employees + tools
+### Phase 9 — The five employees + tools
 
 **Goal:** Clone the now-proven pattern to all five employees, and add the tool system (built-in + user-added via MCP/HTTP). The work here is _content and quality_, not new engineering.
 
@@ -432,15 +523,15 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 9 — Chat interface
+### Phase 10 — Chat: real-time, persistence & visible steps
 
-**Goal:** A polished streaming chat surface — the primary way users experience the employees.
+**Goal:** Make the chat surface (UI shell built in Phase 6) fully real: durable history and visible workflow steps.
 
 **Deliverables**
 
-- Streaming chat UI (`chat/[agentId]/`) with the light Tailwind kit.
-- **Agent switcher**, conversation history (`Conversation`/`Message`), and a **model picker scoped to the user's configured providers**.
-- **Visible tool-call / workflow steps** ("🔍 searching knowledge base…", "✅ validating…") — users love watching the employee work; powered by Phase 7's step boundaries.
+- **Persistence:** `Conversation`/`Message` models + repository; the Phase 6 chat UI and History drawer now read/write real conversations (replacing the fixture history).
+- **Visible tool-call / workflow steps** ("🔍 searching knowledge base…", "✅ validating…") streamed into the thread — powered by Phase 8's step boundaries.
+- Model picker scoped to the user's configured providers (already wired in Phase 6); confirm multi-turn + long-stream robustness.
 - Clean handling of BYOK errors inline in chat.
 
 **Definition of Done**
@@ -454,7 +545,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 10 — REST API & platform keys
+### Phase 11 — REST API & platform keys
 
 **Goal:** Programmatic access to the same employees, for developers and integrations.
 
@@ -481,7 +572,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 11 — Polish & ship (private beta)
+### Phase 12 — Polish & ship (private beta)
 
 **Goal:** A coherent, fast, sub-2-minute onboarding and a shippable private beta.
 
@@ -490,7 +581,7 @@ This is the product. The phases below build it piece by piece; this section is t
 - Landing page with employees as "hire" cards.
 - **Onboarding under 2 minutes**: sign in → add key → pick employee → chat.
 - Sentry error tracking, basic product analytics, in-app feedback button.
-- UI polish pass across the app (this is where the deliberately-minimal UI gets meaningfully better).
+- Final UI polish pass across the app (the design-faithful UI shipped in Phase 6; this is launch-readiness refinement, empty/loading/error states, a11y sweep).
 - Deployment hardening (function duration limits for long streams, env/secrets, DB pooling) on the chosen host.
 
 **Definition of Done**
@@ -510,6 +601,7 @@ This is the product. The phases below build it piece by piece; this section is t
 - [ ] BYOK works for the target providers (key + baseURL + config) with clean error handling.
 - [ ] All 5 employees pass their eval sets across frontier / mid / cheap tiers.
 - [ ] Cheap-model success rate is demonstrably close to frontier (the selling point, proven).
+- [ ] Design-faithful, component-based UI (all screens, light/dark, responsive) built on a shared `ui/` design system.
 - [ ] Chat + REST API both functional, both flowing through the same `runAgent()`.
 - [ ] Per-agent tools working (built-in + at least one user-added mechanism: MCP or HTTP).
 - [ ] Onboarding to first response under 2 minutes.
@@ -522,10 +614,10 @@ This is the product. The phases below build it piece by piece; this section is t
 
 - **Foundation first, then BYOK, then the engine.** Don't touch agent complexity until sign-in and a raw streamed completion both work end-to-end (Phases 1–3).
 - **Build the eval harness before retrieval and workflow (Phase 5).** Every capability after it is validated across tiers as it lands — that's how "works on any LLM" stays true rather than aspirational.
-- **Go vertical on Customer Support** through Phases 4–7 before cloning to the other four in Phase 8.
+- **Go vertical on Customer Support** through the agent-engine phases (4–5, 7–8) before cloning to the other four in Phase 9.
 - **Spend disproportionate time on the retrieval re-ranker and the procedural playbooks.** That's where the "works on any LLM" magic actually lives.
 - **Keep `core/` and `agents/` framework-agnostic.** They are the moat and the future open spec — don't let Next.js leak into them.
-- **UI improves phase by phase.** It's intentionally minimal until Phase 11; never let UI polish block engine progress.
+- **The full design-faithful UI lands in Phase 6**, then backend phases light up each screen by swapping a fixture for real data — no UI rework. Final launch polish (landing, onboarding, Sentry, analytics) is Phase 12.
 
 ---
 

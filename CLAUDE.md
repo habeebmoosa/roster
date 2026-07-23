@@ -58,23 +58,26 @@ Everything else is plumbing.
 - BYOK keys: **AES-256-GCM** encrypted with a server-side secret, validated with a 1-token ping on save, never stored raw, never logged, decrypted only inside the API route at request time.
 - `agent_knowledge.permissions` scopes what each agent may recall — permission-scoping enforced on retrieval.
 
-## Build sequence (11 phases — see `MVP-Plan.md` §8 for full detail)
+## Build sequence (12 phases — see `MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → build the engine capability-by-capability (each measured by the eval harness) → employees → surfaces → ship. Every phase is independently testable and leaves `main` working.
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–5 complete; Phase 6 (Frontend) is next.**
 
-1. **Foundation** — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
-2. **Auth & app shell** — Google OAuth end-to-end (foundation complete)
-3. **LLM provider layer + BYOK vault** — AI SDK, provider registry (key/baseURL/config), encrypted vault, playground → BYOK proven e2e
-4. **Agent definition spec + `runAgent()` skeleton** — persona chat, no retrieval yet
-5. **Eval harness** — built early, on purpose; CI gate across 3 tiers
-6. **Memory & retrieval** — four-layer memory, hybrid retrieval, re-ranker, hard cap, permission-scoping
-7. **Structured workflow** — decompose → execute → validate → rollback
-8. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
-9. **Chat interface** — streaming UI, agent switcher, history, visible tool steps, scoped model picker
-10. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
-11. **Polish & ship** — landing, <2-min onboarding, Sentry, analytics, private beta
+1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
+2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)
+3. **LLM provider layer + BYOK vault** ✅ — AI SDK, provider registry (key/baseURL/config), encrypted vault, playground → BYOK proven e2e
+4. **Agent definition spec + `runAgent()` skeleton** ✅ — persona chat, no retrieval yet
+5. **Eval harness** ✅ — built early, on purpose; CI gate across 3 tiers
+6. **Frontend — design system & application UI** — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, roster, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
+7. **Memory & retrieval** — four-layer memory, hybrid retrieval, re-ranker, hard cap, permission-scoping
+8. **Structured workflow** — decompose → execute → validate → rollback
+9. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
+10. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
+11. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
+12. **Polish & ship** — landing, <2-min onboarding, Sentry, analytics, private beta
 
-**Vertical first:** Customer Support goes through Phases 4–7 end-to-end before the other four are cloned in Phase 8. Spend disproportionate time on the retrieval re-ranker and the procedural playbooks — that's where "works on any LLM" actually lives. Keep `core/` and `agents/` framework-agnostic (the moat + the open spec). UI is intentionally minimal until Phase 11.
+**Vertical first:** Customer Support goes through the agent-engine phases (4–5, 7–8) before the other four are cloned in Phase 9. Spend disproportionate time on the retrieval re-ranker and the procedural playbooks — that's where "works on any LLM" actually lives. Keep `core/` and `agents/` framework-agnostic (the moat + the open spec). The full design-faithful UI lands in Phase 6; later phases light up each screen with real data (no UI rework).
+
+**Frontend layering (Phase 6):** `ui/` = presentational design-system primitives (reused everywhere), `components/` = shared app chrome, `features/*` = self-contained domain modules, `app/` routes stay thin. Tailwind only, no shadcn. Design source of truth: the Claude Design project _RosterAI platform design_ (Public Sans + IBM Plex Mono; OKLCH light/dark tokens; violet accent).
 
 ## Explicitly out of scope (MVP)
 
