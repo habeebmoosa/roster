@@ -100,7 +100,7 @@ roster/
 │  │
 │  ├─ ui/                          # DESIGN SYSTEM — presentational Tailwind primitives (+ theme)
 │  ├─ components/                  # shared app chrome (layout: app-shell, sidebar, topbar)
-│  ├─ features/                    # feature modules (dashboard, roster, chat, connectors, settings, hire)
+│  ├─ features/                    # feature modules (dashboard, workers, chat, connectors, settings, hire)
 │  ├─ hooks/                       # shared React hooks
 │  ├─ lib/                         # shared utils, env (zod), shared types
 │  └─ config/                      # constants, model-tier definitions
@@ -371,8 +371,8 @@ src/
     (app)/                          # authenticated shell
       layout.tsx                    # <AppShell> (sidebar + topbar + theme)
       overview/page.tsx             # Dashboard
-      roster/page.tsx               # Employee list
-      roster/[employeeId]/page.tsx  # Employee detail (stats, about, API access)
+      workers/page.tsx              # Employee list
+      workers/[employeeId]/page.tsx # Employee detail (stats, about, API access)
       chat/page.tsx                 # Employee chat
       connectors/page.tsx           # Tool/integration catalog
       settings/page.tsx             # Tabbed settings
@@ -386,7 +386,7 @@ src/
     layout/  { app-shell, sidebar, topbar, workspace-switcher, profile-menu }
   features/                         # FEATURE MODULES — domain UI, colocated
     dashboard/  { components/, hooks/, fixtures.ts, types.ts }
-    roster/     { components/ (employee-card, employee-table, filters, detail/*), … }
+    workers/    { components/ (employee-card, employee-table, filters, detail/*), … }
     chat/       { components/ (thread, message, composer, history-drawer, employee-switcher), hooks/use-chat-stream.ts }
     connectors/ { components/, fixtures.ts, types.ts }
     settings/   { components/ (workspace, profile, providers, api-keys, billing tabs) }
@@ -408,9 +408,9 @@ Collapsible **Sidebar** (grouped nav: _Operate_ → Overview, Roster, Chat; _Con
 
 #### 6.4 Screens (all from the design)
 
-- **Overview / Dashboard** — greeting; stat tiles (active employees, conversations · 30d, spend this month, eval success rate); "Your roster" preview; "Usage & cost" per-employee breakdown; recent activity; quick actions (hire / add connector / open settings). _Wire now:_ eval success from `EvalRun`; agents from DB. _Fixtures:_ spend/convos/tokens analytics.
-- **Roster** — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
-- **Employee detail** (`/roster/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
+- **Overview / Dashboard** — greeting; stat tiles (active employees, conversations · 30d, spend this month, eval success rate); "Your workers" preview; "Usage & cost" per-employee breakdown; recent activity; quick actions (hire / add connector / open settings). _Wire now:_ eval success from `EvalRun`; agents from DB. _Fixtures:_ spend/convos/tokens analytics.
+- **Workers** (employee list, `/workers`) — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
+- **Employee detail** (`/workers/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
 - **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 10).
 - **Connectors** — tools grouped by category, connector cards (icon, name, desc, connect/manage), "synced" status. _Fixtures now_ (real tools/MCP arrive Phase 9).
 - **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 11); **Billing** (plan, payment, invoices — fixtures now).

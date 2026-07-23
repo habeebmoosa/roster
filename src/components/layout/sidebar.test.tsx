@@ -24,13 +24,18 @@ describe("Sidebar", () => {
   it("marks the active route via aria-current", () => {
     renderSidebar();
     expect(screen.getByRole("link", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
-    expect(screen.queryByRole("link", { name: /Chat/ })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: /Workers/ })).not.toHaveAttribute("aria-current");
   });
 
-  it("renders not-yet-built items as disabled with a Soon badge, not a link", () => {
+  it("renders Workers as a real link now that /workers exists", () => {
     renderSidebar();
-    expect(screen.queryByRole("link", { name: /Roster/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Roster")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Workers/ })).toHaveAttribute("href", "/workers");
+  });
+
+  it("renders not-yet-built items (Connectors) as disabled with a Soon badge", () => {
+    renderSidebar();
+    expect(screen.queryByRole("link", { name: /Connectors/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Connectors")).toBeInTheDocument();
     expect(screen.getAllByText("Soon").length).toBeGreaterThan(0);
   });
 

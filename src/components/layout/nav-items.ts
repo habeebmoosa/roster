@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import { IconChat, IconConnectors, IconOverview, IconRoster, IconSettings } from "./icons";
+import { IconChat, IconConnectors, IconOverview, IconSettings, IconWorkers } from "./icons";
 
 export interface NavItem {
   href: string;
@@ -23,7 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operate",
     items: [
       { href: "/dashboard", label: "Overview", Icon: IconOverview, enabled: true },
-      { href: "/roster", label: "Roster", Icon: IconRoster, enabled: false },
+      { href: "/workers", label: "Workers", Icon: IconWorkers, enabled: true },
       // Chat lives at /playground until its sub-phase (6.7) moves it to /chat.
       { href: "/playground", label: "Chat", Icon: IconChat, enabled: true },
     ],

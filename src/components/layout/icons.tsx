@@ -31,7 +31,7 @@ export function IconOverview(props: IconProps) {
   );
 }
 
-export function IconRoster(props: IconProps) {
+export function IconWorkers(props: IconProps) {
   return (
     <svg {...base(props)}>
       <circle cx="9" cy="8" r="3.2" />

@@ -1,14 +1,16 @@
 import {
-  FIXTURE_CONVERSATIONS_30D,
-  FIXTURE_SPEND_THIS_MONTH_USD,
   QuickActions,
-  RosterPreview,
   StatTiles,
   UsageCost,
-  fixtureMetricsForAgent,
+  WorkerPreview,
   getGreeting,
-  type RosterPreviewRow,
 } from "@/features/dashboard";
+import {
+  FIXTURE_CONVERSATIONS_30D_TOTAL,
+  FIXTURE_SPEND_THIS_MONTH_USD,
+  fixtureMetricsForAgent,
+  type WorkerRow,
+} from "@/features/workers";
 import { listAgentSummaries } from "@/server/db/repositories/agent.repository";
 import { getLatestOverallSuccessRate } from "@/server/db/repositories/eval-run.repository";
 
@@ -22,7 +24,7 @@ export default async function DashboardPage() {
   const activeEmployees = agents.length;
   const totalEmployees = agents.length;
 
-  const rosterRows: RosterPreviewRow[] = agents.map((agent) => ({
+  const workerRows: WorkerRow[] = agents.map((agent) => ({
     id: agent.id,
     name: agent.name,
     role: agent.role,
@@ -39,7 +41,7 @@ export default async function DashboardPage() {
         <StatTiles
           activeEmployees={activeEmployees}
           totalEmployees={totalEmployees}
-          conversations30d={FIXTURE_CONVERSATIONS_30D}
+          conversations30d={FIXTURE_CONVERSATIONS_30D_TOTAL}
           spendThisMonthUsd={FIXTURE_SPEND_THIS_MONTH_USD}
           evalSuccessRatePct={overallSuccessRate ? overallSuccessRate.rate * 100 : null}
         />
@@ -51,9 +53,9 @@ export default async function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <RosterPreview rows={rosterRows} />
+          <WorkerPreview rows={workerRows} />
         </div>
-        <UsageCost entries={rosterRows.map((r) => ({ name: r.name, spendUsd: r.spendUsd }))} />
+        <UsageCost entries={workerRows.map((r) => ({ name: r.name, spendUsd: r.spendUsd }))} />
       </div>
     </div>
   );

@@ -1,12 +1,17 @@
+import Link from "next/link";
+import type { WorkerRow } from "@/features/workers";
 import { Avatar, Badge, Card, CardTitle, EmptyState } from "@/ui";
-import type { RosterPreviewRow } from "../types";
 
-export function RosterPreview({ rows }: { rows: RosterPreviewRow[] }) {
+export function WorkerPreview({ rows }: { rows: WorkerRow[] }) {
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <CardTitle>Your roster</CardTitle>
-        {/* "View all" activates once /roster exists (sub-phase 6.5). */}
+        <CardTitle>Your workers</CardTitle>
+        {rows.length > 0 ? (
+          <Link href="/workers" className="text-accent text-sm font-medium hover:underline">
+            View all →
+          </Link>
+        ) : null}
       </div>
 
       {rows.length === 0 ? (

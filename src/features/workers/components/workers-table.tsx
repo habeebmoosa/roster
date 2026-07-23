@@ -1,0 +1,63 @@
+import {
+  Avatar,
+  Badge,
+  EmptyState,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/ui";
+import type { WorkerRow } from "../types";
+
+export function WorkersTable({ rows }: { rows: WorkerRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        title="No workers found"
+        description="Try a different search, or hire your first AI employee."
+      />
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Employee</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Model</TableHead>
+          <TableHead>Convos</TableHead>
+          <TableHead>Active</TableHead>
+          <TableHead className="text-right">Spend</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.id}>
+            <TableCell>
+              {/* Row → employee detail links once /workers/[id] exists (sub-phase 6.6). */}
+              <div className="flex items-center gap-3">
+                <Avatar name={row.name} />
+                <span className="min-w-0">
+                  <span className="text-text block truncate text-sm font-semibold">{row.name}</span>
+                  <span className="text-text-muted block truncate text-xs">{row.role}</span>
+                </span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <Badge variant="success">{row.status}</Badge>
+            </TableCell>
+            <TableCell className="text-text-muted">{row.model}</TableCell>
+            <TableCell className="text-text-muted">{row.conversations30d}</TableCell>
+            <TableCell className="text-text-faint">{row.lastActivity}</TableCell>
+            <TableCell className="text-text text-right font-medium">
+              ${row.spendUsd.toFixed(0)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}

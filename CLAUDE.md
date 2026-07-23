@@ -67,7 +67,7 @@ Foundation → prove BYOK end-to-end → agent skeleton + eval → full product 
 3. **LLM provider layer + BYOK vault** ✅ — AI SDK, provider registry (key/baseURL/config), encrypted vault, playground → BYOK proven e2e
 4. **Agent definition spec + `runAgent()` skeleton** ✅ — persona chat, no retrieval yet
 5. **Eval harness** ✅ — built early, on purpose; CI gate across 3 tiers
-6. **Frontend — design system & application UI** — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, roster, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
+6. **Frontend — design system & application UI** — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, workers, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
 7. **Memory & retrieval** — four-layer memory, hybrid retrieval, re-ranker, hard cap, permission-scoping
 8. **Structured workflow** — decompose → execute → validate → rollback
 9. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
