@@ -104,9 +104,13 @@ button {
   font-family: inherit;
 }
 
-a {
-  color: var(--color-accent);
-}
+/*
+ * No global `a { color }` rule: Tailwind's utility classes live in a CSS
+ * cascade layer, and unlayered rules always win over layered ones regardless
+ * of specificity — a blanket color here would silently override every
+ * component's own text color classes (e.g. the sidebar's active-link
+ * styling). Links set their own color explicitly, component by component.
+ */
 
 input::placeholder,
 textarea::placeholder {

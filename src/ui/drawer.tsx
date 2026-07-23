@@ -9,13 +9,15 @@ export interface DrawerProps {
   title?: string;
   children: ReactNode;
   className?: string;
+  /** Which edge the panel slides in from. Defaults to "right". */
+  side?: "left" | "right";
 }
 
 /**
- * Side panel (e.g. chat History). Always mounted — visibility is purely CSS
- * (translate-x + opacity) so both the enter and exit transitions animate.
+ * Side panel (e.g. chat History, mobile nav). Always mounted — visibility is
+ * purely CSS (translate-x + opacity) so both enter and exit transitions animate.
  */
-export function Drawer({ open, onClose, title, children, className }: DrawerProps) {
+export function Drawer({ open, onClose, title, children, className, side = "right" }: DrawerProps) {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -41,8 +43,9 @@ export function Drawer({ open, onClose, title, children, className }: DrawerProp
         role="dialog"
         aria-modal="true"
         className={cn(
-          "border-border bg-bg-elevated absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l shadow-md transition-transform duration-200",
-          open ? "translate-x-0" : "translate-x-full",
+          "border-border bg-bg-elevated absolute inset-y-0 flex w-full max-w-sm flex-col shadow-md transition-transform duration-200",
+          side === "right" ? "right-0 border-l" : "left-0 border-r",
+          open ? "translate-x-0" : side === "right" ? "translate-x-full" : "-translate-x-full",
           className,
         )}
       >

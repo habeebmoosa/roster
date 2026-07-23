@@ -78,10 +78,13 @@ export function DropdownMenuContent({
   children,
   className,
   align = "start",
+  side = "bottom",
 }: {
   children: ReactNode;
   className?: string;
   align?: "start" | "end";
+  /** Which side of the trigger the panel opens toward. */
+  side?: "top" | "bottom";
 }) {
   const { open } = useDropdownContext();
   if (!open) return null;
@@ -89,7 +92,8 @@ export function DropdownMenuContent({
     <div
       role="menu"
       className={cn(
-        "border-border bg-bg-elevated absolute z-50 mt-2 min-w-40 rounded-lg border p-1 shadow-md",
+        "border-border bg-bg-elevated absolute z-50 min-w-40 rounded-lg border p-1 shadow-md",
+        side === "bottom" ? "top-full mt-2" : "bottom-full mb-2",
         align === "end" ? "right-0" : "left-0",
         className,
       )}
@@ -98,6 +102,14 @@ export function DropdownMenuContent({
     </div>
   );
 }
+
+/**
+ * Shared visual style for a menu row. Exported so a one-off item that can't
+ * use DropdownMenuItem directly (e.g. a `<form>`-submitted sign-out button)
+ * still looks identical rather than duplicating the class string.
+ */
+export const dropdownMenuItemClasses =
+  "text-text hover:bg-bg-subtle flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors";
 
 export function DropdownMenuItem({
   children,
@@ -114,10 +126,7 @@ export function DropdownMenuItem({
         onSelect?.();
         setOpen(false);
       }}
-      className={cn(
-        "text-text hover:bg-bg-subtle flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
-        className,
-      )}
+      className={cn(dropdownMenuItemClasses, className)}
       {...props}
     >
       {children}

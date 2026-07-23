@@ -24,6 +24,7 @@ export {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  dropdownMenuItemClasses,
 } from "./dropdown-menu";
 export { Modal } from "./modal";
 export type { ModalProps } from "./modal";
