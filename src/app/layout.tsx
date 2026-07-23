@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { IBM_Plex_Mono, Public_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
+import { Toaster } from "@/ui/toast";
 import { ThemeProvider } from "@/ui/theme";
 import "./globals.css";
 
@@ -34,7 +35,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en" data-theme={theme} className={`${publicSans.variable} ${ibmPlexMono.variable}`}>
       <body className="font-sans">
-        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
