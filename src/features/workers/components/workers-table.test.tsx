@@ -33,8 +33,11 @@ describe("WorkersTable", () => {
     expect(screen.getByText("No workers found")).toBeInTheDocument();
   });
 
-  it("does not link a row yet (employee detail lands in 6.6)", () => {
+  it("links a row to its employee detail page", () => {
     render(<WorkersTable rows={[ROW]} />);
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Ada — Customer Support/ })).toHaveAttribute(
+      "href",
+      "/workers/customer-support",
+    );
   });
 });

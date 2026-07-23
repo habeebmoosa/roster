@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Avatar,
   Badge,
@@ -37,14 +38,15 @@ export function WorkersTable({ rows }: { rows: WorkerRow[] }) {
         {rows.map((row) => (
           <TableRow key={row.id}>
             <TableCell>
-              {/* Row → employee detail links once /workers/[id] exists (sub-phase 6.6). */}
-              <div className="flex items-center gap-3">
+              <Link href={`/workers/${row.id}`} className="flex items-center gap-3">
                 <Avatar name={row.name} />
                 <span className="min-w-0">
-                  <span className="text-text block truncate text-sm font-semibold">{row.name}</span>
+                  <span className="text-text block truncate text-sm font-semibold hover:underline">
+                    {row.name}
+                  </span>
                   <span className="text-text-muted block truncate text-xs">{row.role}</span>
                 </span>
-              </div>
+              </Link>
             </TableCell>
             <TableCell>
               <Badge variant="success">{row.status}</Badge>
