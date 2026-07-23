@@ -17,10 +17,10 @@ export default function HomePage() {
         <h1 data-testid="app-title" className="mt-2 text-5xl font-bold tracking-tight">
           Roster
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-neutral-600">
+        <p className="text-text-muted mt-4 max-w-2xl text-lg">
           Hire specialized AI employees that perform like experts on{" "}
-          <span className="font-medium text-neutral-900">any LLM you bring</span> — because we
-          engineer the expertise into the agent, not the model.
+          <span className="text-text font-medium">any LLM you bring</span> — because we engineer the
+          expertise into the agent, not the model.
         </p>
 
         <div className="mt-8">
