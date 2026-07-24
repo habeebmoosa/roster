@@ -2,8 +2,10 @@ import type { LanguageModel } from "ai";
 import {
   ByokError,
   getProvider,
+  isEmbeddingCapable,
   resolveModel,
   validateProviderCredentials,
+  type ResolveEmbeddingModelInput,
   type ResolveModelInput,
 } from "@/core/providers";
 import { decryptSecret, encryptSecret } from "@/server/crypto/vault";
@@ -92,6 +94,46 @@ export async function getModelForUser(
   model: string,
 ): Promise<LanguageModel> {
   return resolveModel(await getResolveInputForUser(userId, provider, model));
+}
+
+/** Preference order when a user has more than one embedding-capable provider connected. */
+const EMBEDDING_PROVIDER_PREFERENCE = ["openai", "google"];
+
+/**
+ * Pick the user's best-available embedding-capable provider and build a
+ * ready-to-use embedding input (decrypts here). Ingestion and query-time
+ * embedding both go through this so they stay on the same provider/model —
+ * required for cosine similarity to mean anything (see AgentKnowledge doc
+ * comment in schema.prisma).
+ */
+export async function getEmbeddingResolveInputForUser(
+  userId: string,
+): Promise<ResolveEmbeddingModelInput & { provider: string }> {
+  const keys = await listProviderKeys(userId);
+  const capable = keys.filter((k) => isEmbeddingCapable(k.provider));
+  const candidate =
+    EMBEDDING_PROVIDER_PREFERENCE.map((provider) =>
+      capable.find((k) => k.provider === provider),
+    ).find(Boolean) ?? capable[0];
+
+  if (!candidate) {
+    throw new ByokError(
+      "embeddings_unsupported",
+      "Connect an OpenAI or Google provider to ingest or search knowledge.",
+    );
+  }
+
+  const record = await getProviderKeyWithSecret(userId, candidate.provider);
+  if (!record) {
+    throw new ByokError("embeddings_unsupported", "No key is configured for this provider.");
+  }
+
+  return {
+    provider: record.provider,
+    apiKey: decryptSecret(record.encryptedKey),
+    baseUrl: record.baseUrl,
+    headers: extractHeaders(record.config),
+  };
 }
 
 function extractHeaders(config?: Record<string, unknown>): Record<string, string> | undefined {

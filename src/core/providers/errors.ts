@@ -11,6 +11,7 @@ export type ByokErrorCode =
   | "bad_base_url"
   | "model_not_found"
   | "unknown_provider"
+  | "embeddings_unsupported"
   | "unknown";
 
 const USER_MESSAGES: Record<ByokErrorCode, string> = {
@@ -20,6 +21,8 @@ const USER_MESSAGES: Record<ByokErrorCode, string> = {
   bad_base_url: "Couldn't reach the provider endpoint. Check the base URL.",
   model_not_found: "That model wasn't found for this provider. Check the model id.",
   unknown_provider: "Unknown provider.",
+  embeddings_unsupported:
+    "This provider doesn't support embeddings. Connect OpenAI or Google to ingest knowledge.",
   unknown: "Something went wrong talking to the provider.",
 };
 

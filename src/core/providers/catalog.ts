@@ -20,6 +20,12 @@ export interface ProviderCatalogEntry {
   requiresBaseUrl: boolean;
   /** Example model ids to suggest in the UI. Free-text; not exhaustive. */
   suggestedModels: string[];
+  /**
+   * Text-embedding model id, if this provider supports embeddings via the AI
+   * SDK (Phase 7). Undefined means this provider can't be used to ingest
+   * knowledge — only openai/google set this today.
+   */
+  embeddingModel?: string;
 }
 
 const CATALOG: ProviderCatalogEntry[] = [
@@ -30,6 +36,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     baseUrlEditable: true,
     requiresBaseUrl: false,
     suggestedModels: ["gpt-4o", "gpt-4o-mini", "o4-mini"],
+    embeddingModel: "text-embedding-3-small",
   },
   {
     id: "anthropic",
@@ -46,6 +53,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     baseUrlEditable: true,
     requiresBaseUrl: false,
     suggestedModels: ["gemini-2.0-flash", "gemini-1.5-pro"],
+    embeddingModel: "gemini-embedding-001",
   },
   {
     id: "groq",

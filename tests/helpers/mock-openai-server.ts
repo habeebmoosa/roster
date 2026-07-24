@@ -11,13 +11,15 @@ export interface MockServer {
 /**
  * Minimal OpenAI-compatible endpoint for offline tests. Implements
  * /chat/completions for non-streaming (validation ping) and streaming (SSE)
- * requests, returns 401 for a wrong API key, and records request bodies.
+ * requests, and /embeddings (returns a deterministic vector per input, sized
+ * to the requested `dimensions`), returns 401 for a wrong API key, and
+ * records request bodies.
  */
 export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<MockServer> {
   const requests: Array<Record<string, unknown>> = [];
 
   const server = createServer((req, res) => {
-    if (!req.url?.endsWith("/chat/completions")) {
+    if (!req.url?.endsWith("/chat/completions") && !req.url?.endsWith("/embeddings")) {
       res.writeHead(404);
       res.end("not found");
       return;
@@ -37,6 +39,31 @@ export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<M
       const json = body ? JSON.parse(body) : {};
       requests.push(json);
       const model = json.model ?? "mock-model";
+
+      if (req.url?.endsWith("/embeddings")) {
+        const dimensions = json.dimensions ?? 8;
+        const inputs: string[] = Array.isArray(json.input) ? json.input : [json.input];
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            object: "list",
+            model,
+            data: inputs.map((text, index) => {
+              // Simple content hash so distinct inputs (even same-length ones)
+              // produce distinct vectors — deterministic, not random.
+              let hash = 0;
+              for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
+              return {
+                object: "embedding",
+                index,
+                embedding: Array.from({ length: dimensions }, (_, i) => ((hash + i) % 7) / 7),
+              };
+            }),
+            usage: { prompt_tokens: 1, total_tokens: 1 },
+          }),
+        );
+        return;
+      }
 
       if (json.stream) {
         res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });

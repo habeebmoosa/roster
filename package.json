@@ -28,6 +28,7 @@
     "db:seed": "prisma db seed",
     "eval": "tsx scripts/eval.ts",
     "eval:gate": "tsx scripts/eval.ts --gate",
+    "ingest": "tsx scripts/ingest-knowledge.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
