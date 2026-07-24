@@ -36,6 +36,11 @@ test("unauthenticated connectors redirects to sign-in", async ({ page }) => {
   await expect(page).toHaveURL(/\/signin/);
 });
 
+test("unauthenticated hire wizard redirects to sign-in", async ({ page }) => {
+  await page.goto("/hire");
+  await expect(page).toHaveURL(/\/signin/);
+});
+
 test("sign-in page renders the Google button", async ({ page }) => {
   await page.goto("/signin");
   await expect(page.getByRole("heading", { name: /sign in to roster/i })).toBeVisible();

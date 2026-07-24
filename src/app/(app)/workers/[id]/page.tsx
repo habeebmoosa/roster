@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getProvider } from "@/core/providers/catalog";
 import {
   DetailAboutTab,
   DetailApiTab,
@@ -16,6 +17,16 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
   if (!definition) notFound();
 
   const fixtures = detailFixturesForAgent(id);
+
+  // The hire wizard (6.10) is the first thing that stores a real default model on the
+  // definition — older/seeded agents don't have one, so fall back to the fixture.
+  const modelInfo = definition.model
+    ? {
+        provider: getProvider(definition.model.provider)?.label ?? definition.model.provider,
+        tier: "Connected",
+        model: definition.model.model,
+      }
+    : { provider: fixtures.provider, tier: fixtures.tier, model: fixtures.model };
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -47,9 +58,9 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
           </TabsPanel>
           <TabsPanel value="model">
             <DetailModelTab
-              provider={fixtures.provider}
-              tier={fixtures.tier}
-              model={fixtures.model}
+              provider={modelInfo.provider}
+              tier={modelInfo.tier}
+              model={modelInfo.model}
             />
           </TabsPanel>
           <TabsPanel value="api">

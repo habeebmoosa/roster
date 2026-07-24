@@ -27,6 +27,15 @@ export const agentDefinitionSchema = z.object({
     })
     .default({ semantic: [], procedural: [] }),
   context_budget_tokens: z.number().int().positive().default(8000),
+  // The hire wizard's default provider/model (Phase 6.10). Optional — the
+  // launch employees seeded from YAML don't set one; chat still lets a user
+  // pick a model per-request regardless of what's stored here.
+  model: z
+    .object({
+      provider: z.string().min(1),
+      model: z.string().min(1),
+    })
+    .optional(),
 });
 
 export type AgentDefinition = z.infer<typeof agentDefinitionSchema>;

@@ -43,4 +43,23 @@ describe("parseAgentDefinition", () => {
   it("rejects a non-positive context budget", () => {
     expect(() => parseAgentDefinition({ ...MINIMAL, context_budget_tokens: 0 })).toThrow();
   });
+
+  it("leaves model undefined when omitted", () => {
+    const def = parseAgentDefinition(MINIMAL);
+    expect(def.model).toBeUndefined();
+  });
+
+  it("keeps a provided model", () => {
+    const def = parseAgentDefinition({
+      ...MINIMAL,
+      model: { provider: "openai", model: "gpt-4o-mini" },
+    });
+    expect(def.model).toEqual({ provider: "openai", model: "gpt-4o-mini" });
+  });
+
+  it("rejects an incomplete model object", () => {
+    expect(() => parseAgentDefinition({ ...MINIMAL, model: { provider: "openai" } })).toThrow(
+      /model/,
+    );
+  });
 });
