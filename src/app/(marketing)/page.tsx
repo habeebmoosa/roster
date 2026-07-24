@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <Container className="py-20">
       <main>
-        <p className="text-brand text-sm font-medium">AI Employees</p>
+        <p className="text-accent text-sm font-medium">AI Employees</p>
         <h1 data-testid="app-title" className="mt-2 text-5xl font-bold tracking-tight">
           Roster
         </h1>

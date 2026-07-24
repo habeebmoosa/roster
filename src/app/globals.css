@@ -71,11 +71,6 @@
   --color-danger-soft: var(--rst-danger-soft);
   --color-overlay: var(--rst-overlay);
 
-  /* Deprecated alias — old pages predating the design import use bg-brand /
-     ring-brand etc. Drop once every consumer migrates to bg-accent (tracked
-     in MVP-Plan Phase 6). */
-  --color-brand: var(--rst-accent);
-
   --shadow-sm: var(--rst-shadow-sm);
   --shadow-md: var(--rst-shadow-md);
 

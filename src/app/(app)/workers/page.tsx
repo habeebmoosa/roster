@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Topbar } from "@/components/layout";
 import {
   WorkersPagination,
@@ -8,7 +9,7 @@ import {
   type WorkerRow,
 } from "@/features/workers";
 import { listAgentSummaries } from "@/server/db/repositories/agent.repository";
-import { Card } from "@/ui";
+import { Button, Card } from "@/ui";
 
 export default async function WorkersPage({
   searchParams,
@@ -36,11 +37,9 @@ export default async function WorkersPage({
       <Topbar
         title="Workers"
         actions={
-          // Hire wizard doesn't exist yet — same disabled treatment as the
-          // sidebar/dashboard CTAs (sub-phase 6.10).
-          <Card className="text-text-faint px-4 py-2 text-sm font-semibold" title="Coming soon">
-            + Hire employee
-          </Card>
+          <Link href="/hire">
+            <Button>+ Hire employee</Button>
+          </Link>
         }
       />
       <div className="flex flex-col gap-4 px-6 pb-6">

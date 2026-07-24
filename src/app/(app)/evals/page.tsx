@@ -13,7 +13,7 @@ export default async function EvalsPage() {
       <h1 className="text-2xl font-bold tracking-tight">Evals</h1>
       <p className="mt-2 text-neutral-600">
         Task success rate across model tiers over time — the moat, made measurable. Run{" "}
-        <code className="text-brand font-mono">npm run eval</code> to add rows.
+        <code className="text-accent font-mono">npm run eval</code> to add rows.
       </p>
 
       <div className="mt-8">

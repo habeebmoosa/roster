@@ -197,7 +197,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~12 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–9) → chat real-time & access surfaces (10–11) → ship (12). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–5 complete · ⬜ Phase 6 (Frontend — design system & application UI) is next · ⬜ Phases 7–12 remaining.
+> **Progress:** ✅ Phases 1–6 complete · ⬜ Phase 7 (Memory & retrieval pipeline) is next · ⬜ Phases 8–12 remaining.
 
 ---
 
@@ -352,7 +352,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ---
 
-### Phase 6 — Frontend: design system & application UI ⬅️ NEXT
+### Phase 6 — Frontend: design system & application UI ✅ COMPLETE
 
 **Goal:** Build the full, design-faithful product UI from the **RosterAI platform design** — a component-based Tailwind frontend covering every screen — wired to the backend that already exists (auth, providers/BYOK, agent chat, evals) and backed by clearly-marked typed fixtures for features whose backend lands later (usage analytics, connectors, abilities, API keys, billing, knowledge sources). Every subsequent backend phase then "lights up" its screen by swapping a fixture for a real repository/API, with no UI rework.
 
@@ -436,7 +436,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 7 — Memory & retrieval pipeline
+### Phase 7 — Memory & retrieval pipeline ⬅️ NEXT
 
 **Goal:** Grounded answers from curated context. Semantic + procedural + episodic memory, hybrid retrieval, re-ranking, hard cap, permission-scoping — all measured by the Phase 5 harness.
 
