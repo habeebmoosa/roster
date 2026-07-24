@@ -24,7 +24,7 @@ export function DetailModelTab({
         {/* Per-agent default model binding doesn't exist yet — this links to
             the real place a provider/model is actually managed today. */}
         <Link
-          href="/settings/providers"
+          href="/settings?tab=providers"
           className="text-accent text-sm font-medium hover:underline"
         >
           Change model →

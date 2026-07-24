@@ -21,7 +21,7 @@ export default async function ChatPage() {
           <CardTitle>No providers configured</CardTitle>
           <CardDescription>
             Add a provider key first, then come back to chat with an employee.{" "}
-            <Link href="/settings/providers" className="text-accent hover:underline">
+            <Link href="/settings?tab=providers" className="text-accent hover:underline">
               Add a provider →
             </Link>
           </CardDescription>

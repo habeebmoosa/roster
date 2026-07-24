@@ -1,28 +1,40 @@
-import Link from "next/link";
-import { Card, CardDescription, CardTitle, Container } from "@/ui";
+import {
+  ApiKeysTab,
+  BillingTab,
+  ProfileTab,
+  ProvidersTab,
+  SettingsTabs,
+  WorkspaceTab,
+} from "@/features/settings";
+import { auth } from "@/server/auth";
+import { listUserProviders } from "@/server/providers/service";
 
-export default function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const session = await auth();
+  const keys = session?.user?.id ? await listUserProviders(session.user.id) : [];
+
+  const name = session?.user?.name ?? "Account";
+  const email = session?.user?.email ?? "";
+
   return (
-    <Container className="py-12">
-      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-      <div className="mt-8 grid gap-4">
-        <Card>
-          <CardTitle>Provider keys</CardTitle>
-          <CardDescription>
-            Bring your own LLM keys (OpenAI, Anthropic, Google, and more), with custom base URLs and
-            per-provider config.{" "}
-            <Link href="/settings/providers" className="text-brand hover:underline">
-              Manage providers →
-            </Link>
-          </CardDescription>
-        </Card>
-        <Card>
-          <CardTitle>API keys</CardTitle>
-          <CardDescription>
-            Platform API keys for programmatic access to your employees. Coming in Phase 10.
-          </CardDescription>
-        </Card>
+    <div className="px-6 py-6">
+      <h1 className="text-text text-2xl font-bold tracking-tight">Settings</h1>
+
+      <div className="mt-6">
+        <SettingsTabs
+          initialTab={tab ?? "workspace"}
+          workspace={<WorkspaceTab initialName={name} />}
+          profile={<ProfileTab name={name} email={email} />}
+          providers={<ProvidersTab keys={keys} />}
+          apiKeys={<ApiKeysTab />}
+          billing={<BillingTab />}
+        />
       </div>
-    </Container>
+    </div>
   );
 }

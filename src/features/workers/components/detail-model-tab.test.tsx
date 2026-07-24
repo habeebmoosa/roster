@@ -15,7 +15,7 @@ describe("DetailModelTab", () => {
     render(<DetailModelTab provider="Google" tier="Free tier" model="gemini-2.0-flash" />);
     expect(screen.getByRole("link", { name: /Change model/ })).toHaveAttribute(
       "href",
-      "/settings/providers",
+      "/settings?tab=providers",
     );
   });
 });

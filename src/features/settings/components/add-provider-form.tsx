@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 // Pure data only — safe to import into a client bundle (no AI SDK / server code).
 import { getProviderCatalog } from "@/core/providers/catalog";
-import { Button, Card, CardDescription, CardTitle, Input } from "@/ui";
+import { Button, Card, CardDescription, CardTitle, Input, Select } from "@/ui";
 
 export function AddProviderForm() {
   const catalog = useMemo(() => getProviderCatalog(), []);
@@ -65,22 +65,18 @@ export function AddProviderForm() {
 
       <form onSubmit={onSubmit} className="mt-4 grid gap-3">
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Provider</span>
-          <select
-            className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
-            value={provider}
-            onChange={(e) => onProviderChange(e.target.value)}
-          >
+          <span className="text-text font-medium">Provider</span>
+          <Select value={provider} onChange={(e) => onProviderChange(e.target.value)}>
             {catalog.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">API key</span>
+          <span className="text-text font-medium">API key</span>
           <Input
             type="password"
             value={apiKey}
@@ -92,7 +88,7 @@ export function AddProviderForm() {
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">Model (used to validate)</span>
+          <span className="text-text font-medium">Model (used to validate)</span>
           <Input
             value={model}
             onChange={(e) => setModel(e.target.value)}
@@ -109,7 +105,7 @@ export function AddProviderForm() {
 
         {showBaseUrl ? (
           <label className="grid gap-1 text-sm">
-            <span className="font-medium">
+            <span className="text-text font-medium">
               Base URL {entry?.requiresBaseUrl ? "(required)" : "(optional)"}
             </span>
             <Input
@@ -127,7 +123,7 @@ export function AddProviderForm() {
           </Button>
           {message ? (
             <span
-              className={status === "error" ? "text-sm text-red-600" : "text-sm text-green-700"}
+              className={status === "error" ? "text-danger text-sm" : "text-success text-sm"}
               role="status"
             >
               {message}
