@@ -26,16 +26,17 @@ datasource db {
 // The User table is the anchor every later domain table references.
 // ─────────────────────────────────────────────────────────────
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  providerKeys  ProviderKey[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String           @id @default(cuid())
+  name             String?
+  email            String?          @unique
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  providerKeys     ProviderKey[]
+  episodicMemories EpisodicMemory[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@map("users")
 }
@@ -120,7 +121,65 @@ model Agent {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  knowledge        AgentKnowledge[]
+  episodicMemories EpisodicMemory[]
+
   @@map("agents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AgentKnowledge (Phase 7) — chunked knowledge (semantic) and playbooks
+// (procedural) for retrieval. One row per chunk. `embedding` is a fixed
+// 1536-dim column so every agent's knowledge lives in one column regardless
+// of which BYOK embedding provider ingested it — a given agent's chunks are
+// always ingested (and later queried) through the same recorded
+// provider/model, so cosine distance stays meaningful; models producing
+// fewer dimensions (e.g. Google's 768-dim) are zero-padded, which preserves
+// relative cosine similarity exactly.
+// `permissions` scopes what a retrieval call may recall — empty means
+// public; every tag listed must be present in the caller's granted
+// permission set.
+// ─────────────────────────────────────────────────────────────
+model AgentKnowledge {
+  id                String                       @id @default(cuid())
+  agentId           String
+  kind              String // "semantic" | "procedural"
+  sourceUri         String // e.g. "kb://support-docs/refunds.md", "playbook://refund-flow"
+  chunkIndex        Int
+  content           String
+  embedding         Unsupported("vector(1536)")?
+  embeddingProvider String
+  embeddingModel    String
+  permissions       String[]                     @default([])
+  createdAt         DateTime                     @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, kind])
+  @@map("agent_knowledge")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EpisodicMemory (Phase 7) — per-user, per-agent history/preferences that
+// persist across sessions (working memory is just the in-session message
+// list; this is what survives between conversations). Simple key/value for
+// now — e.g. key "preference:tone", value "prefers short replies".
+// ─────────────────────────────────────────────────────────────
+model EpisodicMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  agentId   String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId, key])
+  @@index([userId, agentId])
+  @@map("episodic_memory")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -147,14 +206,14 @@ model EvalRun {
 // Foundation smoke model (Phase 1).
 // Proves the full Prisma + pgvector pipeline end-to-end: migrations,
 // repository read/write, and cosine-distance (<=>) similarity search.
-// Phase 6 introduces the real knowledge/embedding tables and this may be
-// removed once those exist.
+// Phase 7 introduces the real knowledge/embedding tables (AgentKnowledge)
+// and this may be removed now that those exist.
 // ─────────────────────────────────────────────────────────────
 model EmbeddingProbe {
-  id        String                 @id
+  id        String                    @id
   content   String
   embedding Unsupported("vector(3)")?
-  createdAt DateTime               @default(now())
+  createdAt DateTime                  @default(now())
 
   @@map("embedding_probe")
 }
