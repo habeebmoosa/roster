@@ -30,7 +30,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Configure",
     items: [
-      { href: "/connectors", label: "Connectors", Icon: IconConnectors, enabled: false },
+      { href: "/connectors", label: "Connectors", Icon: IconConnectors, enabled: true },
       { href: "/settings", label: "Settings", Icon: IconSettings, enabled: true },
     ],
   },

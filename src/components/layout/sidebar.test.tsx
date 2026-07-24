@@ -32,11 +32,10 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /Workers/ })).toHaveAttribute("href", "/workers");
   });
 
-  it("renders not-yet-built items (Connectors) as disabled with a Soon badge", () => {
+  it("renders Connectors as a real link now that /connectors exists", () => {
     renderSidebar();
-    expect(screen.queryByRole("link", { name: /Connectors/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Connectors")).toBeInTheDocument();
-    expect(screen.getAllByText("Soon").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /Connectors/ })).toHaveAttribute("href", "/connectors");
+    expect(screen.queryByText("Soon")).not.toBeInTheDocument();
   });
 
   it("shows the workspace name and email in the profile trigger", () => {

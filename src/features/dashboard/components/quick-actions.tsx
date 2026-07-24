@@ -8,11 +8,11 @@ interface QuickAction {
   enabled: boolean;
 }
 
-// Hire (6.10) and Connectors (6.8) aren't built yet — same disabled/"Soon"
-// treatment as the sidebar, so nothing here is a dead link.
+// Hire (6.10) isn't built yet — same disabled/"Soon" treatment as the
+// sidebar, so it isn't a dead link.
 const ACTIONS: QuickAction[] = [
   { label: "Hire an employee", href: "/hire", enabled: false },
-  { label: "Add a connector", href: "/connectors", enabled: false },
+  { label: "Add a connector", href: "/connectors", enabled: true },
   { label: "Open settings", href: "/settings", enabled: true },
 ];
 
