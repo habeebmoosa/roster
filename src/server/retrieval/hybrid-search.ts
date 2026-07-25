@@ -1,5 +1,5 @@
-import { reciprocalRankFusion, type RankedCandidate } from "@/core/retrieval/rank-fusion";
 import { embedTexts, type ResolveEmbeddingModelInput } from "@/core/providers";
+import { reciprocalRankFusion, type RankedCandidate } from "@/core/retrieval";
 import {
   findKnowledgeByFullText,
   findNearestKnowledge,
