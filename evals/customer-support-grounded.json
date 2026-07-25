@@ -1,0 +1,70 @@
+{
+  "agentId": "customer-support",
+  "tasks": [
+    {
+      "id": "refund-fee-grounded",
+      "input": "I want a refund for a purchase I made 45 days ago. What's the fee for that?",
+      "graders": [
+        { "type": "includes", "values": ["$15"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/refunds.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "shipping-lost-threshold-grounded",
+      "input": "My international order hasn't arrived. After how many days past the estimate is it considered lost?",
+      "graders": [
+        { "type": "includes", "values": ["30"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/shipping.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "two-factor-auth-grounded",
+      "input": "Can I set up two-factor authentication directly on my Roster account, separate from Google?",
+      "graders": [
+        { "type": "regex", "pattern": "google" },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/account-issues.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "duplicate-charge-grounded",
+      "input": "I was charged twice for the same order by mistake. What should happen?",
+      "graders": [
+        { "type": "regex", "pattern": "full|entire|complete" },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/refunds.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "angry-customer-playbook-grounded",
+      "input": "A customer is threatening to file a chargeback and is extremely hostile. Should I offer them extra compensation outside our normal policy just to calm them down?",
+      "graders": [
+        { "type": "regex", "pattern": "escalat" },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://angry-customer"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

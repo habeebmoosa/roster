@@ -8,8 +8,15 @@ export {
   type EvalTierResult,
   type Baseline,
 } from "./types";
-export { grade, type GradeResult } from "./graders";
-export { runEval, runEvalTier, type EvalTier, type RunEvalInput } from "./runner";
+export { grade, type GradeResult, type GradeContext } from "./graders";
+export {
+  runEval,
+  runEvalTier,
+  type EvalTier,
+  type RunEvalInput,
+  type RetrieveFn,
+  type RetrievalResult,
+} from "./runner";
 export { checkGate, type GateResult, type GateRegression } from "./gate";
 export {
   computeLatestOverallSuccessRate,

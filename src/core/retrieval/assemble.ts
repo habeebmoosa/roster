@@ -5,6 +5,8 @@ export interface AssembledContext {
   /** Ready to inject into the system prompt — labeled per-chunk, never a raw dump. */
   text: string;
   usedChunkIds: string[];
+  /** sourceUri of each used chunk (parallel to usedChunkIds) — what eval retrieval graders check. */
+  usedSourceUris: string[];
   totalTokens: number;
   /** True if at least one candidate (or part of one) didn't fit within the budget. */
   truncated: boolean;
@@ -58,6 +60,7 @@ export function assembleContext(
 ): AssembledContext {
   const sections: string[] = [];
   const usedChunkIds: string[] = [];
+  const usedSourceUris: string[] = [];
   let totalTokens = 0;
   let truncated = false;
 
@@ -74,6 +77,7 @@ export function assembleContext(
     if (sectionTokens <= remaining) {
       sections.push(section);
       usedChunkIds.push(candidate.id);
+      usedSourceUris.push(candidate.sourceUri);
       totalTokens += sectionTokens;
       continue;
     }
@@ -84,6 +88,7 @@ export function assembleContext(
       if (shortenedTokens > 0) {
         sections.push(shortened);
         usedChunkIds.push(candidate.id);
+        usedSourceUris.push(candidate.sourceUri);
         totalTokens += shortenedTokens;
       }
     }
@@ -91,5 +96,5 @@ export function assembleContext(
     break;
   }
 
-  return { text: sections.join("\n\n"), usedChunkIds, totalTokens, truncated };
+  return { text: sections.join("\n\n"), usedChunkIds, usedSourceUris, totalTokens, truncated };
 }

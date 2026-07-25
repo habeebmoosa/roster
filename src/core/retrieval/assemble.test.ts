@@ -27,13 +27,20 @@ function candidate(
 describe("assembleContext", () => {
   it("returns empty output for no candidates", () => {
     const result = assembleContext([], 1000);
-    expect(result).toEqual({ text: "", usedChunkIds: [], totalTokens: 0, truncated: false });
+    expect(result).toEqual({
+      text: "",
+      usedChunkIds: [],
+      usedSourceUris: [],
+      totalTokens: 0,
+      truncated: false,
+    });
   });
 
   it("includes every candidate, in order, when they all fit the budget", () => {
     const candidates = [candidate("a", 20), candidate("b", 20), candidate("c", 20)];
     const result = assembleContext(candidates, 1000);
     expect(result.usedChunkIds).toEqual(["a", "b", "c"]);
+    expect(result.usedSourceUris).toEqual(["kb://x/a.md", "kb://x/b.md", "kb://x/c.md"]);
     expect(result.truncated).toBe(false);
     expect(result.totalTokens).toBeLessThanOrEqual(1000);
     expect(result.totalTokens).toBeGreaterThan(0);
@@ -79,6 +86,7 @@ describe("assembleContext", () => {
     expect(assembleContext(candidates, 0)).toEqual({
       text: "",
       usedChunkIds: [],
+      usedSourceUris: [],
       totalTokens: 0,
       truncated: true,
     });

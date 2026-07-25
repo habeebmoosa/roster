@@ -9,6 +9,15 @@ export const graderSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("includes"), values: z.array(z.string()).min(1) }),
   z.object({ type: z.literal("excludes"), values: z.array(z.string()).min(1) }),
   z.object({ type: z.literal("regex"), pattern: z.string().min(1) }),
+  z.object({
+    type: z.literal("retrieval"),
+    /** Source uris (e.g. "kb://support-docs/refunds.md") that should have been retrieved. */
+    expectedSourceUris: z.array(z.string()).min(1),
+    /** Fraction of expectedSourceUris that must have been retrieved. Default: all of them. */
+    minRecall: z.number().min(0).max(1).default(1),
+    /** Fraction of retrieved sources that must be in expectedSourceUris. Default: unenforced. */
+    minPrecision: z.number().min(0).max(1).default(0),
+  }),
 ]);
 export type Grader = z.infer<typeof graderSchema>;
 
@@ -43,6 +52,8 @@ export interface EvalCaseResult {
   tokens: number;
   latencyMs: number;
   output: string;
+  /** Source uris actually retrieved for this case, if the run performed retrieval. */
+  retrievedSourceUris?: string[];
 }
 
 export interface EvalTierResult {
