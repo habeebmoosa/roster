@@ -36,4 +36,32 @@ describe("buildSystemPrompt", () => {
     });
     expect(buildSystemPrompt(bare)).not.toContain("Areas of expertise");
   });
+
+  it("omits retrieved-context and episodic-memory sections when none is given", () => {
+    const prompt = buildSystemPrompt(def);
+    expect(prompt).not.toContain("Reference material");
+    expect(prompt).not.toContain("What you remember about this user");
+  });
+
+  it("folds in retrieved context when given", () => {
+    const prompt = buildSystemPrompt(def, {
+      retrievedContext: "Refunds are available within 30 days.",
+    });
+    expect(prompt).toContain("Reference material");
+    expect(prompt).toContain("Refunds are available within 30 days.");
+  });
+
+  it("folds in episodic memory when given", () => {
+    const prompt = buildSystemPrompt(def, {
+      episodicMemory: [{ key: "preference:tone", value: "prefers short replies" }],
+    });
+    expect(prompt).toContain("What you remember about this user");
+    expect(prompt).toContain("preference:tone: prefers short replies");
+  });
+
+  it("omits an empty episodic memory array (same as undefined)", () => {
+    expect(buildSystemPrompt(def, { episodicMemory: [] })).not.toContain(
+      "What you remember about this user",
+    );
+  });
 });
