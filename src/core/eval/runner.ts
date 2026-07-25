@@ -68,11 +68,19 @@ async function runCase(
       model,
       messages: [{ role: "user", content: task.input }],
       retrievedContext,
+      // Same fn, reused for the multi-step path's own per-step retrieval —
+      // the upfront call above only ever grounds the single-step bypass.
+      retrieve,
     });
     output = await result.text;
     const usage = await result.usage;
     inputTokens = usage.inputTokens;
     outputTokens = usage.outputTokens;
+    // The multi-step workflow path retrieves per-step and reports its own
+    // (possibly broader) union of sources — prefer it when present.
+    if (result.retrievedSourceUris) {
+      retrievedSourceUris = result.retrievedSourceUris;
+    }
   } catch {
     output = "";
   }

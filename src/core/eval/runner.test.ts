@@ -154,6 +154,71 @@ describe("runEvalTier / runEval with retrieval", () => {
     expect(result.avgCostUsd).toBe(0);
   });
 
+  it("aggregates retrievedSourceUris across a multi-step workflow, overriding the upfront single-shot value", async () => {
+    let call = 0;
+    const model = new MockLanguageModelV4({
+      doGenerate: async () => {
+        const index = call;
+        call += 1;
+        let text: string;
+        if (index === 0) {
+          text = JSON.stringify({
+            steps: [
+              { goal: "Look up the refund fee", needsRetrieval: true },
+              { goal: "Look up the shipping lost threshold", needsRetrieval: true },
+            ],
+          });
+        } else if (index === 1) {
+          text = "The fee is $15.";
+        } else {
+          text = "Lost after 30 days.";
+        }
+        return {
+          content: [{ type: "text", text }],
+          finishReason: MOCK_FINISH_REASON,
+          usage: MOCK_USAGE,
+          warnings: [],
+        };
+      },
+    });
+
+    const retrieve: RetrieveFn = async (query) =>
+      query.includes("refund")
+        ? {
+            text: "[Knowledge: kb://support-docs/refunds.md]\nThe fee is $15.",
+            sourceUris: ["kb://support-docs/refunds.md"],
+          }
+        : {
+            text: "[Knowledge: kb://support-docs/shipping.md]\nLost after 30 days.",
+            sourceUris: ["kb://support-docs/shipping.md"],
+          };
+
+    const multiStepTask: EvalTask = {
+      id: "multi-step-task",
+      input: "What's the refund fee, and separately, when is a lost package considered lost?",
+      graders: [
+        {
+          type: "retrieval",
+          expectedSourceUris: ["kb://support-docs/refunds.md", "kb://support-docs/shipping.md"],
+          minRecall: 1,
+          minPrecision: 0,
+        },
+      ],
+    };
+
+    const result = await runEvalTier(
+      definition,
+      { tier: "cheap", modelLabel: "mock", model },
+      [multiStepTask],
+      retrieve,
+    );
+
+    expect(result.cases[0]!.retrievedSourceUris).toEqual(
+      expect.arrayContaining(["kb://support-docs/refunds.md", "kb://support-docs/shipping.md"]),
+    );
+    expect(result.cases[0]!.passed).toBe(true);
+  });
+
   it("runEval threads the same retrieve function across every tier", async () => {
     const retrieve: RetrieveFn = async () => ({
       text: "[Knowledge: kb://support-docs/refunds.md]\nThe fee is $15.",

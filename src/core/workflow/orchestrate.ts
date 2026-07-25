@@ -35,11 +35,17 @@ export interface RunWorkflowResult {
   usage: WorkflowUsage;
   /** True if the plan's final step (or its rollback) never passed validation. */
   failed: boolean;
+  /** Union of every step's retrieved source uris, in first-seen order — what an eval "retrieval" grader checks against. */
+  retrievedSourceUris: string[];
 }
 
 function addUsage(total: WorkflowUsage, usage: WorkflowUsage): void {
   total.inputTokens += usage.inputTokens;
   total.outputTokens += usage.outputTokens;
+}
+
+function addSourceUris(seen: Set<string>, uris: string[] | undefined): void {
+  for (const uri of uris ?? []) seen.add(uri);
 }
 
 /**
@@ -69,6 +75,7 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
   } = input;
 
   const usage: WorkflowUsage = { inputTokens: 0, outputTokens: 0 };
+  const sourceUris = new Set<string>();
   const stepOutputs: string[] = [];
 
   for (const [i, step] of plan.steps.entries()) {
@@ -83,6 +90,7 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
       groundednessModel,
     });
     addUsage(usage, run.usage);
+    addSourceUris(sourceUris, run.result.retrievedSourceUris);
 
     onStepEvent?.({
       type: "step-complete",
@@ -101,7 +109,13 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
         groundednessModel,
       });
       addUsage(usage, rollback.usage);
-      return { text: rollback.result.output, usage, failed: !rollback.validation.passed };
+      addSourceUris(sourceUris, rollback.result.retrievedSourceUris);
+      return {
+        text: rollback.result.output,
+        usage,
+        failed: !rollback.validation.passed,
+        retrievedSourceUris: [...sourceUris],
+      };
     }
 
     const isLastStep = i === plan.steps.length - 1;
@@ -118,5 +132,10 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
     stepOutputs.push(compressed.text);
   }
 
-  return { text: stepOutputs[stepOutputs.length - 1] ?? "", usage, failed: false };
+  return {
+    text: stepOutputs[stepOutputs.length - 1] ?? "",
+    usage,
+    failed: false,
+    retrievedSourceUris: [...sourceUris],
+  };
 }

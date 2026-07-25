@@ -1,0 +1,45 @@
+{
+  "agentId": "customer-support",
+  "tasks": [
+    {
+      "id": "dual-refund-scenarios",
+      "input": "A customer sent one message with two separate issues: (1) they were charged twice for the same order by mistake, and (2) a different purchase they made 45 days ago — they want to know if that one still qualifies for a refund and what it would cost. Please address both parts.",
+      "graders": [
+        { "type": "includes", "values": ["$15", "full"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/refunds.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "shipping-and-refund-combo",
+      "input": "I have two separate questions: first, after how many days is an international shipment considered lost? Second, unrelated to that, if I got charged twice for a software subscription by mistake, what's the resolution?",
+      "graders": [
+        { "type": "includes", "values": ["30", "full"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://support-docs/shipping.md", "kb://support-docs/refunds.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "angry-customer-with-refund-question",
+      "input": "A customer is furious: 'This is absolutely unacceptable, I've never been treated so poorly by a company before.' Buried in their rant, they also ask what the refund fee would be if their purchase was 45 days ago. Handle the tone appropriately and answer their question.",
+      "graders": [
+        { "type": "regex", "pattern": "frustrat|understand|hear you" },
+        { "type": "includes", "values": ["$15"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://angry-customer", "kb://support-docs/refunds.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

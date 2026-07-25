@@ -40,11 +40,14 @@ import { retrieveGroundingContext } from "@/server/retrieval/grounding";
  *
  * The eval set (task file + baseline key) defaults to the agent id, but can
  * be overridden with --evalset to run an alternate task file against the same
- * agent — e.g. the customer-support-grounded.json set that specifically
- * exercises retrieval, kept separate from the default set so CI/gate runs
- * without embedding credentials configured don't fail on unrelated tasks.
+ * agent — e.g. customer-support-grounded.json (retrieval-focused) or
+ * customer-support-multistep.json (Phase 8: tasks that bundle 2+ distinct
+ * sub-asks, designed to reward genuine decomposition + per-step retrieval
+ * over a single blanket answer) — both kept separate from the default set so
+ * CI/gate runs without embedding credentials configured don't fail on
+ * unrelated tasks.
  *
- * Usage:  npm run eval [-- --agent customer-support] [--evalset customer-support-grounded] [--gate]
+ * Usage:  npm run eval [-- --agent customer-support] [--evalset customer-support-multistep] [--gate]
  */
 const AGENT_ID = argValue("--agent") ?? "customer-support";
 const EVAL_SET = argValue("--evalset") ?? AGENT_ID;

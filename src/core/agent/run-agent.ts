@@ -24,6 +24,8 @@ export interface RunAgentResult {
   textStream: AsyncIterable<string>;
   text: Promise<string>;
   usage: Promise<RunAgentUsage>;
+  /** Source uris retrieved across the multi-step workflow path, if it ran (undefined on the bypass path — the caller already has its own upfront retrieval result there). */
+  retrievedSourceUris?: string[];
 }
 
 export interface RunAgentInput {
@@ -98,6 +100,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
         textStream: singleChunkStream(workflow.text),
         text: Promise.resolve(workflow.text),
         usage: Promise.resolve(workflow.usage),
+        retrievedSourceUris: workflow.retrievedSourceUris,
       };
     }
   }
