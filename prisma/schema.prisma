@@ -206,8 +206,9 @@ model EvalRun {
 // Foundation smoke model (Phase 1).
 // Proves the full Prisma + pgvector pipeline end-to-end: migrations,
 // repository read/write, and cosine-distance (<=>) similarity search.
-// Phase 7 introduces the real knowledge/embedding tables (AgentKnowledge)
-// and this may be removed now that those exist.
+// Phase 7 introduced the real knowledge/embedding table (AgentKnowledge) for
+// domain retrieval — this stays on purpose as a minimal infra health-check
+// independent of that table's ingestion/permission/kind complexity.
 // ─────────────────────────────────────────────────────────────
 model EmbeddingProbe {
   id        String                    @id

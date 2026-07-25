@@ -1,14 +1,18 @@
 import { Button, CardDescription, CardTitle } from "@/ui";
 
-// Knowledge base retrieval lands in Phase 7 (hybrid vector + BM25 retrieval). Until then
-// this step is informational only — nothing uploaded here is stored or retrievable.
+// The retrieval pipeline itself (chunk -> embed -> hybrid search -> re-rank ->
+// assemble) now exists (Phase 7) and is wired into runAgent() for any agent
+// whose definition declares memory.semantic/procedural sources. What's still
+// missing is a UI-driven upload/ingestion flow for agents created here in the
+// wizard — today, ingesting knowledge means editing the agent's YAML and
+// running `npm run ingest`. This step stays informational until that UI lands.
 export function StepKnowledge() {
   return (
     <div>
       <CardTitle>Knowledge base</CardTitle>
       <CardDescription>
-        Give this employee documents or a connected source to ground its answers in. Retrieval
-        isn&apos;t wired up yet — you can skip this step for now and add knowledge later.
+        Give this employee documents or a connected source to ground its answers in. There&apos;s no
+        upload flow yet — you can skip this step for now and add knowledge later.
       </CardDescription>
 
       <div className="border-border mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed p-8 text-center">

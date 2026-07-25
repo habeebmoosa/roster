@@ -197,7 +197,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~12 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–9) → chat real-time & access surfaces (10–11) → ship (12). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–6 complete · ⬜ Phase 7 (Memory & retrieval pipeline) is next · ⬜ Phases 8–12 remaining.
+> **Progress:** ✅ Phases 1–7 complete · ⬜ Phase 8 (Structured workflow engine) is next · ⬜ Phases 9–12 remaining.
 
 ---
 
@@ -436,7 +436,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 7 — Memory & retrieval pipeline ⬅️ NEXT
+### Phase 7 — Memory & retrieval pipeline ✅ COMPLETE
 
 **Goal:** Grounded answers from curated context. Semantic + procedural + episodic memory, hybrid retrieval, re-ranking, hard cap, permission-scoping — all measured by the Phase 5 harness.
 
@@ -445,7 +445,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **Ingestion pipeline**: chunk `agents/*/knowledge/` docs → embed (via a configured provider) → store in `AgentKnowledge` (pgvector).
 - **Procedural memory**: load `playbooks/` markdown; **episodic memory**: per-user history/preferences store.
 - **Hybrid retrieval** (`core/retrieval/`): pgvector similarity + Postgres full-text (BM25-style) → 30–50 candidates.
-- **Re-ranker**: cross-encoder or small-model scoring → keep top 3–5.
+- **Re-ranker**: LLM-prompt-based scoring (the caller's own configured chat model — no separate model/runtime dependency, works on any BYOK tier) → keep top 3–5.
 - **Context assembler** with a **hard token cap** at the agent's `context_budget_tokens`; never dumps raw chunks.
 - **Permission-scoping** enforced at retrieval (`AgentKnowledge.permissions`).
 - Retrieval wired into `runAgent()`; retrieval precision/recall added to the eval scorers.
@@ -467,7 +467,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 8 — Structured workflow engine
+### Phase 8 — Structured workflow engine ⬅️ NEXT
 
 **Goal:** Turn one big prompt into a disciplined loop — decompose → execute → validate → rollback — closing the gap on weaker models.
 

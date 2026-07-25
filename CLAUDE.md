@@ -60,7 +60,7 @@ Everything else is plumbing.
 
 ## Build sequence (12 phases — see `MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–6 complete; Phase 7 (Memory & retrieval) is next.**
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–7 complete; Phase 8 (Structured workflow) is next.**
 
 1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
 2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)
@@ -68,7 +68,7 @@ Foundation → prove BYOK end-to-end → agent skeleton + eval → full product 
 4. **Agent definition spec + `runAgent()` skeleton** ✅ — persona chat, no retrieval yet
 5. **Eval harness** ✅ — built early, on purpose; CI gate across 3 tiers
 6. **Frontend — design system & application UI** ✅ — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, workers, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
-7. **Memory & retrieval** — four-layer memory, hybrid retrieval, re-ranker, hard cap, permission-scoping
+7. **Memory & retrieval** ✅ — chunk/embed/ingest pipeline (BYOK), hybrid (vector + full-text) retrieval, LLM-based re-ranker, hard-capped context assembler, permission-scoping, episodic memory, wired into `runAgent()`; eval gained a retrieval precision/recall grader
 8. **Structured workflow** — decompose → execute → validate → rollback
 9. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
 10. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
