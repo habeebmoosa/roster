@@ -20,3 +20,9 @@ export {
   type ValidateStepInput,
   type GroundednessCheckInput,
 } from "./validate";
+export {
+  compressStepOutput,
+  type CompressStepOutputInput,
+  type CompressedStepOutput,
+  type CompressionMethod,
+} from "./compress";
