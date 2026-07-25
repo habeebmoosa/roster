@@ -50,6 +50,10 @@ export interface EvalCaseResult {
   passed: boolean;
   failures: string[];
   tokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** Undefined when the tier has no per-token pricing configured. */
+  costUsd?: number;
   latencyMs: number;
   output: string;
   /** Source uris actually retrieved for this case, if the run performed retrieval. */
@@ -64,6 +68,8 @@ export interface EvalTierResult {
   successRate: number;
   avgTokens: number;
   avgLatencyMs: number;
+  /** 0 when the tier has no per-token pricing configured. */
+  avgCostUsd: number;
   cases: EvalCaseResult[];
 }
 

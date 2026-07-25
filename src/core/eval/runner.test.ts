@@ -117,6 +117,43 @@ describe("runEvalTier / runEval with retrieval", () => {
     expect(result.cases[0]!.failures.join(" ")).toContain("recall");
   });
 
+  it("computes per-case and per-tier cost when the tier has pricing", async () => {
+    const model = mockModel("the fee is $15");
+    const retrieve: RetrieveFn = async () => ({
+      text: "[Knowledge: kb://support-docs/refunds.md]\nThe fee is $15.",
+      sourceUris: ["kb://support-docs/refunds.md"],
+    });
+
+    const result = await runEvalTier(
+      definition,
+      {
+        tier: "cheap",
+        modelLabel: "mock",
+        model,
+        pricing: { inputPerMTok: 1, outputPerMTok: 5 },
+      },
+      [REFUND_TASK],
+      retrieve,
+    );
+
+    const [caseResult] = result.cases;
+    expect(caseResult!.inputTokens).toBe(1);
+    expect(caseResult!.outputTokens).toBe(1);
+    // 1 input token @ $1/MTok + 1 output token @ $5/MTok
+    expect(caseResult!.costUsd).toBeCloseTo(0.000001 + 0.000005);
+    expect(result.avgCostUsd).toBeCloseTo(caseResult!.costUsd!);
+  });
+
+  it("leaves cost undefined/zero when the tier has no pricing", async () => {
+    const model = mockModel("the fee is $15");
+    const result = await runEvalTier(definition, { tier: "cheap", modelLabel: "mock", model }, [
+      REFUND_TASK,
+    ]);
+
+    expect(result.cases[0]!.costUsd).toBeUndefined();
+    expect(result.avgCostUsd).toBe(0);
+  });
+
   it("runEval threads the same retrieve function across every tier", async () => {
     const retrieve: RetrieveFn = async () => ({
       text: "[Knowledge: kb://support-docs/refunds.md]\nThe fee is $15.",

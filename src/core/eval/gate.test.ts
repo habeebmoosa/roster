@@ -12,6 +12,7 @@ function tier(t: ModelTier, successRate: number): EvalTierResult {
     successRate,
     avgTokens: 0,
     avgLatencyMs: 0,
+    avgCostUsd: 0,
     cases: [],
   };
 }

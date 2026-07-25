@@ -196,6 +196,7 @@ model EvalRun {
   successRate  Float
   avgTokens    Float
   avgLatencyMs Float
+  avgCostUsd   Float    @default(0) // 0 when the tier's model had no known per-token pricing
   createdAt    DateTime @default(now())
 
   @@index([agentId, modelTier])

@@ -5,7 +5,12 @@ import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { checkGate, type EvalTier, type RetrieveFn, runEval } from "@/core/eval";
 import { loadBaseline, loadEvalSet } from "@/core/eval/loader";
 import { resolveModel } from "@/core/providers";
-import { MODEL_TIERS, type ModelTier } from "@/config/model-tiers";
+import {
+  MODEL_TIER_DEFAULTS,
+  MODEL_TIERS,
+  type ModelPricing,
+  type ModelTier,
+} from "@/config/model-tiers";
 import { countKnowledgeForAgent } from "@/server/db/repositories/agent-knowledge.repository";
 import { prisma } from "@/server/db/prisma";
 import { saveEvalRun } from "@/server/db/repositories/eval-run.repository";
@@ -15,11 +20,18 @@ import { retrieveGroundingContext } from "@/server/retrieval/grounding";
  * Eval CLI. Runs an agent's eval set through runAgent() across each configured
  * model tier, prints a table, and persists EvalRun rows.
  *
- * Configure tiers via env (any subset). For each TIER in FRONTIER/MID/CHEAP:
- *   EVAL_<TIER>_PROVIDER   catalog id (openai, anthropic, google, groq, custom…)
- *   EVAL_<TIER>_MODEL      model id
- *   EVAL_<TIER>_API_KEY    provider API key
+ * Configure tiers via env (any subset). For each TIER in FRONTIER/MID/CHEAP,
+ * only API_KEY is strictly required — PROVIDER/MODEL default to Anthropic
+ * (see MODEL_TIER_DEFAULTS) so a tier activates with zero setup beyond a key:
+ *   EVAL_<TIER>_PROVIDER   catalog id (openai, anthropic, google, groq, custom…) — default: anthropic
+ *   EVAL_<TIER>_MODEL      model id — default: per-tier Anthropic model (see MODEL_TIER_DEFAULTS)
+ *   EVAL_<TIER>_API_KEY    provider API key (required to activate this tier)
  *   EVAL_<TIER>_BASE_URL   optional (for custom / openai-compatible)
+ *   EVAL_<TIER>_INPUT_PRICE_PER_MTOK / _OUTPUT_PRICE_PER_MTOK
+ *                          optional USD/1M-token overrides. Only needed if you
+ *                          override PROVIDER/MODEL away from the default —
+ *                          without them an overridden model reports no cost
+ *                          rather than a misleading guessed number.
  *
  * Optional, for agents with a knowledge base (Phase 7): configure
  * EVAL_EMBEDDING_PROVIDER/API_KEY/BASE_URL (openai | google only) so grounded
@@ -43,17 +55,42 @@ function argValue(flag: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
+function numFromEnv(key: string): number | undefined {
+  const raw = process.env[key];
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function tierFromEnv(tier: ModelTier): EvalTier | null {
   const prefix = `EVAL_${tier.toUpperCase()}`;
-  const provider = process.env[`${prefix}_PROVIDER`];
-  const model = process.env[`${prefix}_MODEL`];
+  const defaults = MODEL_TIER_DEFAULTS[tier];
+  const provider = process.env[`${prefix}_PROVIDER`] ?? defaults.provider;
+  const model = process.env[`${prefix}_MODEL`] ?? defaults.model;
   const apiKey = process.env[`${prefix}_API_KEY`];
   const baseUrl = process.env[`${prefix}_BASE_URL`];
-  if (!provider || !model || !apiKey) return null;
+  if (!apiKey) return null;
+
+  // Only apply the built-in price table when the resolved provider/model
+  // still match the default — an overridden model needs its own explicit
+  // price env vars, or cost simply isn't reported (never guessed).
+  const usingDefaultModel = provider === defaults.provider && model === defaults.model;
+  const inputPerMTok =
+    numFromEnv(`${prefix}_INPUT_PRICE_PER_MTOK`) ??
+    (usingDefaultModel ? defaults.pricing.inputPerMTok : undefined);
+  const outputPerMTok =
+    numFromEnv(`${prefix}_OUTPUT_PRICE_PER_MTOK`) ??
+    (usingDefaultModel ? defaults.pricing.outputPerMTok : undefined);
+  const pricing: ModelPricing | undefined =
+    inputPerMTok !== undefined && outputPerMTok !== undefined
+      ? { inputPerMTok, outputPerMTok }
+      : undefined;
+
   return {
     tier,
     modelLabel: `${provider}:${model}`,
     model: resolveModel({ provider, model, apiKey, baseUrl }),
+    pricing,
   };
 }
 
@@ -102,6 +139,10 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
 
+function cost(n: number): string {
+  return n > 0 ? `$${n.toFixed(4)}` : "—";
+}
+
 async function main() {
   const definition = loadAgentDefinitionFile(`agents/${AGENT_ID}/agent.yaml`);
   const set = loadEvalSet(`evals/${EVAL_SET}.json`);
@@ -109,7 +150,7 @@ async function main() {
   const tiers = MODEL_TIERS.map(tierFromEnv).filter((t): t is EvalTier => t !== null);
   if (tiers.length === 0) {
     console.error(
-      "No eval tiers configured. Set EVAL_<FRONTIER|MID|CHEAP>_PROVIDER/MODEL/API_KEY (see .env.example).",
+      "No eval tiers configured. Set EVAL_<FRONTIER|MID|CHEAP>_API_KEY (provider/model default to Anthropic — see .env.example).",
     );
     process.exit(1);
   }
@@ -122,13 +163,15 @@ async function main() {
   );
   const results = await runEval({ definition, tasks: set.tasks, tiers, retrieve });
 
-  console.log("tier      model                     pass/total  success   avg tokens  avg latency");
-  console.log("─".repeat(84));
+  console.log(
+    "tier      model                     pass/total  success   avg tokens  avg cost    avg latency",
+  );
+  console.log("─".repeat(96));
   for (const r of results) {
     console.log(
       `${r.tier.padEnd(9)} ${r.modelLabel.slice(0, 24).padEnd(25)} ` +
         `${`${r.passed}/${r.total}`.padEnd(11)} ${pct(r.successRate).padEnd(9)} ` +
-        `${r.avgTokens.toFixed(0).padEnd(11)} ${r.avgLatencyMs.toFixed(0)}ms`,
+        `${r.avgTokens.toFixed(0).padEnd(11)} ${cost(r.avgCostUsd).padEnd(11)} ${r.avgLatencyMs.toFixed(0)}ms`,
     );
     for (const c of r.cases) {
       if (c.passed) continue;

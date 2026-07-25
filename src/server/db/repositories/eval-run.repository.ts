@@ -15,6 +15,7 @@ export interface EvalRunRow {
   successRate: number;
   avgTokens: number;
   avgLatencyMs: number;
+  avgCostUsd: number;
   createdAt: Date;
 }
 
@@ -29,6 +30,7 @@ export async function saveEvalRun(agentId: string, result: EvalTierResult): Prom
       successRate: result.successRate,
       avgTokens: result.avgTokens,
       avgLatencyMs: result.avgLatencyMs,
+      avgCostUsd: result.avgCostUsd,
     },
   });
 }

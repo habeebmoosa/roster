@@ -37,6 +37,7 @@ export default async function EvalsPage() {
                   <th className="py-2 pr-4 font-medium">Pass</th>
                   <th className="py-2 pr-4 font-medium">Success</th>
                   <th className="py-2 pr-4 font-medium">Avg tokens</th>
+                  <th className="py-2 pr-4 font-medium">Avg cost</th>
                   <th className="py-2 font-medium">Avg latency</th>
                 </tr>
               </thead>
@@ -52,6 +53,9 @@ export default async function EvalsPage() {
                     </td>
                     <td className="py-2 pr-4 font-medium">{pct(run.successRate)}</td>
                     <td className="py-2 pr-4">{run.avgTokens.toFixed(0)}</td>
+                    <td className="py-2 pr-4">
+                      {run.avgCostUsd > 0 ? `$${run.avgCostUsd.toFixed(4)}` : "—"}
+                    </td>
                     <td className="py-2">{run.avgLatencyMs.toFixed(0)}ms</td>
                   </tr>
                 ))}

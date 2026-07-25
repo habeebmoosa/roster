@@ -1,6 +1,6 @@
 import type { LanguageModel } from "ai";
 import { type AgentDefinition, runAgent } from "@/core/agent";
-import type { ModelTier } from "@/config/model-tiers";
+import type { ModelPricing, ModelTier } from "@/config/model-tiers";
 import { grade } from "./graders";
 import type { EvalCaseResult, EvalTask, EvalTierResult } from "./types";
 
@@ -8,6 +8,20 @@ export interface EvalTier {
   tier: ModelTier;
   modelLabel: string;
   model: LanguageModel;
+  /** Omit when the tier's model has no known per-token pricing. */
+  pricing?: ModelPricing;
+}
+
+function computeCostUsd(
+  inputTokens: number,
+  outputTokens: number,
+  pricing?: ModelPricing,
+): number | undefined {
+  if (!pricing) return undefined;
+  return (
+    (inputTokens / 1_000_000) * pricing.inputPerMTok +
+    (outputTokens / 1_000_000) * pricing.outputPerMTok
+  );
 }
 
 export interface RetrievalResult {
@@ -35,10 +49,12 @@ async function runCase(
   model: LanguageModel,
   task: EvalTask,
   retrieve?: RetrieveFn,
+  pricing?: ModelPricing,
 ): Promise<EvalCaseResult> {
   const start = Date.now();
   let output = "";
-  let tokens = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
   let retrievedSourceUris: string[] | undefined;
   try {
     let retrievedContext: string | undefined;
@@ -55,13 +71,26 @@ async function runCase(
     });
     output = await result.text;
     const usage = await result.usage;
-    tokens = usage?.totalTokens ?? (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0);
+    inputTokens = usage?.inputTokens ?? 0;
+    outputTokens = usage?.outputTokens ?? 0;
   } catch {
     output = "";
   }
   const latencyMs = Date.now() - start;
+  const costUsd = computeCostUsd(inputTokens, outputTokens, pricing);
   const { passed, failures } = grade(output, task.graders, { retrievedSourceUris });
-  return { taskId: task.id, passed, failures, tokens, latencyMs, output, retrievedSourceUris };
+  return {
+    taskId: task.id,
+    passed,
+    failures,
+    tokens: inputTokens + outputTokens,
+    inputTokens,
+    outputTokens,
+    costUsd,
+    latencyMs,
+    output,
+    retrievedSourceUris,
+  };
 }
 
 export async function runEvalTier(
@@ -72,7 +101,7 @@ export async function runEvalTier(
 ): Promise<EvalTierResult> {
   const cases: EvalCaseResult[] = [];
   for (const task of tasks) {
-    cases.push(await runCase(definition, tier.model, task, retrieve));
+    cases.push(await runCase(definition, tier.model, task, retrieve, tier.pricing));
   }
   const total = cases.length;
   const passed = cases.filter((c) => c.passed).length;
@@ -87,6 +116,7 @@ export async function runEvalTier(
     successRate: total === 0 ? 0 : passed / total,
     avgTokens: average((c) => c.tokens),
     avgLatencyMs: average((c) => c.latencyMs),
+    avgCostUsd: average((c) => c.costUsd ?? 0),
     cases,
   };
 }
