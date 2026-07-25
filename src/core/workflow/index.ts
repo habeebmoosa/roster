@@ -26,3 +26,10 @@ export {
   type CompressedStepOutput,
   type CompressionMethod,
 } from "./compress";
+export {
+  runStepWithRetry,
+  rollbackToSingleStep,
+  type RunStepInput,
+  type StepRunResult,
+  type RollbackInput,
+} from "./retry";

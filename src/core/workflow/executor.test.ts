@@ -118,4 +118,19 @@ describe("executeStep", () => {
     const call = model.doGenerateCalls[0]!;
     expect(JSON.stringify(call.prompt)).toContain("prefers short replies");
   });
+
+  it("folds a previous failure reason into the prompt when retrying", async () => {
+    const model = mockModel("a corrected answer");
+    await executeStep({
+      definition,
+      model,
+      step: step(),
+      previousFailureReason: "The response includes claims not supported by the retrieved context.",
+    });
+
+    const call = model.doGenerateCalls[0]!;
+    expect(JSON.stringify(call.prompt)).toContain(
+      "The response includes claims not supported by the retrieved context.",
+    );
+  });
 });

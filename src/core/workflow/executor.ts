@@ -23,6 +23,8 @@ export interface ExecuteStepInput {
   episodicMemory?: EpisodicMemoryEntry[];
   /** Omit when the agent has no knowledge base — only called when step.needsRetrieval is true. */
   retrieve?: StepRetrieveFn;
+  /** A prior attempt's validation failure reason, fed back into the prompt for a retry (8.6). */
+  previousFailureReason?: string;
 }
 
 export interface StepExecutionResult {
@@ -34,7 +36,11 @@ export interface StepExecutionResult {
   retrievedContext?: string;
 }
 
-function buildStepPrompt(step: WorkflowStep, priorStepOutputs?: string[]): string {
+function buildStepPrompt(
+  step: WorkflowStep,
+  priorStepOutputs?: string[],
+  previousFailureReason?: string,
+): string {
   const lines: string[] = [];
 
   if (priorStepOutputs && priorStepOutputs.length > 0) {
@@ -46,6 +52,15 @@ function buildStepPrompt(step: WorkflowStep, priorStepOutputs?: string[]): strin
   }
 
   lines.push(`Your current task: ${step.goal}`);
+
+  if (previousFailureReason) {
+    lines.push(
+      "",
+      `Your previous attempt at this task was rejected: ${previousFailureReason}`,
+      "Address this specifically in your new response.",
+    );
+  }
+
   return lines.join("\n");
 }
 
@@ -58,7 +73,15 @@ function buildStepPrompt(step: WorkflowStep, priorStepOutputs?: string[]): strin
  * orchestrator (8.7) composes around this.
  */
 export async function executeStep(input: ExecuteStepInput): Promise<StepExecutionResult> {
-  const { definition, model, step, priorStepOutputs, episodicMemory, retrieve } = input;
+  const {
+    definition,
+    model,
+    step,
+    priorStepOutputs,
+    episodicMemory,
+    retrieve,
+    previousFailureReason,
+  } = input;
 
   let retrievedContext: string | undefined;
   let retrievedSourceUris: string[] | undefined;
@@ -71,7 +94,7 @@ export async function executeStep(input: ExecuteStepInput): Promise<StepExecutio
   const { text } = await generateText({
     model,
     system: buildSystemPrompt(definition, { retrievedContext, episodicMemory }),
-    prompt: buildStepPrompt(step, priorStepOutputs),
+    prompt: buildStepPrompt(step, priorStepOutputs, previousFailureReason),
   });
 
   return { step, output: text, retrievedSourceUris, retrievedContext };
