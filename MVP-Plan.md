@@ -469,29 +469,48 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ### Phase 8 — Structured workflow engine ⬅️ NEXT
 
-**Goal:** Turn one big prompt into a disciplined loop — decompose → execute → validate → rollback — closing the gap on weaker models.
+**Goal:** Turn one big prompt into a disciplined loop — decompose → execute → validate → rollback — closing the gap on weaker models, without paying full workflow overhead on every trivial turn. Cost and latency are first-class constraints on this phase, not an afterthought: every added call has to earn its place against a simpler alternative (Anthropic, OpenAI, and Google all name "run the heavy pipeline on everything" as the anti-pattern, not the safe default).
 
 **Deliverables**
 
-- Workflow engine in `core/workflow/`: decompose a task into verifiable sub-steps; per step assemble minimal context → call the model → **validate** output.
-- Retry / rollback on validation failure; **compression** of intermediate results before folding into the next step.
-- Validation hooks (schema checks, groundedness checks, tool-result checks).
+- Workflow engine in `core/workflow/`: decompose a task into verifiable sub-steps; per step assemble minimal context (reusing Phase 7's retrieval, called per-step with that step's own query, not one blanket retrieval for the whole task) → call the model → **validate** output.
+- **Single-step bypass**: when the decomposer returns exactly one step, skip the validate/compress machinery entirely and stream that step directly to the user — the same shape as today's Phase 7 path. This is a zero-extra-call check on output the decomposer already produces, not a second classifier call, so it doesn't reintroduce the fragile-heuristic problem uniform decomposition was trying to avoid. Trivial chat turns keep paying for one decomposition call, not for a validator and compressor they don't need.
+- **Mechanical validators first.** Validation hooks are pluggable per step type, in this priority order: schema/shape checks and tool-result checks are code, not LLM calls — free and deterministic. Groundedness checks (do claims trace back to retrieved context) stay LLM-based, since that's a genuinely semantic comparison — but only run where a step actually used retrieval. A step's validator is never "ask the same model if its own answer looks good" — same-model self-critique is the one form of self-correction the literature shows doesn't reliably help, especially on weaker models.
+- **Mechanical compression first.** Compression between steps is truncation/structured extraction (code) whenever a step's output already fits the next step's context budget. Only step outputs that genuinely exceed the budget get an LLM summarization call.
+- **Retry/rollback cap:** max 1 retry per step (same step, failure fed back into the prompt), max 1 rollback per plan. No unbounded retry loops — a step that fails twice surfaces as a workflow failure, not a cost multiplier.
+- **Cost instrumentation** added to the eval harness: `EvalRun` gains a `costUsd` field computed from usage × the configured model's per-token price. Closes the gap where the harness tracks tokens/latency but not $ — the only way to actually prove Phase 8's cost/latency tradeoff empirically, per this project's own "prove it on every commit" principle.
+- **Sensible model-tier defaults**: default frontier/mid/cheap model bindings in `src/config/model-tiers.ts` (with a per-token price alongside each, for the cost field above), so `npm run eval` works with zero env configuration for local dev/CI. BYOK env vars (`EVAL_<TIER>_PROVIDER/MODEL/API_KEY`) still override per-deployment — tiers already resolve to real models today via that mechanism, this just removes the setup friction of configuring three env vars before a first eval run.
 - Workflow integrated into `runAgent()`; visible step boundaries exposed for the chat UI (built in Phase 6; step visibility wired in Phase 10).
 
 **Key decisions**
 
-- Validation is first-class and pluggable per step type.
-- The workflow is deterministic scaffolding around the model, not another autonomous prompt.
+- Validation is first-class and pluggable per step type, but external/mechanical validators are preferred over LLM-judge validators wherever the check can be expressed as code — reserve LLM calls for checks that are genuinely semantic (groundedness, tone/policy compliance).
+- The single-step bypass is not a separate complexity classifier — it's a zero-extra-call branch on output the decomposer already produces. This keeps "every request goes through the same shape" true while avoiding paying for validate/compress on requests that don't need them.
+- Retries and rollbacks are capped, not open-ended — the workflow is deterministic scaffolding around the model, not another autonomous prompt, and an uncapped retry loop is exactly the kind of cost/latency blowup that undermines the "works on any LLM including cheap ones" thesis.
+- `runAgent()`'s signature changes here, and that's expected and scoped (unlike Phase 7, which kept it stable) — going from one model call to a multi-step loop is a real shape change, and the eval harness (`core/eval/runner.ts`) evolves alongside it.
 
 **Definition of Done**
 
-- A multi-step Customer Support task completes with validation; an induced failure triggers a correct retry/rollback. Eval shows another success-rate lift, especially on the cheap tier.
+- A multi-step Customer Support task completes with validation; an induced failure triggers a correct retry (capped at 1) or rollback. A trivial single-step task (e.g. a grounded FAQ answer) visibly takes the bypass path — same call count as Phase 7, not Phase 8's full loop.
+- Eval shows a measurable success-rate lift on the cheap tier vs the Phase 7 baseline, **and** a measured cost/latency delta (via the new `costUsd` field) reported side by side — the phase isn't done until both numbers exist together, not just the success-rate lift in isolation.
 
 **How we test it**
 
-- Unit: decomposition, validation hooks, rollback logic.
-- Integration: end-to-end multi-step task; forced-failure path recovers.
-- Eval: measurable error reduction vs Phase 7 across all tiers.
+- Unit: decomposition, validation hooks (both mechanical and LLM-based), rollback logic, single-step bypass triggering correctly.
+- Integration: end-to-end multi-step task; forced-failure path recovers within the retry cap; forced-failure path that exceeds the cap surfaces as a workflow failure instead of looping.
+- Eval: success-rate lift vs Phase 7 across all three tiers, plus cost-per-task and latency-per-task reported per tier — a regression in cost/latency without a corresponding success-rate gain should be visible in the same eval run, not just success rate in isolation.
+
+**Sub-phases**
+
+- **8.1 — Cost instrumentation + model-tier defaults.** `EvalRun.costUsd`, a per-token price table alongside default frontier/mid/cheap model bindings in `src/config/model-tiers.ts`. Done first so every later sub-phase's eval runs already report cost/latency side by side with success rate, instead of retrofitting it at the end.
+- **8.2 — Decomposer.** `core/workflow/decompose.ts`: structured-output step planning (`generateObject`, same technique as the Phase 7 re-ranker), including the single-step-plan detection the bypass relies on. Unit-tested with a mock model.
+- **8.3 — Per-step executor + context assembly.** Runs one step: assembles minimal per-step context (calling Phase 7's `retrieveGroundingContext()` with that step's own query when the step needs grounding), calls the model, returns the raw result.
+- **8.4 — Validators.** Pluggable validator interface; mechanical schema/tool-result checks (code) and LLM-based groundedness checks (only on steps that used retrieval), never same-model self-critique.
+- **8.5 — Compression.** Mechanical truncation/structured extraction between steps by default; LLM summarization only when a step's output genuinely exceeds the next step's context budget.
+- **8.6 — Retry/rollback.** Capped retry (max 1/step) and rollback (max 1/plan) logic; a step failing twice surfaces as a workflow failure rather than looping.
+- **8.7 — Orchestrator + wire into `runAgent()`.** Runs the full loop (with the single-step bypass as the fast path), exposes step-boundary events for the future Phase 10 chat UI, updates `runAgent()`'s signature and the eval harness call sites.
+- **8.8 — Eval integration.** Success-rate lift vs the Phase 7 baseline, reported alongside `costUsd`/latency per tier; grounded + multi-step eval cases exercising retry/rollback.
+- **8.9 — Final Phase 8 verification sweep.** Full gate across the whole phase together, plus a manual multi-step smoke test (forced validation failure → correct retry/rollback; a trivial query → visibly takes the bypass path).
 
 ---
 

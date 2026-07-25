@@ -69,7 +69,7 @@ Foundation → prove BYOK end-to-end → agent skeleton + eval → full product 
 5. **Eval harness** ✅ — built early, on purpose; CI gate across 3 tiers
 6. **Frontend — design system & application UI** ✅ — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, workers, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
 7. **Memory & retrieval** ✅ — chunk/embed/ingest pipeline (BYOK), hybrid (vector + full-text) retrieval, LLM-based re-ranker, hard-capped context assembler, permission-scoping, episodic memory, wired into `runAgent()`; eval gained a retrieval precision/recall grader
-8. **Structured workflow** — decompose → execute → validate → rollback
+8. **Structured workflow** — decompose → execute → validate → rollback, with a single-step bypass for trivial turns, mechanical-first validation/compression, capped retries, and cost (`$`) instrumentation added to the eval harness
 9. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
 10. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
 11. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
