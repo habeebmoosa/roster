@@ -197,7 +197,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~12 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–9) → chat real-time & access surfaces (10–11) → ship (12). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–7 complete · ⬜ Phase 8 (Structured workflow engine) is next · ⬜ Phases 9–12 remaining.
+> **Progress:** ✅ Phases 1–8 complete · ⬜ Phase 9 (The five employees + tools) is next · ⬜ Phases 10–12 remaining.
 
 ---
 
@@ -467,7 +467,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 8 — Structured workflow engine ⬅️ NEXT
+### Phase 8 — Structured workflow engine ✅ COMPLETE
 
 **Goal:** Turn one big prompt into a disciplined loop — decompose → execute → validate → rollback — closing the gap on weaker models, without paying full workflow overhead on every trivial turn. Cost and latency are first-class constraints on this phase, not an afterthought: every added call has to earn its place against a simpler alternative (Anthropic, OpenAI, and Google all name "run the heavy pipeline on everything" as the anti-pattern, not the safe default).
 
@@ -514,7 +514,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 9 — The five employees + tools
+### Phase 9 — The five employees + tools ⬅️ NEXT
 
 **Goal:** Clone the now-proven pattern to all five employees, and add the tool system (built-in + user-added via MCP/HTTP). The work here is _content and quality_, not new engineering.
 
