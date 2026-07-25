@@ -1,5 +1,4 @@
 import { generateText, type LanguageModel } from "ai";
-import { buildSystemPrompt, type AgentDefinition, type EpisodicMemoryEntry } from "@/core/agent";
 import type { WorkflowStep } from "./decompose";
 
 export interface StepRetrievalResult {
@@ -15,16 +14,26 @@ export interface StepRetrievalResult {
 export type StepRetrieveFn = (query: string, model: LanguageModel) => Promise<StepRetrievalResult>;
 
 export interface ExecuteStepInput {
-  definition: AgentDefinition;
   model: LanguageModel;
   step: WorkflowStep;
+  /**
+   * The persona system prompt to use for every step's call, built once by the
+   * caller (core/agent) — this module knows nothing about agent identity or
+   * episodic memory, only how to run a step. Deliberately a plain string, not
+   * an AgentDefinition, so core/workflow has no dependency on core/agent.
+   */
+  systemPrompt: string;
   /** Completed prior steps' outputs in this plan, in order — this step's only view into earlier work. */
   priorStepOutputs?: string[];
-  episodicMemory?: EpisodicMemoryEntry[];
   /** Omit when the agent has no knowledge base — only called when step.needsRetrieval is true. */
   retrieve?: StepRetrieveFn;
   /** A prior attempt's validation failure reason, fed back into the prompt for a retry (8.6). */
   previousFailureReason?: string;
+}
+
+export interface StepUsage {
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface StepExecutionResult {
@@ -34,11 +43,14 @@ export interface StepExecutionResult {
   retrievedSourceUris?: string[];
   /** The assembled grounding text retrieval produced, if it ran — what the groundedness validator (8.4) checks output against. */
   retrievedContext?: string;
+  /** This step's own model-call usage — the orchestrator (8.7) aggregates these across all steps. */
+  usage: StepUsage;
 }
 
 function buildStepPrompt(
   step: WorkflowStep,
   priorStepOutputs?: string[],
+  retrievedContext?: string,
   previousFailureReason?: string,
 ): string {
   const lines: string[] = [];
@@ -49,6 +61,14 @@ function buildStepPrompt(
       lines.push(`Step ${i + 1} result: ${output}`);
     }
     lines.push("");
+  }
+
+  if (retrievedContext) {
+    lines.push(
+      "Reference material relevant to this step — ground your response in this. If it doesn't cover what's being asked, say so rather than guessing:",
+      retrievedContext,
+      "",
+    );
   }
 
   lines.push(`Your current task: ${step.goal}`);
@@ -73,15 +93,7 @@ function buildStepPrompt(
  * orchestrator (8.7) composes around this.
  */
 export async function executeStep(input: ExecuteStepInput): Promise<StepExecutionResult> {
-  const {
-    definition,
-    model,
-    step,
-    priorStepOutputs,
-    episodicMemory,
-    retrieve,
-    previousFailureReason,
-  } = input;
+  const { model, step, systemPrompt, priorStepOutputs, retrieve, previousFailureReason } = input;
 
   let retrievedContext: string | undefined;
   let retrievedSourceUris: string[] | undefined;
@@ -91,11 +103,17 @@ export async function executeStep(input: ExecuteStepInput): Promise<StepExecutio
     retrievedSourceUris = retrieval.sourceUris;
   }
 
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model,
-    system: buildSystemPrompt(definition, { retrievedContext, episodicMemory }),
-    prompt: buildStepPrompt(step, priorStepOutputs, previousFailureReason),
+    system: systemPrompt,
+    prompt: buildStepPrompt(step, priorStepOutputs, retrievedContext, previousFailureReason),
   });
 
-  return { step, output: text, retrievedSourceUris, retrievedContext };
+  return {
+    step,
+    output: text,
+    retrievedSourceUris,
+    retrievedContext,
+    usage: { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 },
+  };
 }

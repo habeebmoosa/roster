@@ -33,3 +33,10 @@ export {
   type StepRunResult,
   type RollbackInput,
 } from "./retry";
+export {
+  runWorkflow,
+  type RunWorkflowInput,
+  type RunWorkflowResult,
+  type WorkflowUsage,
+  type WorkflowStepEvent,
+} from "./orchestrate";

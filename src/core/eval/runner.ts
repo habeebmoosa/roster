@@ -63,7 +63,7 @@ async function runCase(
       retrievedContext = retrieval.text || undefined;
       retrievedSourceUris = retrieval.sourceUris;
     }
-    const result = runAgent({
+    const result = await runAgent({
       definition,
       model,
       messages: [{ role: "user", content: task.input }],
@@ -71,8 +71,8 @@ async function runCase(
     });
     output = await result.text;
     const usage = await result.usage;
-    inputTokens = usage?.inputTokens ?? 0;
-    outputTokens = usage?.outputTokens ?? 0;
+    inputTokens = usage.inputTokens;
+    outputTokens = usage.outputTokens;
   } catch {
     output = "";
   }

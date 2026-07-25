@@ -1,16 +1,9 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
-import { parseAgentDefinition } from "@/core/agent";
 import { rollbackToSingleStep, runStepWithRetry } from "./retry";
 import type { WorkflowStep } from "./decompose";
 
-const definition = parseAgentDefinition({
-  id: "customer-support",
-  name: "Ada — Customer Support",
-  role: "Customer Support Specialist",
-  identity: "Calm and precise.",
-  voice: "Warm but concise.",
-});
+const SYSTEM_PROMPT = "You are Ada, a Customer Support Specialist. Calm and precise.";
 
 const MOCK_FINISH_REASON = { unified: "stop" as const, raw: undefined };
 const MOCK_USAGE = {
@@ -42,7 +35,7 @@ function sequencedModel(replies: string[]): MockLanguageModelV4 {
 describe("runStepWithRetry", () => {
   it("passes on the first attempt without retrying", async () => {
     const model = sequencedModel(["a real answer"]);
-    const run = await runStepWithRetry({ definition, model, step: step() });
+    const run = await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
 
     expect(run.attempts).toBe(1);
     expect(run.validation.passed).toBe(true);
@@ -52,7 +45,7 @@ describe("runStepWithRetry", () => {
 
   it("retries once and passes if the retry produces valid output", async () => {
     const model = sequencedModel(["", "a corrected answer"]);
-    const run = await runStepWithRetry({ definition, model, step: step() });
+    const run = await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
 
     expect(run.attempts).toBe(2);
     expect(run.validation.passed).toBe(true);
@@ -60,9 +53,16 @@ describe("runStepWithRetry", () => {
     expect(model.doGenerateCalls).toHaveLength(2);
   });
 
+  it("sums usage across both the failed attempt and the retry, not just the last one", async () => {
+    const model = sequencedModel(["", "a corrected answer"]);
+    const run = await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
+
+    expect(run.usage).toEqual({ inputTokens: 2, outputTokens: 2 });
+  });
+
   it("feeds the first failure's reason into the retry prompt", async () => {
     const model = sequencedModel(["", "a corrected answer"]);
-    await runStepWithRetry({ definition, model, step: step() });
+    await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
 
     const retryCall = model.doGenerateCalls[1]!;
     expect(JSON.stringify(retryCall.prompt)).toContain("empty response");
@@ -70,7 +70,7 @@ describe("runStepWithRetry", () => {
 
   it("stops after exactly one retry and surfaces failure if it still fails", async () => {
     const model = sequencedModel(["", "", "would never be reached"]);
-    const run = await runStepWithRetry({ definition, model, step: step() });
+    const run = await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
 
     expect(run.attempts).toBe(2);
     expect(run.validation.passed).toBe(false);
@@ -82,9 +82,9 @@ describe("rollbackToSingleStep", () => {
   it("re-attempts the whole task as a single step", async () => {
     const model = sequencedModel(["the whole-task answer"]);
     const run = await rollbackToSingleStep({
-      definition,
       model,
       task: "What's the refund window?",
+      systemPrompt: SYSTEM_PROMPT,
     });
 
     expect(run.validation.passed).toBe(true);
@@ -98,7 +98,11 @@ describe("rollbackToSingleStep", () => {
 
   it("still gets its own single retry if the rollback attempt itself fails validation", async () => {
     const model = sequencedModel(["", "recovered on rollback's retry"]);
-    const run = await rollbackToSingleStep({ definition, model, task: "Handle this complaint" });
+    const run = await rollbackToSingleStep({
+      model,
+      task: "Handle this complaint",
+      systemPrompt: SYSTEM_PROMPT,
+    });
 
     expect(run.attempts).toBe(2);
     expect(run.validation.passed).toBe(true);

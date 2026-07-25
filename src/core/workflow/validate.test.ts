@@ -9,7 +9,12 @@ function step(overrides: Partial<WorkflowStep> = {}): WorkflowStep {
 }
 
 function stepResult(overrides: Partial<StepExecutionResult> = {}): StepExecutionResult {
-  return { step: step(), output: "The fee is $15.", ...overrides };
+  return {
+    step: step(),
+    output: "The fee is $15.",
+    usage: { inputTokens: 1, outputTokens: 1 },
+    ...overrides,
+  };
 }
 
 const MOCK_FINISH_REASON = { unified: "stop" as const, raw: undefined };

@@ -1,6 +1,10 @@
 import type { LanguageModel } from "ai";
-import type { AgentDefinition, EpisodicMemoryEntry } from "@/core/agent";
-import { executeStep, type StepExecutionResult, type StepRetrieveFn } from "./executor";
+import {
+  executeStep,
+  type StepExecutionResult,
+  type StepRetrieveFn,
+  type StepUsage,
+} from "./executor";
 import { validateStep, type ValidationResult } from "./validate";
 import type { WorkflowStep } from "./decompose";
 
@@ -8,12 +12,12 @@ import type { WorkflowStep } from "./decompose";
 const MAX_RETRIES_PER_STEP = 1;
 
 export interface RunStepInput {
-  definition: AgentDefinition;
   model: LanguageModel;
   step: WorkflowStep;
+  /** The persona system prompt to use for every attempt, built once by the caller (core/agent). */
+  systemPrompt: string;
   /** Completed prior steps' outputs in this plan, in order. */
   priorStepOutputs?: string[];
-  episodicMemory?: EpisodicMemoryEntry[];
   retrieve?: StepRetrieveFn;
   /** Model that judges groundedness — independent of `model`'s own output, never self-critique. Omit to skip that check. */
   groundednessModel?: LanguageModel;
@@ -24,6 +28,8 @@ export interface StepRunResult {
   validation: ValidationResult;
   /** Execution attempts this step took (1 = passed first try, 2 = passed on its one retry, or exhausted). */
   attempts: number;
+  /** Usage summed across every attempt, including any that failed validation — the true cost of this step. */
+  usage: StepUsage;
 }
 
 /**
@@ -37,39 +43,40 @@ export interface StepRunResult {
  * next.
  */
 export async function runStepWithRetry(input: RunStepInput): Promise<StepRunResult> {
-  const { definition, model, step, priorStepOutputs, episodicMemory, retrieve, groundednessModel } =
-    input;
+  const { model, step, systemPrompt, priorStepOutputs, retrieve, groundednessModel } = input;
   const maxAttempts = MAX_RETRIES_PER_STEP + 1;
 
   let previousFailureReason: string | undefined;
   let result: StepExecutionResult;
   let validation: ValidationResult;
   let attempts = 0;
+  const usage: StepUsage = { inputTokens: 0, outputTokens: 0 };
 
   do {
     attempts += 1;
     result = await executeStep({
-      definition,
       model,
       step,
+      systemPrompt,
       priorStepOutputs,
-      episodicMemory,
       retrieve,
       previousFailureReason,
     });
+    usage.inputTokens += result.usage.inputTokens;
+    usage.outputTokens += result.usage.outputTokens;
     validation = await validateStep({ result, groundednessModel });
     previousFailureReason = validation.reason;
   } while (!validation.passed && attempts < maxAttempts);
 
-  return { result, validation, attempts };
+  return { result, validation, attempts, usage };
 }
 
 export interface RollbackInput {
-  definition: AgentDefinition;
   model: LanguageModel;
   /** The original, whole task — rollback abandons the multi-step plan and re-attempts this directly. */
   task: string;
-  episodicMemory?: EpisodicMemoryEntry[];
+  /** The persona system prompt to use, built once by the caller (core/agent). */
+  systemPrompt: string;
   retrieve?: StepRetrieveFn;
   groundednessModel?: LanguageModel;
 }
@@ -86,14 +93,13 @@ export interface RollbackInput {
  * never calling this more than once per plan, not by state kept here.
  */
 export function rollbackToSingleStep(input: RollbackInput): Promise<StepRunResult> {
-  const { definition, model, task, episodicMemory, retrieve, groundednessModel } = input;
+  const { model, task, systemPrompt, retrieve, groundednessModel } = input;
   const wholeTaskStep: WorkflowStep = { index: 1, goal: task, needsRetrieval: true };
 
   return runStepWithRetry({
-    definition,
     model,
     step: wholeTaskStep,
-    episodicMemory,
+    systemPrompt,
     retrieve,
     groundednessModel,
   });
