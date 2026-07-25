@@ -1,0 +1,95 @@
+import { countTokens } from "@/lib/tokens";
+import type { RankedCandidate } from "./rank-fusion";
+
+export interface AssembledContext {
+  /** Ready to inject into the system prompt — labeled per-chunk, never a raw dump. */
+  text: string;
+  usedChunkIds: string[];
+  totalTokens: number;
+  /** True if at least one candidate (or part of one) didn't fit within the budget. */
+  truncated: boolean;
+}
+
+function formatChunk(candidate: RankedCandidate): string {
+  const label = candidate.kind === "procedural" ? "Playbook" : "Knowledge";
+  return `[${label}: ${candidate.sourceUri}]\n${candidate.content}`;
+}
+
+/** Shorten `text` to fit within `maxTokens`, tokens permitting (binary search on length). */
+function truncateToTokenBudget(text: string, maxTokens: number): string {
+  if (maxTokens <= 0) return "";
+  if (countTokens(text) <= maxTokens) return text;
+
+  // The trailing ellipsis itself costs tokens — reserve room for it up front
+  // rather than appending it after the search and risking going back over budget.
+  const ellipsis = "…";
+  const targetTokens = Math.max(0, maxTokens - countTokens(ellipsis));
+
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (countTokens(text.slice(0, mid)) <= targetTokens) lo = mid;
+    else hi = mid - 1;
+  }
+  if (lo === 0) return "";
+
+  const withEllipsis = `${text.slice(0, lo).trimEnd()}${ellipsis}`;
+  // Defensive re-check: trimEnd()/tokenizer boundary effects could still push
+  // this over — never return more than maxTokens under any circumstance.
+  return countTokens(withEllipsis) <= maxTokens ? withEllipsis : text.slice(0, lo).trimEnd();
+}
+
+/**
+ * Assemble re-ranked candidates into a single grounded context block, never
+ * exceeding `budgetTokens` (the agent's context_budget_tokens) — the hard cap
+ * this project's whole retrieval design exists to enforce (CLAUDE.md: "less
+ * context, not more"). Candidates are consumed in the given (most-relevant-
+ * first) order; the first one that doesn't fit stops assembly rather than
+ * skipping ahead to a smaller, less-relevant candidate, which would produce a
+ * confusing, out-of-priority-order context.
+ *
+ * If even the single most relevant candidate doesn't fit, it's truncated to
+ * fit rather than leaving the agent with no grounding at all.
+ */
+export function assembleContext(
+  candidates: RankedCandidate[],
+  budgetTokens: number,
+): AssembledContext {
+  const sections: string[] = [];
+  const usedChunkIds: string[] = [];
+  let totalTokens = 0;
+  let truncated = false;
+
+  for (const candidate of candidates) {
+    const remaining = budgetTokens - totalTokens;
+    if (remaining <= 0) {
+      truncated = true;
+      break;
+    }
+
+    const section = formatChunk(candidate);
+    const sectionTokens = countTokens(section);
+
+    if (sectionTokens <= remaining) {
+      sections.push(section);
+      usedChunkIds.push(candidate.id);
+      totalTokens += sectionTokens;
+      continue;
+    }
+
+    if (sections.length === 0) {
+      const shortened = truncateToTokenBudget(section, remaining);
+      const shortenedTokens = countTokens(shortened);
+      if (shortenedTokens > 0) {
+        sections.push(shortened);
+        usedChunkIds.push(candidate.id);
+        totalTokens += shortenedTokens;
+      }
+    }
+    truncated = true;
+    break;
+  }
+
+  return { text: sections.join("\n\n"), usedChunkIds, totalTokens, truncated };
+}
