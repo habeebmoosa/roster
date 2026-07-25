@@ -12,3 +12,11 @@ export {
   type StepRetrieveFn,
   type StepRetrievalResult,
 } from "./executor";
+export {
+  validateStep,
+  validateShape,
+  validateGroundedness,
+  type ValidationResult,
+  type ValidateStepInput,
+  type GroundednessCheckInput,
+} from "./validate";

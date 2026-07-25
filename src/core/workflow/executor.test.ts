@@ -74,6 +74,9 @@ describe("executeStep", () => {
 
     expect(retrieve).toHaveBeenCalledWith("Look up the refund fee", model);
     expect(result.retrievedSourceUris).toEqual(["kb://support-docs/refunds.md"]);
+    expect(result.retrievedContext).toBe(
+      "[Knowledge: kb://support-docs/refunds.md]\nThe fee is $15.",
+    );
 
     const call = model.doGenerateCalls[0]!;
     expect(JSON.stringify(call.prompt)).toContain("kb://support-docs/refunds.md");
@@ -83,6 +86,7 @@ describe("executeStep", () => {
     const model = mockModel("some reply");
     const result = await executeStep({ definition, model, step: step({ needsRetrieval: true }) });
     expect(result.retrievedSourceUris).toBeUndefined();
+    expect(result.retrievedContext).toBeUndefined();
   });
 
   it("includes prior step outputs as context, in order", async () => {

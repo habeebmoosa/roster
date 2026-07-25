@@ -30,6 +30,8 @@ export interface StepExecutionResult {
   output: string;
   /** Source uris retrieved for this step, if retrieval ran (undefined if it didn't run). */
   retrievedSourceUris?: string[];
+  /** The assembled grounding text retrieval produced, if it ran — what the groundedness validator (8.4) checks output against. */
+  retrievedContext?: string;
 }
 
 function buildStepPrompt(step: WorkflowStep, priorStepOutputs?: string[]): string {
@@ -72,5 +74,5 @@ export async function executeStep(input: ExecuteStepInput): Promise<StepExecutio
     prompt: buildStepPrompt(step, priorStepOutputs),
   });
 
-  return { step, output: text, retrievedSourceUris };
+  return { step, output: text, retrievedSourceUris, retrievedContext };
 }
