@@ -1,0 +1,17 @@
+{
+  "id": "hubspot",
+  "name": "HubSpot",
+  "description": "Search and update contacts, companies, and deals in HubSpot",
+  "developer": "HubSpot, Inc.",
+  "connectorUrl": "https://mcp.hubspot.com/anthropic",
+  "authType": "oauth_dcr",
+  "categories": ["CRM", "Marketing"],
+  "trustTier": "community",
+  "documentationUrl": "https://developers.hubspot.com",
+  "tools": [
+    { "name": "search-contacts", "description": "Search contacts by name, email, or property" },
+    { "name": "get-deal", "description": "Fetch a deal's stage, amount, and associations" },
+    { "name": "update-contact", "description": "Update a contact's properties" }
+  ],
+  "resources": [{ "name": "contact", "description": "A single contact's full profile" }]
+}

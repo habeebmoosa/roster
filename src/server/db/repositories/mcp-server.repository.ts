@@ -1,0 +1,109 @@
+import type { McpServerDefinition } from "@/core/mcp/directory";
+import type { Prisma } from "@/generated/prisma";
+import { prisma } from "@/server/db/prisma";
+
+/** A tool or resource name+description pair — the pre-connection capability snapshot shown in the Connectors UI, before a real tools/list or resources/list call has ever run. */
+export interface CachedCapability {
+  name: string;
+  description: string;
+}
+
+export interface McpServerRecord {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  developer: string | null;
+  connectorUrl: string;
+  authType: string;
+  categories: string[];
+  trustTier: string;
+  cachedTools: CachedCapability[];
+  cachedResources: CachedCapability[];
+  documentationUrl: string | null;
+  supportUrl: string | null;
+  privacyPolicyUrl: string | null;
+  preRegisteredClientId: string | null;
+  createdByUserId: string | null;
+  createdAt: Date;
+}
+
+const asCapabilityList = (value: Prisma.JsonValue | null): CachedCapability[] =>
+  Array.isArray(value) ? (value as unknown as CachedCapability[]) : [];
+
+function toRecord(row: {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  developer: string | null;
+  connectorUrl: string;
+  authType: string;
+  categories: string[];
+  trustTier: string;
+  cachedTools: Prisma.JsonValue;
+  cachedResources: Prisma.JsonValue;
+  documentationUrl: string | null;
+  supportUrl: string | null;
+  privacyPolicyUrl: string | null;
+  preRegisteredClientId: string | null;
+  createdByUserId: string | null;
+  createdAt: Date;
+}): McpServerRecord {
+  return {
+    ...row,
+    cachedTools: asCapabilityList(row.cachedTools),
+    cachedResources: asCapabilityList(row.cachedResources),
+  };
+}
+
+export async function listMcpServers(): Promise<McpServerRecord[]> {
+  const rows = await prisma.mcpServer.findMany({ orderBy: { name: "asc" } });
+  return rows.map(toRecord);
+}
+
+export async function getMcpServer(id: string): Promise<McpServerRecord | null> {
+  const row = await prisma.mcpServer.findUnique({ where: { id } });
+  return row ? toRecord(row) : null;
+}
+
+/** Seeds/updates a curated directory entry from its definition file (prisma/seed.ts). */
+export async function upsertMcpServerFromDefinition(
+  definition: McpServerDefinition,
+): Promise<void> {
+  const data = {
+    name: definition.name,
+    description: definition.description,
+    iconUrl: definition.iconUrl ?? null,
+    developer: definition.developer ?? null,
+    connectorUrl: definition.connectorUrl,
+    authType: definition.authType,
+    categories: definition.categories,
+    trustTier: definition.trustTier,
+    cachedTools: definition.tools as unknown as Prisma.InputJsonValue,
+    cachedResources: definition.resources as unknown as Prisma.InputJsonValue,
+    documentationUrl: definition.documentationUrl ?? null,
+    supportUrl: definition.supportUrl ?? null,
+    privacyPolicyUrl: definition.privacyPolicyUrl ?? null,
+  };
+  await prisma.mcpServer.upsert({
+    where: { id: definition.id },
+    create: { id: definition.id, ...data },
+    update: data,
+  });
+}
+
+/** Overwrites the cached capability snapshot with a live tools/list + resources/list result (10.7, on connect). */
+export async function updateMcpServerCapabilities(
+  id: string,
+  cachedTools: CachedCapability[],
+  cachedResources: CachedCapability[],
+): Promise<void> {
+  await prisma.mcpServer.update({
+    where: { id },
+    data: {
+      cachedTools: cachedTools as unknown as Prisma.InputJsonValue,
+      cachedResources: cachedResources as unknown as Prisma.InputJsonValue,
+    },
+  });
+}

@@ -1,0 +1,17 @@
+{
+  "id": "box",
+  "name": "Box",
+  "description": "Search, read, and manage files and folders stored in Box",
+  "developer": "Box, Inc.",
+  "connectorUrl": "https://mcp.box.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Storage", "Docs"],
+  "trustTier": "community",
+  "documentationUrl": "https://developer.box.com",
+  "tools": [
+    { "name": "search-files", "description": "Search files and folders by name or content" },
+    { "name": "get-file", "description": "Fetch a file's metadata and content" },
+    { "name": "list-folder", "description": "List the contents of a folder" }
+  ],
+  "resources": [{ "name": "file", "description": "A single file's content" }]
+}

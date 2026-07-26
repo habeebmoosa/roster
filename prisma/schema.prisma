@@ -35,6 +35,8 @@ model User {
   sessions         Session[]
   providerKeys     ProviderKey[]
   episodicMemories EpisodicMemory[]
+  mcpConnections   McpConnection[]
+  agentMcpServers  AgentMcpServer[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -123,6 +125,7 @@ model Agent {
 
   knowledge        AgentKnowledge[]
   episodicMemories EpisodicMemory[]
+  mcpServers       AgentMcpServer[]
 
   @@map("agents")
 }
@@ -218,4 +221,91 @@ model EmbeddingProbe {
   createdAt DateTime                  @default(now())
 
   @@map("embedding_probe")
+}
+
+// ─────────────────────────────────────────────────────────────
+// McpServer (Phase 10.5) — a directory entry (curated, seeded from
+// mcp-servers/*.json — definitions-as-files, same pattern as Agent/agents/)
+// or a user-added custom server (created directly, no definition file).
+// `cachedTools`/`cachedResources` are a snapshot of the server's own
+// tools/list + resources/list, refreshed on connect — good enough for the
+// Connectors UI to render capability lists without a live connection.
+// authType: "oauth_dcr" | "static_headers" | "none".
+// trustTier: "verified" | "community" | "custom".
+// ─────────────────────────────────────────────────────────────
+model McpServer {
+  id                           String   @id // kebab-case slug for curated servers; a generated id for custom ones
+  name                         String
+  description                  String
+  iconUrl                      String?
+  developer                    String?
+  connectorUrl                 String
+  authType                     String
+  categories                   String[] @default([])
+  trustTier                    String
+  cachedTools                  Json     @default("[]")
+  cachedResources              Json     @default("[]")
+  documentationUrl             String?
+  supportUrl                   String?
+  privacyPolicyUrl             String?
+  // Set when the server issues a fixed OAuth client out-of-band instead of via
+  // Dynamic Client Registration. Secret is encrypted with the same vault as
+  // connection credentials (server/mcp/vault.ts).
+  preRegisteredClientId        String?
+  encryptedPreRegisteredSecret String?
+  // Null for curated directory servers; set to the adding user for a custom server.
+  createdByUserId              String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  connections  McpConnection[]
+  agentServers AgentMcpServer[]
+
+  @@map("mcp_servers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// McpConnection (Phase 10.5) — one user's authenticated connection to one
+// MCP server. `credentials` is the AES-256-GCM-encrypted JSON blob produced
+// by server/mcp/vault.ts (10.4): either OAuth tokens or a static_headers map.
+// status: "active" | "expired" | "revoked" | "error".
+// ─────────────────────────────────────────────────────────────
+model McpConnection {
+  id          String    @id @default(cuid())
+  userId      String
+  mcpServerId String
+  credentials String
+  status      String    @default("active")
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mcpServerId])
+  @@index([userId])
+  @@map("mcp_connections")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AgentMcpServer (Phase 10.5) — which of a user's connected MCP servers are
+// enabled for which agent. Enablement is per-user (not just per-agent) since
+// the underlying connection is per-user — two users hiring the same employee
+// each turn their own connected servers on independently.
+// ─────────────────────────────────────────────────────────────
+model AgentMcpServer {
+  id          String   @id @default(cuid())
+  agentId     String
+  mcpServerId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  agent     Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId, mcpServerId])
+  @@index([userId, agentId])
+  @@map("agent_mcp_servers")
 }

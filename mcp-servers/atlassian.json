@@ -1,0 +1,25 @@
+{
+  "id": "atlassian",
+  "name": "Atlassian",
+  "description": "Search and update Jira issues and Confluence pages",
+  "developer": "Atlassian",
+  "connectorUrl": "https://mcp.atlassian.com/v1/sse",
+  "authType": "oauth_dcr",
+  "categories": ["Project Management", "Docs"],
+  "trustTier": "verified",
+  "documentationUrl": "https://support.atlassian.com/atlassian-rovo-mcp-server",
+  "tools": [
+    { "name": "search-jira-issues", "description": "Search Jira issues with JQL or free text" },
+    { "name": "get-jira-issue", "description": "Fetch a single Jira issue's full detail" },
+    { "name": "create-jira-issue", "description": "Create a new Jira issue" },
+    {
+      "name": "search-confluence-pages",
+      "description": "Search Confluence pages by title or content"
+    },
+    { "name": "get-confluence-page", "description": "Fetch a Confluence page's content" }
+  ],
+  "resources": [
+    { "name": "jira-issue", "description": "A single Jira issue's full detail" },
+    { "name": "confluence-page", "description": "A single Confluence page's content" }
+  ]
+}

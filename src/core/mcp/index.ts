@@ -20,6 +20,13 @@ export {
   type OAuthCredentials,
   type StaticHeadersCredentials,
 } from "./connection";
+export {
+  mcpServerDefinitionSchema,
+  parseMcpServerDefinition,
+  type McpServerDefinition,
+} from "./directory";
+// Note: directory-loader.ts (node fs) is intentionally NOT re-exported here — import
+// it directly from "@/core/mcp/directory-loader" in server/seed code only.
 export type {
   JsonRpcErrorObject,
   JsonRpcErrorResponse,
