@@ -63,10 +63,31 @@ describe("resolveMcpToolsForAgent", () => {
 
     const tools = await resolveMcpToolsForAgent(userId, AGENT_ID);
 
-    expect(Object.keys(tools).sort()).toEqual([`mcp_${SERVER_ID}_echo`, `mcp_${SERVER_ID}_fail`]);
+    expect(Object.keys(tools).sort()).toEqual([
+      `mcp_${SERVER_ID}_echo`,
+      `mcp_${SERVER_ID}_fail`,
+      `mcp_${SERVER_ID}_list_resources`,
+      `mcp_${SERVER_ID}_read_resource`,
+    ]);
 
     const result = await callTool(tools[`mcp_${SERVER_ID}_echo`]!, { greeting: "hi" });
     expect(result).toMatchObject({ isError: false });
     expect(result.content).toContain("greeting");
+  });
+
+  it("also resolves resource list/read tools from the same connected server", async () => {
+    const tools = await resolveMcpToolsForAgent(userId, AGENT_ID);
+
+    const listed = await callTool<Record<string, never>, Array<{ uri: string }>>(
+      tools[`mcp_${SERVER_ID}_list_resources`]!,
+      {},
+    );
+    expect(listed.map((r) => r.uri)).toEqual(["res://a", "res://b"]);
+
+    const read = await callTool<{ uri: string }, Array<{ text?: string }>>(
+      tools[`mcp_${SERVER_ID}_read_resource`]!,
+      { uri: "res://a" },
+    );
+    expect(read[0]?.text).toBe("resource A content");
   });
 });

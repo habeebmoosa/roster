@@ -1,6 +1,7 @@
 import { jsonSchema, tool, type Tool } from "ai";
+import { z } from "zod";
 import type { McpClient } from "./client";
-import type { McpTool } from "./types";
+import type { McpResource, McpTool } from "./types";
 
 type RawJsonSchema = Parameters<typeof jsonSchema>[0];
 
@@ -11,6 +12,8 @@ export interface McpServerToolBinding {
   client: McpClient;
   /** This server's tools, from a prior `listTools()` call. */
   tools: McpTool[];
+  /** This server's resources, from a prior `listResources()` call — omit or leave empty for a server with none. */
+  resources?: McpResource[];
 }
 
 /** A namespaced tool id such that two servers can each expose a tool named e.g. "search" without colliding. */
@@ -28,7 +31,7 @@ export function mcpToolId(serverId: string, toolName: string): string {
 export function wrapMcpToolsForAgent(bindings: McpServerToolBinding[]): Record<string, Tool> {
   const result: Record<string, Tool> = {};
 
-  for (const { serverId, client, tools } of bindings) {
+  for (const { serverId, client, tools, resources } of bindings) {
     for (const mcpTool of tools) {
       result[mcpToolId(serverId, mcpTool.name)] = tool({
         description: mcpTool.description ?? `Call "${mcpTool.name}" on the "${serverId}" server.`,
@@ -41,6 +44,35 @@ export function wrapMcpToolsForAgent(bindings: McpServerToolBinding[]): Record<s
               .map((block) => block.text ?? JSON.stringify(block))
               .join("\n"),
           };
+        },
+      });
+    }
+
+    if (resources && resources.length > 0) {
+      result[mcpToolId(serverId, "list_resources")] = tool({
+        description: `List resources available from the "${serverId}" server (files, records, or other data it exposes for reading).`,
+        inputSchema: z.object({}),
+        execute: async () =>
+          resources.map((r) => ({
+            uri: r.uri,
+            name: r.name,
+            description: r.description,
+            mimeType: r.mimeType,
+          })),
+      });
+
+      result[mcpToolId(serverId, "read_resource")] = tool({
+        description: `Read one resource from the "${serverId}" server by its URI — use ${mcpToolId(serverId, "list_resources")} first to see what's available. The result becomes context for continuing this task, the same way retrieved knowledge does.`,
+        inputSchema: z.object({ uri: z.string().min(1) }),
+        execute: async ({ uri }) => {
+          const contents = await client.readResource(uri);
+          return contents.map((c) => ({
+            uri: c.uri,
+            mimeType: c.mimeType,
+            text: c.text,
+            // Binary content isn't useful to a text-only model turn — note its presence without inlining it.
+            hasBinaryContent: c.blob !== undefined,
+          }));
         },
       });
     }

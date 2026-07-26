@@ -68,4 +68,38 @@ describe("wrapMcpToolsForAgent", () => {
     const toolDef = wrapped[mcpToolId("acme", "does-not-exist")]!;
     await expect(callTool(toolDef, {})).rejects.toThrow();
   });
+
+  it("does not add resource tools for a server with no resources", async () => {
+    mock = await startMockMcpServer();
+    const client = new McpClient(mock.url);
+    await client.initialize();
+    const tools = await client.listTools();
+
+    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools, resources: [] }]);
+
+    expect(wrapped).not.toHaveProperty(mcpToolId("acme", "list_resources"));
+    expect(wrapped).not.toHaveProperty(mcpToolId("acme", "read_resource"));
+  });
+
+  it("adds list_resources/read_resource tools for a server that has resources", async () => {
+    mock = await startMockMcpServer();
+    const client = new McpClient(mock.url);
+    await client.initialize();
+    const tools = await client.listTools();
+    const resources = await client.listResources();
+
+    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools, resources }]);
+
+    const listed = await callTool<Record<string, never>, Array<{ uri: string }>>(
+      wrapped[mcpToolId("acme", "list_resources")]!,
+      {},
+    );
+    expect(listed.map((r) => r.uri)).toEqual(["res://a", "res://b"]);
+
+    const read = await callTool<{ uri: string }, Array<{ text?: string }>>(
+      wrapped[mcpToolId("acme", "read_resource")]!,
+      { uri: "res://a" },
+    );
+    expect(read[0]?.text).toBe("resource A content");
+  });
 });

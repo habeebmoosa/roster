@@ -199,7 +199,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~13 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–8) → the five employees + tools (9–10) → chat real-time & access surfaces (11–12) → ship (13). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–9 complete · ⬜ Phase 10 (Tool system) is next · ⬜ Phases 11–13 remaining.
+> **Progress:** ✅ Phases 1–10 complete · ⬜ Phase 11 (Chat: real-time & persistence) is next · ⬜ Phases 12–13 remaining.
 
 ---
 
@@ -414,9 +414,9 @@ Collapsible **Sidebar** (grouped nav: _Operate_ → Overview, Roster, Chat; _Con
 - **Workers** (employee list, `/workers`) — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
 - **Employee detail** (`/workers/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
 - **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 11).
-- **Connectors** — a directory of MCP servers grouped by category (connector cards: icon, name, one-line description, trust badge); clicking a card opens a detail dialog (longer description, example prompts, developer, tool list + count, categories, an Author/Capabilities/Connector-URL details panel, Documentation/Support/Privacy-Policy links, a Connect button) — modeled directly on Claude's own connector detail view. Plus an "Add custom connector" flow for pasting an arbitrary MCP server URL. _Fixtures now_ (real MCP directory + custom connectors arrive Phase 10).
+- **Connectors** — a directory of MCP servers (connector cards: icon, name, one-line description, trust badge); clicking a card opens a detail dialog (longer description, example prompts, developer, tool list + count, categories, an Author/Capabilities/Connector-URL details panel, Documentation/Support/Privacy-Policy links, a Connect button) — modeled directly on Claude's own connector detail view. Plus an "Add custom connector" flow for pasting an arbitrary MCP server URL. _Real since Phase 10:_ directory data, OAuth + static-header connect, custom connectors, per-agent enable/disable.
 - **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 12); **Billing** (plan, payment, invoices — fixtures now).
-- **Hire a new employee** (`/hire`) — 6-step wizard with a stepper: (1) role, (2) basic details, (3) knowledge base (upload / connect source), (4) abilities (tool toggles), (5) provider & model (BYOK), (6) review & create + live preview. Back / Continue / Save & exit. _Wire now:_ provider/model from the real catalog + saved keys; create writes an `Agent` (definition). _Fixtures:_ knowledge upload, abilities catalog (real in Phases 7 & 9).
+- **Hire a new employee** (`/hire`) — 6-step wizard with a stepper: (1) role, (2) basic details, (3) knowledge base (upload / connect source), (4) abilities (tool toggles), (5) provider & model (BYOK), (6) review & create + live preview. Back / Continue / Save & exit. _Wire now:_ provider/model from the real catalog + saved keys; create writes an `Agent` (definition). _Fixtures:_ knowledge upload. Abilities catalog is real since Phase 10 (built-in tools genuinely execute; MCP servers are enabled separately via Connectors).
 
 #### 6.5 Data strategy
 
@@ -551,7 +551,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 10 — Tool system (built-in + MCP connectors) ⬅️ NEXT
+### Phase 10 — Tool system (built-in + MCP connectors) ✅
 
 **Goal:** Give all five employees the ability to act, not just answer — from exactly two sources. **Built-in tools**: a small, platform-maintained set of local, no-network operations (file format conversion, basic utilities) available to any agent whose definition declares them, no connection step required. **MCP connectors**: third-party service integrations, exclusively through the Model Context Protocol — a curated directory of real, popular MCP servers users can one-click connect to, plus a custom-connector option for any MCP server a user already has. No generic HTTP tools, no arbitrary user-defined API integrations outside MCP — those two sources are exhaustive. The MCP half matches where the industry has actually converged: Claude's Connectors is a wide directory-of-connectors model (hundreds of listed servers, tiered trust labels); ChatGPT's is a small first-party list plus bring-your-own-URL. Our (curated directory) + (custom URL) plan sits on the same real, currently-shipping pattern, not a hypothetical third approach.
 
@@ -597,7 +597,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 11 — Chat: real-time, persistence & visible steps
+### Phase 11 — Chat: real-time, persistence & visible steps ⬅️ NEXT
 
 **Goal:** Make the chat surface (UI shell built in Phase 6) fully real: durable history and visible workflow steps.
 
