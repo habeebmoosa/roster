@@ -1,6 +1,12 @@
 export { McpClient } from "./client";
 export { McpTransport, type McpTransportOptions } from "./transport";
-export { McpProtocolError, McpTransportError } from "./errors";
+export {
+  McpProtocolError,
+  McpTransportError,
+  McpAuthError,
+  type McpAuthErrorStage,
+} from "./errors";
+export * as mcpOAuth from "./oauth";
 export type {
   JsonRpcErrorObject,
   JsonRpcErrorResponse,

@@ -56,6 +56,7 @@ export class McpTransport {
       throw new McpTransportError(
         `MCP server responded with HTTP ${response.status}`,
         response.status,
+        response.headers.get("www-authenticate") ?? undefined,
       );
     }
     return response;

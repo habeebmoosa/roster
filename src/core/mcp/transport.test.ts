@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import { McpTransport } from "./transport";
 import { McpProtocolError, McpTransportError } from "./errors";
@@ -55,11 +56,32 @@ describe.each([
 });
 
 describe("McpTransport error handling", () => {
-  it("throws McpTransportError on a non-2xx HTTP response", async () => {
-    // No server listening on this port — fetch itself will reject, exercising the
-    // transport's raw-network-failure path distinctly from a parsed JSON-RPC error.
+  it("throws on a raw network failure (nothing listening)", async () => {
     const transport = new McpTransport("http://127.0.0.1:1");
     await expect(transport.request("initialize", {})).rejects.toThrow();
+  });
+
+  it("surfaces WWW-Authenticate on a 401 so callers can start OAuth discovery (10.3)", async () => {
+    const server = createServer((_req, res) => {
+      res.writeHead(401, {
+        "www-authenticate":
+          'Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"',
+      });
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+
+    try {
+      const transport = new McpTransport(`http://127.0.0.1:${port}`);
+      await expect(transport.request("initialize", {})).rejects.toMatchObject({
+        wwwAuthenticate:
+          'Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"',
+      });
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("does not conflate McpProtocolError with McpTransportError", () => {
