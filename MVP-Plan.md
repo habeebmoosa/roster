@@ -89,7 +89,8 @@ roster/
 │  │  ├─ memory/                   # semantic | procedural | episodic | working
 │  │  ├─ retrieval/                # hybrid search, re-ranker, context assembler + cap
 │  │  ├─ workflow/                 # decompose → execute → validate → rollback
-│  │  ├─ tools/                    # built-in tools + MCP/HTTP tool adapters
+│  │  ├─ tools/                    # built-in tools (file conversion, basic utilities) — local, no network
+│  │  ├─ mcp/                      # MCP client: protocol (tools/call, resources/read), transport, OAuth
 │  │  └─ eval/                     # eval harness (runner, scorers, tiers)
 │  │
 │  ├─ server/                      # server-only concerns
@@ -147,19 +148,20 @@ The database is chosen entirely by configuration — no code changes to switch p
 
 Managed via Prisma migrations. Vector columns via the custom-migration approach above.
 
-| Model                                       | Key fields                                                                                                                    |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `User`                                      | from Auth.js (id, email, name, image)                                                                                         |
-| `Account` / `Session` / `VerificationToken` | Auth.js Prisma adapter tables                                                                                                 |
-| `ProviderKey`                               | userId, provider, **encryptedKey (AES-256-GCM)**, baseUrl, config (JSON — headers, org, region, api-version, etc.), createdAt |
-| `Agent`                                     | id, name, role, definition (persona/voice/expertise), defaultTools                                                            |
-| `AgentKnowledge`                            | agentId, chunk, embedding (`vector`), source, **permissions**                                                                 |
-| `Playbook`                                  | agentId, name, content (markdown decision tree)                                                                               |
-| `Conversation` / `Message`                  | userId, agentId, history                                                                                                      |
-| `Tool`                                      | name, description, JSON schema, type (builtin/mcp/http), config                                                               |
-| `AgentTool`                                 | which tools attached to which agent for which user                                                                            |
-| `ApiKey`                                    | hashed platform API keys for programmatic access                                                                              |
-| `EvalRun`                                   | agentId, modelTier, successRate, tokens, retrievalPrecision/Recall, latency, timestamp                                        |
+| Model                                       | Key fields                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`                                      | from Auth.js (id, email, name, image)                                                                                                                                                                                                                                                                                            |
+| `Account` / `Session` / `VerificationToken` | Auth.js Prisma adapter tables                                                                                                                                                                                                                                                                                                    |
+| `ProviderKey`                               | userId, provider, **encryptedKey (AES-256-GCM)**, baseUrl, config (JSON — headers, org, region, api-version, etc.), createdAt                                                                                                                                                                                                    |
+| `Agent`                                     | id, name, role, definition (persona/voice/expertise), defaultTools                                                                                                                                                                                                                                                               |
+| `AgentKnowledge`                            | agentId, chunk, embedding (`vector`), source, **permissions**                                                                                                                                                                                                                                                                    |
+| `Playbook`                                  | agentId, name, content (markdown decision tree)                                                                                                                                                                                                                                                                                  |
+| `Conversation` / `Message`                  | userId, agentId, history                                                                                                                                                                                                                                                                                                         |
+| `McpServer`                                 | a directory entry or a user-added custom server: name, slug, description, iconUrl, developer, connectorUrl, authType (oauth_dcr/static_headers/none), categories, cached capability list (tools + resources), trust tier (verified/community/custom), optional pre-registered OAuth client id/secret, docs/support/privacy links |
+| `McpConnection`                             | userId, mcpServerId, **encrypted OAuth tokens or static header value (AES-256-GCM)**, expiresAt, status                                                                                                                                                                                                                          |
+| `AgentMcpServer`                            | which connected MCP servers are enabled for which agent                                                                                                                                                                                                                                                                          |
+| `ApiKey`                                    | hashed platform API keys for programmatic access                                                                                                                                                                                                                                                                                 |
+| `EvalRun`                                   | agentId, modelTier, successRate, tokens, retrievalPrecision/Recall, latency, timestamp                                                                                                                                                                                                                                           |
 
 > **BYOK security:** encrypt with AES-256-GCM using a server-side secret before storing. Never store raw, never log. Decrypt only inside the request that uses it. Validate keys with a cheap ~1-token ping on save. The `config` JSON + `baseUrl` make each provider entry fully self-describing (an OpenAI-compatible endpoint, an Azure deployment, a Bedrock region, a local Ollama URL — all just data).
 
@@ -197,7 +199,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~13 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–8) → the five employees + tools (9–10) → chat real-time & access surfaces (11–12) → ship (13). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–8 complete · ⬜ Phase 9 (The five specialized employees) is next · ⬜ Phases 10–13 remaining.
+> **Progress:** ✅ Phases 1–9 complete · ⬜ Phase 10 (Tool system) is next · ⬜ Phases 11–13 remaining.
 
 ---
 
@@ -374,7 +376,7 @@ src/
       workers/page.tsx              # Employee list
       workers/[employeeId]/page.tsx # Employee detail (stats, about, API access)
       chat/page.tsx                 # Employee chat
-      connectors/page.tsx           # Tool/integration catalog
+      connectors/page.tsx           # MCP connector directory + custom connector management
       settings/page.tsx             # Tabbed settings
       hire/page.tsx                 # "Hire a new employee" wizard
   ui/                               # DESIGN SYSTEM — presentational primitives, no domain logic
@@ -412,7 +414,7 @@ Collapsible **Sidebar** (grouped nav: _Operate_ → Overview, Roster, Chat; _Con
 - **Workers** (employee list, `/workers`) — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
 - **Employee detail** (`/workers/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
 - **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 11).
-- **Connectors** — tools grouped by category, connector cards (icon, name, desc, connect/manage), "synced" status. _Fixtures now_ (real tools/MCP arrive Phase 10).
+- **Connectors** — a directory of MCP servers grouped by category (connector cards: icon, name, one-line description, trust badge); clicking a card opens a detail dialog (longer description, example prompts, developer, tool list + count, categories, an Author/Capabilities/Connector-URL details panel, Documentation/Support/Privacy-Policy links, a Connect button) — modeled directly on Claude's own connector detail view. Plus an "Add custom connector" flow for pasting an arbitrary MCP server URL. _Fixtures now_ (real MCP directory + custom connectors arrive Phase 10).
 - **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 12); **Billing** (plan, payment, invoices — fixtures now).
 - **Hire a new employee** (`/hire`) — 6-step wizard with a stepper: (1) role, (2) basic details, (3) knowledge base (upload / connect source), (4) abilities (tool toggles), (5) provider & model (BYOK), (6) review & create + live preview. Back / Continue / Save & exit. _Wire now:_ provider/model from the real catalog + saved keys; create writes an `Agent` (definition). _Fixtures:_ knowledge upload, abilities catalog (real in Phases 7 & 9).
 
@@ -514,7 +516,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 9 — The five specialized employees ⬅️ NEXT
+### Phase 9 — The five specialized employees ✅ COMPLETE
 
 **Goal:** Clone the now-proven Customer Support pattern to the other four launch employees. The work here is _content and quality_ — new personas, procedural playbooks, and knowledge — not new engineering; the agent engine (retrieval, workflow, eval) already works end-to-end from Phases 4–8.
 
@@ -549,29 +551,49 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 10 — Tool system (built-in + MCP/HTTP)
+### Phase 10 — Tool system (built-in + MCP connectors) ⬅️ NEXT
 
-**Goal:** Give all five employees tool-calling capability — built-in tools plus user-added extensibility via MCP and generic HTTP — so they can act, not just answer.
+**Goal:** Give all five employees the ability to act, not just answer — from exactly two sources. **Built-in tools**: a small, platform-maintained set of local, no-network operations (file format conversion, basic utilities) available to any agent whose definition declares them, no connection step required. **MCP connectors**: third-party service integrations, exclusively through the Model Context Protocol — a curated directory of real, popular MCP servers users can one-click connect to, plus a custom-connector option for any MCP server a user already has. No generic HTTP tools, no arbitrary user-defined API integrations outside MCP — those two sources are exhaustive. The MCP half matches where the industry has actually converged: Claude's Connectors is a wide directory-of-connectors model (hundreds of listed servers, tiered trust labels); ChatGPT's is a small first-party list plus bring-your-own-URL. Our (curated directory) + (custom URL) plan sits on the same real, currently-shipping pattern, not a hypothetical third approach.
 
 **Deliverables**
 
-- **Built-in tools** as AI SDK `tool()` functions, assigned per-role (kb lookup, web search, URL fetch, calculator, CSV/spreadsheet analysis, task breakdown, etc.).
-- **User-added tools** via **MCP** (headline: "connect any MCP server to your AI employee") and generic **HTTP** tools; `Tool` / `AgentTool` DB models + per-agent enablement UI (the Connectors screen, fixtures since Phase 6, goes live here).
-- Tool calls integrated into the Phase 8 workflow loop — a step that needs a tool calls it as part of executing that step, and the tool result is subject to the same validation as any other step output.
+- **Built-in tools** (`core/tools/`, framework-agnostic, no network calls): file format conversion (PDF → text, DOCX → text/Markdown, Markdown → HTML) and a handful of basic utilities (calculator/expression evaluator, word/character count, date & timezone math) — plain AI SDK `tool()` functions backed by local npm libraries. Enabled per-agent through the agent definition's existing `abilities` field (already wired into the Hire wizard's Abilities step since Phase 6) — no new data model, no connection/auth step, since these never leave our own server.
+- **MCP client core** (`core/mcp/`, framework-agnostic): the protocol layer for both of MCP's client-facing surfaces — `tools/list`/`tools/call` (paginated discovery + invocation) **and** `resources/list`/`resources/read` (paginated discovery + reading a server's exposed data) — over the Streamable HTTP transport, JSON-RPC 2.0 message handling, and the spec's two distinct tool-error channels: a protocol-level error (unknown tool, bad schema — a client bug or stale `tools/list` cache, shouldn't reach the model) vs. a `tools/call` response with `isError: true` (the tool ran but failed — its `content` text should reach the model so it can retry or adapt, exactly like any other step failure in Phase 8's retry design). A resource a step reads becomes context for that step the same way retrieved knowledge already works, not a separate mechanism.
+- **MCP authorization**: an OAuth 2.1 client implementing the spec's discovery flow — `401` + `WWW-Authenticate` → Protected Resource Metadata (RFC 9728) → Authorization Server metadata (RFC 8414 / OIDC discovery) → PKCE (`S256`, mandatory) → the `resource` parameter (RFC 8707, binds a token to one specific server) → token exchange → refresh (reactive on 401, proactive before expiry, handling refresh-token rotation). Dynamic Client Registration (RFC 7591) is the MVP registration path — simpler to implement than Client ID Metadata Documents (CIMD), the newer approach Anthropic is steering toward at their scale; CIMD/pre-registered credentials are a future optimization, not required for launch. A simpler **`static_headers` mode** (a fixed bearer token/API key, entered once) covers MCP servers that don't implement OAuth at all — this mirrors exactly the two auth patterns Claude's own connector platform ships today (confirmed via their public connector-building docs), not a simplification we're inventing.
+- **Data model**: `McpServer` (a directory entry or a user's custom server, including a cached capability list — tools and resources — and an optional pre-registered OAuth client id/secret for servers that need one), `McpConnection` (a user's per-server OAuth tokens or static credential, encrypted via the same AES-256-GCM vault pattern as `ProviderKey`), `AgentMcpServer` (per-agent enablement).
+- **Starter directory**: ~10-12 real, independently-verified MCP servers seeded as directory content — Notion, Canva, Stripe, Linear, Asana, Atlassian, Box, Figma, HubSpot, Intercom, Microsoft 365, monday.com. This is a starting catalog, not an attempt to match Claude's much larger (reportedly hundreds-strong) directory — adding more servers later is content work (a new `McpServer` row), not engineering work.
+- **Connectors UI rebuild** (MCP only — built-in tools surface in the existing Hire-wizard Abilities step instead, since they need no connection step): a list page of connector cards grouped by category, each opening a detail dialog on click — description, example prompts, developer, tool list + count, categories, an Author/Capabilities/Connector-URL details panel, Documentation/Support/Privacy-Policy links, and a Connect button — modeled directly on Claude's own connector detail view (including its "only use connectors from developers you trust" disclaimer for non-verified entries). Plus an "Add custom connector" flow: paste an MCP server URL (+ optional advanced auth settings) for any server not in the directory.
+- **Workflow integration**: both built-in tool calls and MCP tool calls/resource reads become available during step execution (Phase 8's `executeStep`) — a step that needs one calls it as part of running that step, and the result (including an `isError: true` execution failure) is validated and can trigger the existing capped retry, exactly like any other step output. No separate tool-specific validation path.
 
 **Key decisions**
 
-- MCP is the preferred extensibility path; HTTP is the fallback for services without an MCP server.
-- Tool results flow through the existing per-step validation (Phase 8.4) rather than a separate tool-specific check — a tool result is just another kind of step output.
+- **Exactly two tool sources, cleanly separated.** Built-in tools are platform-maintained, local, and enabled via the agent's existing `abilities` list — no connection, no per-user credential, no directory listing. MCP connectors are third-party, per-user-connected via the new Connectors UI, and require the OAuth/static-header auth flow. No generic HTTP tools and no arbitrary user-defined API integrations outside MCP, in either case.
+- **The MCP client supports both Tools and Resources.** Same transport/JSON-RPC plumbing either way, so the incremental cost is low, and several real connectors (filesystem-style servers, repo browsers) rely on Resources for read access rather than Tools.
+- **Per-user OAuth tokens, not platform-wide credentials.** Every MCP connection is scoped to (user, MCP server) — confirmed as the correct model even for Anthropic's own pre-registered-credential connectors, which still require a live per-user consent screen rather than a server-to-server grant. A shared/admin-level credential is a possible future extension, not the default.
+- **The `resource` parameter (RFC 8707) is non-negotiable.** It binds an issued token to the exact MCP server it was issued for, preventing a token minted for one connector from being replayed against another (the spec's explicit anti-"confused deputy" protection).
+- **Static-header auth is a first-class fallback, not an afterthought.** Not every MCP server implements OAuth; a fixed bearer token/API key mode needs to work just as reliably as the OAuth path.
+- **Tool and resource results flow through the existing per-step validation (Phase 8.4) rather than a separate tool-specific check** — any of these is just another kind of step output, and an `isError: true` result is just another kind of step failure eligible for the same capped retry.
 
 **Definition of Done**
 
-- At least one built-in tool and one user-added tool (MCP or HTTP) work end-to-end, demonstrated across at least two employees.
+- A built-in tool (e.g. PDF-to-text conversion) works end-to-end for an employee. Separately, a user connects at least one directory connector (full OAuth flow) and one custom connector (arbitrary MCP server URL, either auth mode), enables both for an employee, and that employee successfully calls a tool — and reads a resource, from at least one connector that exposes one — mid-conversation, with results flowing correctly into its reply. A forced tool failure (`isError: true`) is fed back into the workflow's retry, per Phase 8's existing capped-retry design.
 
 **How we test it**
 
-- Integration: tool invocation (built-in + MCP + HTTP), including tool-error handling and how a failed tool call surfaces to validation/retry.
-- E2E: an employee handles a representative task that requires a tool call, via the Connectors UI.
+- Unit: built-in tool conversions against real sample files (a real PDF/DOCX fixture — pure local computation, nothing to mock). MCP client protocol handling (`tools/list`/`tools/call` and `resources/list`/`resources/read` pagination and invocation, the two error channels) against a mock MCP server — no real network calls.
+- Integration: the OAuth discovery/PKCE/refresh flow against a mock authorization server; the static-headers mode; a full connector-directory seed load; per-agent tool enablement; a resource-read flow.
+- E2E: an employee converts an uploaded/pasted file with a built-in tool. Separately: browse the directory → connect a connector → enable it for an employee → the employee calls its tool (and reads a resource, if available) in a live chat.
+
+**Sub-phases**
+
+- **10.1 — Built-in tools.** `core/tools/`: PDF/DOCX/Markdown format conversion + basic utilities (calculator, word count, date/timezone math). Unit-tested against real sample files, no mocking needed.
+- **10.2 — MCP client core.** `core/mcp/`: JSON-RPC 2.0 over Streamable HTTP; `tools/list`/`tools/call`; `resources/list`/`resources/read`; the protocol-error vs. `isError` distinction. Framework-agnostic, unit-tested against a mock MCP server.
+- **10.3 — MCP OAuth 2.1 client.** Discovery (Protected Resource Metadata, Authorization Server metadata), PKCE, Dynamic Client Registration, the `resource` parameter, token exchange, and refresh (reactive + proactive, handling refresh-token rotation).
+- **10.4 — Static-headers auth + the connection vault.** The simpler fixed-token/API-key mode; `McpConnection`'s encrypted-credential storage (same AES-256-GCM vault as `ProviderKey`), keyed per (user, server).
+- **10.5 — Data model + starter directory.** `McpServer` / `McpConnection` / `AgentMcpServer` Prisma models; seed ~10-12 real, verified MCP servers as directory content.
+- **10.6 — Connectors UI.** List page (real directory data replacing the Phase 6 fixtures) + detail dialog (Canva-style layout) + custom-connector add flow + per-agent enable/disable.
+- **10.7 — Wire built-in tools + MCP tools/resources into `runAgent()`/the workflow.** Both tool sources become callable during `executeStep`; MCP resource reads become step context; results (including `isError`) flow through validation and the existing capped retry.
+- **10.8 — Final Phase 10 verification sweep.** Full gate; end-to-end smoke test covering a built-in tool, a directory connector, and a custom connector.
 
 ---
 
@@ -655,7 +677,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - [ ] Cheap-model success rate is demonstrably close to frontier (the selling point, proven).
 - [ ] Design-faithful, component-based UI (all screens, light/dark, responsive) built on a shared `ui/` design system.
 - [ ] Chat + REST API both functional, both flowing through the same `runAgent()`.
-- [ ] Per-agent tools working (built-in + at least one user-added mechanism: MCP or HTTP).
+- [ ] Per-agent tools working: at least one built-in tool, one directory MCP connector, and one custom-URL MCP connector, all callable end-to-end.
 - [ ] Onboarding to first response under 2 minutes.
 - [ ] Key vault encrypted (AES-256-GCM); permission-scoping enforced on retrieval.
 - [ ] Eval gate wired into CI; no change ships that regresses any tier.
