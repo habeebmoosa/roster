@@ -1,4 +1,4 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, ToolSet } from "ai";
 import type { WorkflowPlan } from "./decompose";
 import type { StepRetrieveFn } from "./executor";
 import { rollbackToSingleStep, runStepWithRetry } from "./retry";
@@ -28,6 +28,8 @@ export interface RunWorkflowInput {
   /** Model that judges groundedness — independent of `model`'s own output, never self-critique. Omit to skip that check. */
   groundednessModel?: LanguageModel;
   onStepEvent?: (event: WorkflowStepEvent) => void;
+  /** Built-in + MCP tools available to every step in this plan (10.7). */
+  tools?: ToolSet;
 }
 
 export interface RunWorkflowResult {
@@ -72,6 +74,7 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
     retrieve,
     groundednessModel,
     onStepEvent,
+    tools,
   } = input;
 
   const usage: WorkflowUsage = { inputTokens: 0, outputTokens: 0 };
@@ -88,6 +91,7 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
       priorStepOutputs: stepOutputs,
       retrieve,
       groundednessModel,
+      tools,
     });
     addUsage(usage, run.usage);
     addSourceUris(sourceUris, run.result.retrievedSourceUris);
@@ -107,6 +111,7 @@ export async function runWorkflow(input: RunWorkflowInput): Promise<RunWorkflowR
         systemPrompt,
         retrieve,
         groundednessModel,
+        tools,
       });
       addUsage(usage, rollback.usage);
       addSourceUris(sourceUris, rollback.result.retrievedSourceUris);

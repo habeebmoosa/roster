@@ -7,3 +7,4 @@ export {
 export { calculate, evaluateExpression } from "./calculator";
 export { countTextStats, computeTextStats } from "./text-stats";
 export { dateTimeMath } from "./date-math";
+export { BUILT_IN_TOOLS, resolveBuiltInTools } from "./registry";

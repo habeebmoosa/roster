@@ -1,7 +1,8 @@
-import { streamText, type LanguageModel } from "ai";
+import { stepCountIs, streamText, type LanguageModel, type ToolSet } from "ai";
 import {
   decomposeTask,
   isSingleStepPlan,
+  MAX_TOOL_STEPS,
   runWorkflow,
   type StepRetrieveFn,
   type WorkflowStepEvent,
@@ -42,6 +43,8 @@ export interface RunAgentInput {
   groundednessModel?: LanguageModel;
   /** Step-boundary events for the future Phase 10 chat UI to render live progress. */
   onStepEvent?: (event: WorkflowStepEvent) => void;
+  /** Built-in + MCP tools resolved for this agent/user (10.7) — the caller (server/agents/service.ts) merges core/tools' registry with any connected, enabled MCP servers. Omit for an agent with none enabled. */
+  tools?: ToolSet;
 }
 
 async function* singleChunkStream(text: string): AsyncGenerator<string> {
@@ -77,8 +80,10 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     retrieve,
     groundednessModel,
     onStepEvent,
+    tools,
   } = input;
 
+  const hasTools = tools && Object.keys(tools).length > 0;
   const task = [...messages].reverse().find((m) => m.role === "user")?.content;
 
   if (task) {
@@ -95,6 +100,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
         retrieve,
         groundednessModel,
         onStepEvent,
+        tools,
       });
       return {
         textStream: singleChunkStream(workflow.text),
@@ -109,6 +115,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     model,
     system: buildSystemPrompt(definition, { retrievedContext, episodicMemory }),
     messages,
+    ...(hasTools ? { tools, stopWhen: stepCountIs(MAX_TOOL_STEPS) } : {}),
   });
 
   return {

@@ -1,7 +1,9 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { type AgentDefinition, type AgentMessage, runAgent } from "@/core/agent";
+import { resolveBuiltInTools } from "@/core/tools";
 import { getAgentDefinition, listAgentSummaries } from "@/server/db/repositories/agent.repository";
 import { listEpisodicMemories } from "@/server/db/repositories/episodic-memory.repository";
+import { resolveMcpToolsForAgent } from "@/server/mcp/agent-tools-service";
 import { getEmbeddingResolveInputForUser, getModelForUser } from "@/server/providers/service";
 import { retrieveGroundingContext } from "@/server/retrieval/grounding";
 
@@ -60,11 +62,27 @@ async function tryRetrieveGroundingContext(
 }
 
 /**
+ * Merges this agent's built-in tools (from `abilities`, purely local — see
+ * core/tools/registry.ts) with any MCP servers the user has both connected
+ * and enabled for it (server/mcp/agent-tools-service.ts). Built-in resolution
+ * can't fail; MCP resolution already degrades a single bad connector away
+ * rather than throwing, so this never blocks a turn.
+ */
+async function resolveToolsForAgent(
+  userId: string,
+  agentId: string,
+  definition: AgentDefinition,
+): Promise<Record<string, Tool>> {
+  const mcpTools = await resolveMcpToolsForAgent(userId, agentId);
+  return { ...resolveBuiltInTools(definition.abilities), ...mcpTools };
+}
+
+/**
  * Orchestrates a single agent turn for a user: load the definition, resolve
  * the user's chosen model (BYOK), retrieve grounding context and episodic
- * memory if the agent has any, and stream through the core `runAgent()`.
- * Provider issues surface as ByokError (mapped by the caller); a missing
- * agent throws {@link AgentNotFoundError}.
+ * memory if the agent has any, resolve its built-in + MCP tools, and stream
+ * through the core `runAgent()`. Provider issues surface as ByokError (mapped
+ * by the caller); a missing agent throws {@link AgentNotFoundError}.
  */
 export async function streamAgentChat(input: StreamAgentChatInput) {
   const definition = await getAgentDefinition(input.agentId);
@@ -72,9 +90,10 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
 
   const model = await getModelForUser(input.userId, input.provider, input.model);
 
-  const [retrievedContext, episodicMemory] = await Promise.all([
+  const [retrievedContext, episodicMemory, tools] = await Promise.all([
     tryRetrieveGroundingContext(input, definition, model),
     listEpisodicMemories(input.userId, input.agentId),
+    resolveToolsForAgent(input.userId, input.agentId, definition),
   ]);
 
   return runAgent({
@@ -83,5 +102,6 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
     messages: input.messages,
     retrievedContext,
     episodicMemory,
+    tools,
   });
 }

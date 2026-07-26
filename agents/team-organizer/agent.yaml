@@ -17,6 +17,8 @@ expertise:
 abilities:
   - kb_lookup
   - calendar_scheduling
+  - date_time_math
+  - count_text_stats
 memory:
   semantic:
     - kb://pm-frameworks

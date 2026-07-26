@@ -1,4 +1,6 @@
+import { tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { rollbackToSingleStep, runStepWithRetry } from "./retry";
 import type { WorkflowStep } from "./decompose";
@@ -41,6 +43,19 @@ describe("runStepWithRetry", () => {
     expect(run.validation.passed).toBe(true);
     expect(run.result.output).toBe("a real answer");
     expect(model.doGenerateCalls).toHaveLength(1);
+  });
+
+  it("passes tools through to the model call", async () => {
+    const model = sequencedModel(["a real answer"]);
+    const echo = tool({
+      description: "Echo",
+      inputSchema: z.object({ text: z.string() }),
+      execute: async ({ text }) => text,
+    });
+
+    await runStepWithRetry({ model, step: step(), systemPrompt: SYSTEM_PROMPT, tools: { echo } });
+
+    expect(model.doGenerateCalls[0]?.tools?.map((t) => t.name)).toContain("echo");
   });
 
   it("retries once and passes if the retry produces valid output", async () => {
@@ -107,5 +122,23 @@ describe("rollbackToSingleStep", () => {
     expect(run.attempts).toBe(2);
     expect(run.validation.passed).toBe(true);
     expect(run.result.output).toBe("recovered on rollback's retry");
+  });
+
+  it("passes tools through to the rollback attempt's model call", async () => {
+    const model = sequencedModel(["the whole-task answer"]);
+    const echo = tool({
+      description: "Echo",
+      inputSchema: z.object({ text: z.string() }),
+      execute: async ({ text }) => text,
+    });
+
+    await rollbackToSingleStep({
+      model,
+      task: "What's the refund window?",
+      systemPrompt: SYSTEM_PROMPT,
+      tools: { echo },
+    });
+
+    expect(model.doGenerateCalls[0]?.tools?.map((t) => t.name)).toContain("echo");
   });
 });

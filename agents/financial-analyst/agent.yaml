@@ -18,6 +18,8 @@ expertise:
 abilities:
   - kb_lookup
   - data_analysis
+  - calculate
+  - convert_pdf_to_text
 memory:
   semantic:
     - kb://financial-concepts

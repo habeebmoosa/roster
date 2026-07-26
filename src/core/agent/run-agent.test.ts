@@ -1,4 +1,6 @@
+import { tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { parseAgentDefinition } from "./definition";
@@ -146,6 +148,39 @@ describe("runAgent — bypass path (single-step plan)", () => {
     for await (const _chunk of result.textStream) void _chunk;
     expect(events).toEqual([]);
   });
+
+  it("passes tools through to the model call when given", async () => {
+    const model = bypassModel("Hi");
+    const echo = tool({
+      description: "Echo",
+      inputSchema: z.object({ text: z.string() }),
+      execute: async ({ text }) => text,
+    });
+
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "hi" }],
+      tools: { echo },
+    });
+    for await (const _chunk of result.textStream) void _chunk;
+
+    const call = model.doStreamCalls[0]!;
+    expect(call.tools?.map((t) => t.name)).toContain("echo");
+  });
+
+  it("does not pass a tools option when none are given", async () => {
+    const model = bypassModel("Hi");
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "hi" }],
+    });
+    for await (const _chunk of result.textStream) void _chunk;
+
+    const call = model.doStreamCalls[0]!;
+    expect(call.tools ?? []).toEqual([]);
+  });
 });
 
 describe("runAgent — multi-step workflow path", () => {
@@ -216,5 +251,32 @@ describe("runAgent — multi-step workflow path", () => {
       { type: "step-start", index: 2, goal: "Step two" },
       { type: "step-complete", index: 2, passed: true, attempts: 1 },
     ]);
+  });
+
+  it("passes tools through to every step's model call", async () => {
+    const model = multiStepModel(
+      [
+        { goal: "Step one", needsRetrieval: false },
+        { goal: "Step two", needsRetrieval: false },
+      ],
+      ["first", "second"],
+    );
+    const echo = tool({
+      description: "Echo",
+      inputSchema: z.object({ text: z.string() }),
+      execute: async ({ text }) => text,
+    });
+
+    await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "Do a two-part task" }],
+      tools: { echo },
+    });
+
+    // Call 0 is decomposition (no tools — that's core/workflow/decompose's own
+    // structured-output call); calls 1+ are each step's executeStep call.
+    expect(model.doGenerateCalls[1]?.tools?.map((t) => t.name)).toContain("echo");
+    expect(model.doGenerateCalls[2]?.tools?.map((t) => t.name)).toContain("echo");
   });
 });

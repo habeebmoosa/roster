@@ -27,6 +27,7 @@ export {
 } from "./directory";
 // Note: directory-loader.ts (node fs) is intentionally NOT re-exported here — import
 // it directly from "@/core/mcp/directory-loader" in server/seed code only.
+export { mcpToolId, wrapMcpToolsForAgent, type McpServerToolBinding } from "./agent-tools";
 export type {
   JsonRpcErrorObject,
   JsonRpcErrorResponse,

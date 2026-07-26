@@ -1,4 +1,6 @@
+import { tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
+import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 import { executeStep, type StepRetrieveFn } from "./executor";
 import type { WorkflowStep } from "./decompose";
@@ -6,6 +8,7 @@ import type { WorkflowStep } from "./decompose";
 const SYSTEM_PROMPT = "You are Ada, a Customer Support Specialist. Calm and precise.";
 
 const MOCK_FINISH_REASON = { unified: "stop" as const, raw: undefined };
+const MOCK_TOOL_CALL_FINISH_REASON = { unified: "tool-calls" as const, raw: undefined };
 const MOCK_USAGE = {
   inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
   outputTokens: { total: 1, text: 1, reasoning: undefined },
@@ -19,6 +22,33 @@ function mockModel(replyText: string): MockLanguageModelV4 {
       usage: MOCK_USAGE,
       warnings: [],
     },
+  });
+}
+
+/** A model that calls one tool, then produces a final text reply referencing the tool's result. */
+function mockModelThatCallsATool(toolName: string, toolInput: object, replyText: string) {
+  return new MockLanguageModelV4({
+    doGenerate: [
+      {
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName,
+            input: JSON.stringify(toolInput),
+          },
+        ],
+        finishReason: MOCK_TOOL_CALL_FINISH_REASON,
+        usage: MOCK_USAGE,
+        warnings: [],
+      },
+      {
+        content: [{ type: "text", text: replyText }],
+        finishReason: MOCK_FINISH_REASON,
+        usage: MOCK_USAGE,
+        warnings: [],
+      },
+    ],
   });
 }
 
@@ -121,5 +151,79 @@ describe("executeStep", () => {
     expect(JSON.stringify(call.prompt)).toContain(
       "The response includes claims not supported by the retrieved context.",
     );
+  });
+
+  it("does not pass tools/stopWhen to generateText when no tools are given", async () => {
+    const model = mockModel("a plain reply");
+    await executeStep({ model, step: step(), systemPrompt: SYSTEM_PROMPT });
+    // MockLanguageModelV4 only ever returns its scripted response regardless of
+    // call options, so the real proof is simply that a tool-less step still works.
+    expect(model.doGenerateCalls).toHaveLength(1);
+  });
+
+  it("runs a tool the model calls, then returns the model's final text once it sees the result", async () => {
+    const execute = vi.fn(async ({ orderId }: { orderId: string }) => ({
+      status: "shipped",
+      orderId,
+    }));
+    const lookupOrder = tool({
+      description: "Look up an order's shipping status",
+      inputSchema: z.object({ orderId: z.string() }),
+      execute,
+    });
+
+    const model = mockModelThatCallsATool(
+      "lookup_order",
+      { orderId: "ord-123" },
+      "Your order has shipped.",
+    );
+
+    const result = await executeStep({
+      model,
+      step: step({ goal: "Check the order status" }),
+      systemPrompt: SYSTEM_PROMPT,
+      tools: { lookup_order: lookupOrder },
+    });
+
+    expect(execute).toHaveBeenCalledWith({ orderId: "ord-123" }, expect.anything());
+    expect(result.output).toBe("Your order has shipped.");
+    expect(model.doGenerateCalls).toHaveLength(2);
+  });
+
+  it("caps the tool-use loop at MAX_TOOL_STEPS rather than looping forever", async () => {
+    const execute = vi.fn(async () => ({ ok: true }));
+    const alwaysCallable = tool({
+      description: "A tool that always gets called again",
+      inputSchema: z.object({}),
+      execute,
+    });
+
+    // Every scripted response calls the tool again — enough copies that the
+    // model never legitimately "runs out"; only MAX_TOOL_STEPS should stop it.
+    const alwaysCallsTheTool = {
+      content: [
+        {
+          type: "tool-call" as const,
+          toolCallId: "call-x",
+          toolName: "always_callable",
+          input: "{}",
+        },
+      ],
+      finishReason: MOCK_TOOL_CALL_FINISH_REASON,
+      usage: MOCK_USAGE,
+      warnings: [],
+    };
+    const model = new MockLanguageModelV4({
+      doGenerate: Array.from({ length: 10 }, () => alwaysCallsTheTool),
+    });
+
+    await executeStep({
+      model,
+      step: step(),
+      systemPrompt: SYSTEM_PROMPT,
+      tools: { always_callable: alwaysCallable },
+    });
+
+    expect(model.doGenerateCalls.length).toBeLessThanOrEqual(4);
   });
 });

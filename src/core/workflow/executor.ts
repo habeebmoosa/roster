@@ -1,5 +1,8 @@
-import { generateText, type LanguageModel } from "ai";
+import { generateText, stepCountIs, type LanguageModel, type ToolSet } from "ai";
 import type { WorkflowStep } from "./decompose";
+
+/** A step's own tool-use loop is capped independently of Phase 8's step-level retry — enough for "call a tool, see the result, respond" plus a little room, not an open-ended agent loop. */
+export const MAX_TOOL_STEPS = 4;
 
 export interface StepRetrievalResult {
   text: string;
@@ -29,6 +32,8 @@ export interface ExecuteStepInput {
   retrieve?: StepRetrieveFn;
   /** A prior attempt's validation failure reason, fed back into the prompt for a retry (8.6). */
   previousFailureReason?: string;
+  /** Built-in + MCP tools available to this step (10.7). Omit for an agent with none enabled. */
+  tools?: ToolSet;
 }
 
 export interface StepUsage {
@@ -93,7 +98,8 @@ function buildStepPrompt(
  * orchestrator (8.7) composes around this.
  */
 export async function executeStep(input: ExecuteStepInput): Promise<StepExecutionResult> {
-  const { model, step, systemPrompt, priorStepOutputs, retrieve, previousFailureReason } = input;
+  const { model, step, systemPrompt, priorStepOutputs, retrieve, previousFailureReason, tools } =
+    input;
 
   let retrievedContext: string | undefined;
   let retrievedSourceUris: string[] | undefined;
@@ -103,10 +109,12 @@ export async function executeStep(input: ExecuteStepInput): Promise<StepExecutio
     retrievedSourceUris = retrieval.sourceUris;
   }
 
+  const hasTools = tools && Object.keys(tools).length > 0;
   const { text, usage } = await generateText({
     model,
     system: systemPrompt,
     prompt: buildStepPrompt(step, priorStepOutputs, retrievedContext, previousFailureReason),
+    ...(hasTools ? { tools, stopWhen: stepCountIs(MAX_TOOL_STEPS) } : {}),
   });
 
   return {

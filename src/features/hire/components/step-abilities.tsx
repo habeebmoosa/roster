@@ -1,8 +1,9 @@
 import { CardDescription, CardTitle, Switch } from "@/ui";
 import { ABILITIES_CATALOG } from "../fixtures";
 
-// The tool catalog itself is a fixture until Phase 9 (built-in + MCP/HTTP tools) — toggling
-// one here only records its id on the definition; nothing executes until then.
+// The built-in-tool entries in ABILITIES_CATALOG are real (core/tools/registry.ts,
+// resolved per-turn in server/agents/service.ts) — toggling one genuinely enables it.
+// The other entries are still descriptive-only.
 export function StepAbilities({
   selected,
   onToggle,
@@ -13,10 +14,7 @@ export function StepAbilities({
   return (
     <div>
       <CardTitle>Abilities</CardTitle>
-      <CardDescription>
-        Choose which tools this employee can use. Tool execution lands in a later phase — this just
-        records what&apos;s enabled.
-      </CardDescription>
+      <CardDescription>Choose which tools this employee can use.</CardDescription>
 
       <ul className="divide-border mt-4 divide-y">
         {ABILITIES_CATALOG.map((ability) => (

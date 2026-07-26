@@ -7,6 +7,7 @@ export {
 } from "./decompose";
 export {
   executeStep,
+  MAX_TOOL_STEPS,
   type ExecuteStepInput,
   type StepExecutionResult,
   type StepRetrieveFn,

@@ -17,6 +17,8 @@ expertise:
 abilities:
   - kb_lookup
   - web_search
+  - convert_pdf_to_text
+  - count_text_stats
 memory:
   semantic:
     - kb://research-methods

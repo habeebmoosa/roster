@@ -16,6 +16,9 @@ expertise:
   - SEO fundamentals (keyword intent, headings, meta descriptions)
 abilities:
   - draft_reply
+  - convert_markdown_to_html
+  - convert_html_to_markdown
+  - count_text_stats
 memory:
   semantic:
     - kb://writing-guides

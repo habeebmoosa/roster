@@ -79,8 +79,11 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
   },
 ];
 
-// Tool catalog — fixture until Phase 9 (built-in + MCP/HTTP tools). Selecting one here
-// only stores its id on the definition's `abilities` list; no tool actually executes yet.
+// The first 6 entries are descriptive-only — selecting one just stores its id on the
+// definition's `abilities` list, with no tool wired to it (kb_lookup describes retrieval,
+// which runs whenever an agent has a knowledge base, independent of this toggle). The
+// remaining entries are real built-in tools (core/tools/registry.ts, Phase 10.1/10.7):
+// enabling one here genuinely makes that tool callable during a conversation.
 export const ABILITIES_CATALOG: AbilityOption[] = [
   {
     id: "kb_lookup",
@@ -107,5 +110,40 @@ export const ABILITIES_CATALOG: AbilityOption[] = [
     id: "calendar_scheduling",
     label: "Calendar scheduling",
     description: "Propose and book meeting times.",
+  },
+  {
+    id: "convert_pdf_to_text",
+    label: "Convert PDF to text",
+    description: "Extract plain text from a PDF file.",
+  },
+  {
+    id: "convert_docx_to_text",
+    label: "Convert Word doc to text",
+    description: "Extract plain text from a .docx file.",
+  },
+  {
+    id: "convert_markdown_to_html",
+    label: "Convert Markdown to HTML",
+    description: "Render Markdown as HTML.",
+  },
+  {
+    id: "convert_html_to_markdown",
+    label: "Convert HTML to Markdown",
+    description: "Convert HTML into Markdown.",
+  },
+  {
+    id: "calculate",
+    label: "Calculator",
+    description: "Evaluate arithmetic expressions.",
+  },
+  {
+    id: "count_text_stats",
+    label: "Text stats",
+    description: "Count words/characters and estimate reading time.",
+  },
+  {
+    id: "date_time_math",
+    label: "Date & timezone math",
+    description: "Add, subtract, or convert dates and timezones.",
   },
 ];

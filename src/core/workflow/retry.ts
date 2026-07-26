@@ -1,4 +1,4 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, ToolSet } from "ai";
 import {
   executeStep,
   type StepExecutionResult,
@@ -21,6 +21,8 @@ export interface RunStepInput {
   retrieve?: StepRetrieveFn;
   /** Model that judges groundedness — independent of `model`'s own output, never self-critique. Omit to skip that check. */
   groundednessModel?: LanguageModel;
+  /** Built-in + MCP tools available to this step (10.7). */
+  tools?: ToolSet;
 }
 
 export interface StepRunResult {
@@ -43,7 +45,7 @@ export interface StepRunResult {
  * next.
  */
 export async function runStepWithRetry(input: RunStepInput): Promise<StepRunResult> {
-  const { model, step, systemPrompt, priorStepOutputs, retrieve, groundednessModel } = input;
+  const { model, step, systemPrompt, priorStepOutputs, retrieve, groundednessModel, tools } = input;
   const maxAttempts = MAX_RETRIES_PER_STEP + 1;
 
   let previousFailureReason: string | undefined;
@@ -61,6 +63,7 @@ export async function runStepWithRetry(input: RunStepInput): Promise<StepRunResu
       priorStepOutputs,
       retrieve,
       previousFailureReason,
+      tools,
     });
     usage.inputTokens += result.usage.inputTokens;
     usage.outputTokens += result.usage.outputTokens;
@@ -79,6 +82,8 @@ export interface RollbackInput {
   systemPrompt: string;
   retrieve?: StepRetrieveFn;
   groundednessModel?: LanguageModel;
+  /** Built-in + MCP tools available to the rollback attempt (10.7). */
+  tools?: ToolSet;
 }
 
 /**
@@ -93,7 +98,7 @@ export interface RollbackInput {
  * never calling this more than once per plan, not by state kept here.
  */
 export function rollbackToSingleStep(input: RollbackInput): Promise<StepRunResult> {
-  const { model, task, systemPrompt, retrieve, groundednessModel } = input;
+  const { model, task, systemPrompt, retrieve, groundednessModel, tools } = input;
   const wholeTaskStep: WorkflowStep = { index: 1, goal: task, needsRetrieval: true };
 
   return runStepWithRetry({
@@ -101,6 +106,7 @@ export function rollbackToSingleStep(input: RollbackInput): Promise<StepRunResul
     step: wholeTaskStep,
     systemPrompt,
     retrieve,
+    tools,
     groundednessModel,
   });
 }
