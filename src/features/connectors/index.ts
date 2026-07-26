@@ -1,3 +1,2 @@
-export type { Connector, ConnectorGroup } from "./types";
-export { CONNECTOR_GROUPS } from "./fixtures";
+export type { Connector, ConnectorCapability } from "./types";
 export { ConnectorsBoard } from "./components/connectors-board";

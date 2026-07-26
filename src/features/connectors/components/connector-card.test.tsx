@@ -5,32 +5,57 @@ import { describe, expect, it, vi } from "vitest";
 import type { Connector } from "../types";
 import { ConnectorCard } from "./connector-card";
 
-const SLACK: Connector = {
-  id: "slack",
-  name: "Slack",
-  description: "Let employees post updates and read channel context.",
+const NOTION: Connector = {
+  id: "notion",
+  name: "Notion",
+  description: "Search, read, and update Notion pages and databases",
+  iconUrl: null,
+  developer: "Notion Labs, Inc.",
+  connectorUrl: "https://mcp.notion.com/mcp",
+  authType: "oauth_dcr",
+  categories: ["Productivity", "Docs"],
+  trustTier: "verified",
+  cachedTools: [{ name: "search", description: "Search pages" }],
+  cachedResources: [],
+  documentationUrl: null,
+  supportUrl: null,
+  privacyPolicyUrl: null,
+  connected: false,
+  connectionStatus: null,
 };
 
 describe("ConnectorCard", () => {
-  it("shows Connect and no badge when not connected", () => {
-    render(<ConnectorCard connector={SLACK} connected={false} onToggle={() => {}} />);
-    expect(screen.getByText("Slack")).toBeInTheDocument();
-    expect(screen.getByText(SLACK.description)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Connect" })).toBeInTheDocument();
+  it("shows name, description, categories, and trust badge", () => {
+    render(<ConnectorCard connector={NOTION} onOpen={() => {}} />);
+    expect(screen.getByText("Notion")).toBeInTheDocument();
+    expect(screen.getByText(NOTION.description)).toBeInTheDocument();
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.getByText("Productivity · Docs")).toBeInTheDocument();
+  });
+
+  it("shows a Connected badge only when connected", () => {
+    const { rerender } = render(<ConnectorCard connector={NOTION} onOpen={() => {}} />);
     expect(screen.queryByText("Connected")).not.toBeInTheDocument();
-  });
 
-  it("shows the Connected badge and a Manage button when connected", () => {
-    render(<ConnectorCard connector={SLACK} connected={true} onToggle={() => {}} />);
+    rerender(<ConnectorCard connector={{ ...NOTION, connected: true }} onOpen={() => {}} />);
     expect(screen.getByText("Connected")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Manage" })).toBeInTheDocument();
   });
 
-  it("calls onToggle when the button is clicked", async () => {
+  it("calls onOpen when the card is clicked", async () => {
     const user = userEvent.setup();
-    const onToggle = vi.fn();
-    render(<ConnectorCard connector={SLACK} connected={false} onToggle={onToggle} />);
-    await user.click(screen.getByRole("button", { name: "Connect" }));
-    expect(onToggle).toHaveBeenCalledTimes(1);
+    const onOpen = vi.fn();
+    render(<ConnectorCard connector={NOTION} onOpen={onOpen} />);
+    await user.click(screen.getByTestId("connector-notion"));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onOpen on Enter/Space for keyboard accessibility", async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(<ConnectorCard connector={NOTION} onOpen={onOpen} />);
+    const card = screen.getByTestId("connector-notion");
+    card.focus();
+    await user.keyboard("{Enter}");
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

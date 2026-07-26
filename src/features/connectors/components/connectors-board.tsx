@@ -1,42 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { CardTitle } from "@/ui";
-import { DEFAULT_CONNECTED_IDS } from "../fixtures";
-import type { ConnectorGroup } from "../types";
+import { Suspense, useState } from "react";
+import { Button } from "@/ui";
+import type { Connector } from "../types";
+import { AddCustomConnectorDialog } from "./add-custom-connector-dialog";
+import { ConnectRedirectToast } from "./connect-redirect-toast";
 import { ConnectorCard } from "./connector-card";
+import { ConnectorDetailDialog } from "./connector-detail-dialog";
 
-export function ConnectorsBoard({ groups }: { groups: ConnectorGroup[] }) {
-  const [connectedIds, setConnectedIds] = useState<Set<string>>(
-    () => new Set(DEFAULT_CONNECTED_IDS),
-  );
+export function ConnectorsBoard({ connectors }: { connectors: Connector[] }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
-  function toggle(id: string) {
-    setConnectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const selected = connectors.find((c) => c.id === openId) ?? null;
 
   return (
-    <div className="flex flex-col gap-6">
-      {groups.map((group) => (
-        <div key={group.category}>
-          <CardTitle className="mb-3">{group.category}</CardTitle>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {group.items.map((connector) => (
-              <ConnectorCard
-                key={connector.id}
-                connector={connector}
-                connected={connectedIds.has(connector.id)}
-                onToggle={() => toggle(connector.id)}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="flex flex-col gap-4">
+      <Suspense fallback={null}>
+        <ConnectRedirectToast connectors={connectors} />
+      </Suspense>
+
+      <div className="flex justify-end">
+        <Button variant="secondary" onClick={() => setAddOpen(true)}>
+          + Add custom connector
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {connectors.map((connector) => (
+          <ConnectorCard
+            key={connector.id}
+            connector={connector}
+            onOpen={() => setOpenId(connector.id)}
+          />
+        ))}
+      </div>
+
+      {selected ? (
+        <ConnectorDetailDialog connector={selected} onClose={() => setOpenId(null)} />
+      ) : null}
+      {addOpen ? <AddCustomConnectorDialog onClose={() => setAddOpen(false)} /> : null}
     </div>
   );
 }

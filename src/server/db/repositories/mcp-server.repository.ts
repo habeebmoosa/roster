@@ -107,3 +107,61 @@ export async function updateMcpServerCapabilities(
     },
   });
 }
+
+export interface RegisteredOAuthClient {
+  clientId: string;
+  encryptedClientSecret: string | null;
+}
+
+/** A dynamically-registered OAuth client is shared across every Roster user connecting to this server — only the resulting per-user tokens (McpConnection) differ. */
+export async function getRegisteredOAuthClient(id: string): Promise<RegisteredOAuthClient | null> {
+  const row = await prisma.mcpServer.findUnique({
+    where: { id },
+    select: { preRegisteredClientId: true, encryptedPreRegisteredSecret: true },
+  });
+  if (!row?.preRegisteredClientId) return null;
+  return {
+    clientId: row.preRegisteredClientId,
+    encryptedClientSecret: row.encryptedPreRegisteredSecret,
+  };
+}
+
+/** Caches a Dynamic Client Registration result on the server row so later connects (by any user) skip re-registering. */
+export async function saveRegisteredOAuthClient(
+  id: string,
+  clientId: string,
+  encryptedClientSecret: string | null,
+): Promise<void> {
+  await prisma.mcpServer.update({
+    where: { id },
+    data: { preRegisteredClientId: clientId, encryptedPreRegisteredSecret: encryptedClientSecret },
+  });
+}
+
+export interface CreateCustomMcpServerInput {
+  id: string;
+  name: string;
+  description: string;
+  connectorUrl: string;
+  authType: string;
+  categories: string[];
+  createdByUserId: string;
+}
+
+export async function createCustomMcpServer(
+  input: CreateCustomMcpServerInput,
+): Promise<McpServerRecord> {
+  const row = await prisma.mcpServer.create({
+    data: {
+      id: input.id,
+      name: input.name,
+      description: input.description,
+      connectorUrl: input.connectorUrl,
+      authType: input.authType,
+      categories: input.categories,
+      trustTier: "custom",
+      createdByUserId: input.createdByUserId,
+    },
+  });
+  return toRecord(row);
+}

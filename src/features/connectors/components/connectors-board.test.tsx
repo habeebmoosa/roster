@@ -1,57 +1,63 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-import type { ConnectorGroup } from "../types";
+import { describe, expect, it, vi } from "vitest";
+import type { Connector } from "../types";
 import { ConnectorsBoard } from "./connectors-board";
 
-const GROUPS: ConnectorGroup[] = [
-  {
-    category: "Knowledge & docs",
-    items: [
-      { id: "google-drive", name: "Google Drive", description: "Search files." },
-      { id: "notion", name: "Notion", description: "Pull pages." },
-    ],
-  },
-  {
-    category: "Communication",
-    items: [{ id: "slack", name: "Slack", description: "Post updates." }],
-  },
-];
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace, refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
+
+function connector(overrides: Partial<Connector> = {}): Connector {
+  return {
+    id: "notion",
+    name: "Notion",
+    description: "Search Notion pages",
+    iconUrl: null,
+    developer: "Notion Labs, Inc.",
+    connectorUrl: "https://mcp.notion.com/mcp",
+    authType: "oauth_dcr",
+    categories: ["Docs"],
+    trustTier: "verified",
+    cachedTools: [],
+    cachedResources: [],
+    documentationUrl: null,
+    supportUrl: null,
+    privacyPolicyUrl: null,
+    connected: false,
+    connectionStatus: null,
+    ...overrides,
+  };
+}
 
 describe("ConnectorsBoard", () => {
-  it("renders every category and connector", () => {
-    render(<ConnectorsBoard groups={GROUPS} />);
-    expect(screen.getByText("Knowledge & docs")).toBeInTheDocument();
-    expect(screen.getByText("Communication")).toBeInTheDocument();
-    expect(screen.getByText("Google Drive")).toBeInTheDocument();
+  it("renders every connector as a card", () => {
+    render(
+      <ConnectorsBoard connectors={[connector(), connector({ id: "linear", name: "Linear" })]} />,
+    );
     expect(screen.getByText("Notion")).toBeInTheDocument();
-    expect(screen.getByText("Slack")).toBeInTheDocument();
+    expect(screen.getByText("Linear")).toBeInTheDocument();
   });
 
-  it("starts with the default-connected ids already showing Manage/Connected", () => {
-    render(<ConnectorsBoard groups={GROUPS} />);
-    // google-drive and notion are in DEFAULT_CONNECTED_IDS; slack is not.
-    const manageButtons = screen.getAllByRole("button", { name: "Manage" });
-    expect(manageButtons).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "Connect" })).toBeInTheDocument();
-  });
-
-  it("toggles a connector's connected state on click, independently of the others", async () => {
+  it("opens the detail dialog for a connector when its card is clicked", async () => {
     const user = userEvent.setup();
-    render(<ConnectorsBoard groups={GROUPS} />);
+    render(<ConnectorsBoard connectors={[connector()]} />);
 
-    const slackCard = screen.getByTestId("connector-slack");
-    const notionCard = screen.getByTestId("connector-notion");
+    expect(screen.queryByText("Example prompts")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("connector-notion"));
+    expect(screen.getByText("Example prompts")).toBeVisible();
+  });
 
-    await user.click(within(slackCard).getByRole("button", { name: "Connect" }));
-    expect(within(slackCard).getByRole("button", { name: "Manage" })).toBeInTheDocument();
-    // Notion is untouched.
-    expect(within(notionCard).getByRole("button", { name: "Manage" })).toBeInTheDocument();
+  it("opens the add-custom-connector dialog from the header button", async () => {
+    const user = userEvent.setup();
+    render(<ConnectorsBoard connectors={[connector()]} />);
 
-    await user.click(within(notionCard).getByRole("button", { name: "Manage" }));
-    expect(within(notionCard).getByRole("button", { name: "Connect" })).toBeInTheDocument();
-    // Slack stays connected — toggles are independent.
-    expect(within(slackCard).getByRole("button", { name: "Manage" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "+ Add custom connector" }));
+    expect(screen.getByText("Add a custom MCP server")).toBeInTheDocument();
   });
 });
