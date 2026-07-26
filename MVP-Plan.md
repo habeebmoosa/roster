@@ -195,9 +195,9 @@ This is the product. The phases below build it piece by piece; this section is t
 
 ## 8. The phased build plan
 
-**~12 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–9) → chat real-time & access surfaces (10–11) → ship (12). Each phase is independently testable and leaves `main` in a working state.
+**~13 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–8) → the five employees + tools (9–10) → chat real-time & access surfaces (11–12) → ship (13). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–8 complete · ⬜ Phase 9 (The five employees + tools) is next · ⬜ Phases 10–12 remaining.
+> **Progress:** ✅ Phases 1–8 complete · ⬜ Phase 9 (The five specialized employees) is next · ⬜ Phases 10–13 remaining.
 
 ---
 
@@ -411,9 +411,9 @@ Collapsible **Sidebar** (grouped nav: _Operate_ → Overview, Roster, Chat; _Con
 - **Overview / Dashboard** — greeting; stat tiles (active employees, conversations · 30d, spend this month, eval success rate); "Your workers" preview; "Usage & cost" per-employee breakdown; recent activity; quick actions (hire / add connector / open settings). _Wire now:_ eval success from `EvalRun`; agents from DB. _Fixtures:_ spend/convos/tokens analytics.
 - **Workers** (employee list, `/workers`) — employee table (tag/avatar, name, role, status, model, convos, spend) with filter/display controls + pagination; **Hire employee** CTA. _Wire now:_ agents list. _Fixtures:_ per-employee metrics.
 - **Employee detail** (`/workers/[id]`) — header (avatar, status, role, Pause/Edit); stat row (conversations, spend, tokens, uptime); tabs; **About** (identity/voice from the definition); recent activity; **model** (provider/tier + "Change model"); **API access** (auth toggle: API key / none, endpoint `POST /v1/agents/{id}/chat`, copyable code snippet in multiple languages). _Wire now:_ definition fields. _Fixtures:_ metrics, activity.
-- **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 10).
-- **Connectors** — tools grouped by category, connector cards (icon, name, desc, connect/manage), "synced" status. _Fixtures now_ (real tools/MCP arrive Phase 9).
-- **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 11); **Billing** (plan, payment, invoices — fixtures now).
+- **Chat** — employee switcher, **New chat**, **History** drawer, message thread (user/assistant bubbles, streaming), composer, model indicator + switcher. _Wire now:_ streams through the existing agent-chat endpoint (`runAgent()`). _Fixtures:_ saved history list (real persistence arrives Phase 11).
+- **Connectors** — tools grouped by category, connector cards (icon, name, desc, connect/manage), "synced" status. _Fixtures now_ (real tools/MCP arrive Phase 10).
+- **Settings** — tabs: **Workspace** (name, URL, timezone, appearance/theme, delete workspace); **Profile** (avatar, name, email, 2FA, change/delete); **Providers** (reuse the real Phase 3 BYOK UI, restyled to the design); **API keys** (create/revoke — fixtures now, real in Phase 12); **Billing** (plan, payment, invoices — fixtures now).
 - **Hire a new employee** (`/hire`) — 6-step wizard with a stepper: (1) role, (2) basic details, (3) knowledge base (upload / connect source), (4) abilities (tool toggles), (5) provider & model (BYOK), (6) review & create + live preview. Back / Continue / Save & exit. _Wire now:_ provider/model from the real catalog + saved keys; create writes an `Agent` (definition). _Fixtures:_ knowledge upload, abilities catalog (real in Phases 7 & 9).
 
 #### 6.5 Data strategy
@@ -480,7 +480,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **Retry/rollback cap:** max 1 retry per step (same step, failure fed back into the prompt), max 1 rollback per plan. No unbounded retry loops — a step that fails twice surfaces as a workflow failure, not a cost multiplier.
 - **Cost instrumentation** added to the eval harness: `EvalRun` gains a `costUsd` field computed from usage × the configured model's per-token price. Closes the gap where the harness tracks tokens/latency but not $ — the only way to actually prove Phase 8's cost/latency tradeoff empirically, per this project's own "prove it on every commit" principle.
 - **Sensible model-tier defaults**: default frontier/mid/cheap model bindings in `src/config/model-tiers.ts` (with a per-token price alongside each, for the cost field above), so `npm run eval` works with zero env configuration for local dev/CI. BYOK env vars (`EVAL_<TIER>_PROVIDER/MODEL/API_KEY`) still override per-deployment — tiers already resolve to real models today via that mechanism, this just removes the setup friction of configuring three env vars before a first eval run.
-- Workflow integrated into `runAgent()`; visible step boundaries exposed for the chat UI (built in Phase 6; step visibility wired in Phase 10).
+- Workflow integrated into `runAgent()`; visible step boundaries exposed for the chat UI (built in Phase 6; step visibility wired in Phase 11).
 
 **Key decisions**
 
@@ -508,41 +508,74 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **8.4 — Validators.** Pluggable validator interface; mechanical schema/tool-result checks (code) and LLM-based groundedness checks (only on steps that used retrieval), never same-model self-critique.
 - **8.5 — Compression.** Mechanical truncation/structured extraction between steps by default; LLM summarization only when a step's output genuinely exceeds the next step's context budget.
 - **8.6 — Retry/rollback.** Capped retry (max 1/step) and rollback (max 1/plan) logic; a step failing twice surfaces as a workflow failure rather than looping.
-- **8.7 — Orchestrator + wire into `runAgent()`.** Runs the full loop (with the single-step bypass as the fast path), exposes step-boundary events for the future Phase 10 chat UI, updates `runAgent()`'s signature and the eval harness call sites.
+- **8.7 — Orchestrator + wire into `runAgent()`.** Runs the full loop (with the single-step bypass as the fast path), exposes step-boundary events for the future Phase 11 chat UI, updates `runAgent()`'s signature and the eval harness call sites.
 - **8.8 — Eval integration.** Success-rate lift vs the Phase 7 baseline, reported alongside `costUsd`/latency per tier; grounded + multi-step eval cases exercising retry/rollback.
 - **8.9 — Final Phase 8 verification sweep.** Full gate across the whole phase together, plus a manual multi-step smoke test (forced validation failure → correct retry/rollback; a trivial query → visibly takes the bypass path).
 
 ---
 
-### Phase 9 — The five employees + tools ⬅️ NEXT
+### Phase 9 — The five specialized employees ⬅️ NEXT
 
-**Goal:** Clone the now-proven pattern to all five employees, and add the tool system (built-in + user-added via MCP/HTTP). The work here is _content and quality_, not new engineering.
+**Goal:** Clone the now-proven Customer Support pattern to the other four launch employees. The work here is _content and quality_ — new personas, procedural playbooks, and knowledge — not new engineering; the agent engine (retrieval, workflow, eval) already works end-to-end from Phases 4–8.
 
 **Deliverables**
 
-- Author the other four employees as definitions + **procedural playbooks** + knowledge: Content Writer, Research Analyst, Financial Analyst, Team Organizer.
-- **Built-in tools** as AI SDK `tool()` functions (per-role: kb lookup, web search, URL fetch, calculator, CSV/spreadsheet analysis, task breakdown, etc.).
-- **User-added tools** via **MCP** (headline: "connect any MCP server to your AI employee") and generic **HTTP** tools; `Tool` / `AgentTool` wiring + per-agent enablement UI.
-- Eval sets for all five employees; each must pass across all three tiers.
+- Author Content Writer, Research Analyst, Financial Analyst, and Team Organizer as definitions (YAML) + **procedural playbooks** + seed knowledge, mirroring Customer Support's structure (`agents/<id>/agent.yaml`, `knowledge/`, `playbooks/`).
+- Each new employee runs through the existing `runAgent()` unchanged — persona, retrieval, and the Phase 8 workflow all just work once the definition/content exists.
+- Eval sets for each of the 4 new employees (mirroring `evals/customer-support.json`'s structure); each must pass across all three tiers.
 
 **Key decisions**
 
-- MCP is the preferred extensibility path; HTTP is the fallback.
+- No new engineering in `core/` — this phase is purely content (definitions, playbooks, knowledge, eval tasks). If something doesn't "just work" through the existing engine, that's a signal the engine has a gap, not a cue to patch around it ad hoc.
+- **Tools are explicitly out of scope here** — these five employees ship on retrieval + workflow alone; tool-calling lands in Phase 10 and applies to all five at once.
 - No employee ships until it passes its eval on frontier / mid / cheap.
 
 **Definition of Done**
 
-- All five employees pass their eval sets on all three tiers; cheap-tier success is demonstrably close to frontier. At least one built-in and one user-added (MCP or HTTP) tool work end-to-end.
+- All 5 employees (Customer Support + the 4 new ones) pass their eval sets on all three tiers; cheap-tier success is demonstrably close to frontier for each.
 
 **How we test it**
 
-- Per-employee eval suites (the gate).
-- Integration: tool invocation (built-in + MCP + HTTP), including tool-error handling.
-- E2E: each employee handles a representative task with tools.
+- Per-employee eval suites (the gate) for each of the 4 new employees.
+- Manual: spot-check each employee's voice/expertise reads distinctly — not a reskinned Customer Support with a different name.
+
+**Sub-phases**
+
+- **9.1 — Content Writer.** Definition + knowledge + playbooks + basic and grounded eval sets.
+- **9.2 — Research Analyst.** Same shape.
+- **9.3 — Financial Analyst.** Same shape.
+- **9.4 — Team Organizer.** Same shape.
+- **9.5 — Final Phase 9 verification sweep.** Seed + ingest all 5 employees together, full gate, cross-employee voice/distinctness check, close out the phase.
 
 ---
 
-### Phase 10 — Chat: real-time, persistence & visible steps
+### Phase 10 — Tool system (built-in + MCP/HTTP)
+
+**Goal:** Give all five employees tool-calling capability — built-in tools plus user-added extensibility via MCP and generic HTTP — so they can act, not just answer.
+
+**Deliverables**
+
+- **Built-in tools** as AI SDK `tool()` functions, assigned per-role (kb lookup, web search, URL fetch, calculator, CSV/spreadsheet analysis, task breakdown, etc.).
+- **User-added tools** via **MCP** (headline: "connect any MCP server to your AI employee") and generic **HTTP** tools; `Tool` / `AgentTool` DB models + per-agent enablement UI (the Connectors screen, fixtures since Phase 6, goes live here).
+- Tool calls integrated into the Phase 8 workflow loop — a step that needs a tool calls it as part of executing that step, and the tool result is subject to the same validation as any other step output.
+
+**Key decisions**
+
+- MCP is the preferred extensibility path; HTTP is the fallback for services without an MCP server.
+- Tool results flow through the existing per-step validation (Phase 8.4) rather than a separate tool-specific check — a tool result is just another kind of step output.
+
+**Definition of Done**
+
+- At least one built-in tool and one user-added tool (MCP or HTTP) work end-to-end, demonstrated across at least two employees.
+
+**How we test it**
+
+- Integration: tool invocation (built-in + MCP + HTTP), including tool-error handling and how a failed tool call surfaces to validation/retry.
+- E2E: an employee handles a representative task that requires a tool call, via the Connectors UI.
+
+---
+
+### Phase 11 — Chat: real-time, persistence & visible steps
 
 **Goal:** Make the chat surface (UI shell built in Phase 6) fully real: durable history and visible workflow steps.
 
@@ -564,7 +597,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 11 — REST API & platform keys
+### Phase 12 — REST API & platform keys
 
 **Goal:** Programmatic access to the same employees, for developers and integrations.
 
@@ -591,7 +624,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 12 — Polish & ship (private beta)
+### Phase 13 — Polish & ship (private beta)
 
 **Goal:** A coherent, fast, sub-2-minute onboarding and a shippable private beta.
 
@@ -636,7 +669,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **Go vertical on Customer Support** through the agent-engine phases (4–5, 7–8) before cloning to the other four in Phase 9.
 - **Spend disproportionate time on the retrieval re-ranker and the procedural playbooks.** That's where the "works on any LLM" magic actually lives.
 - **Keep `core/` and `agents/` framework-agnostic.** They are the moat and the future open spec — don't let Next.js leak into them.
-- **The full design-faithful UI lands in Phase 6**, then backend phases light up each screen by swapping a fixture for real data — no UI rework. Final launch polish (landing, onboarding, Sentry, analytics) is Phase 12.
+- **The full design-faithful UI lands in Phase 6**, then backend phases light up each screen by swapping a fixture for real data — no UI rework. Final launch polish (landing, onboarding, Sentry, analytics) is Phase 13.
 
 ---
 

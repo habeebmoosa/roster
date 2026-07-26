@@ -58,9 +58,9 @@ Everything else is plumbing.
 - BYOK keys: **AES-256-GCM** encrypted with a server-side secret, validated with a 1-token ping on save, never stored raw, never logged, decrypted only inside the API route at request time.
 - `agent_knowledge.permissions` scopes what each agent may recall — permission-scoping enforced on retrieval.
 
-## Build sequence (12 phases — see `MVP-Plan.md` §8 for full detail)
+## Build sequence (13 phases — see `MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–8 complete; Phase 9 (The 5 employees + tools) is next.**
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–8 complete; Phase 9 (The five specialized employees) is next.**
 
 1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
 2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)
@@ -70,10 +70,11 @@ Foundation → prove BYOK end-to-end → agent skeleton + eval → full product 
 6. **Frontend — design system & application UI** ✅ — full RosterAI design: `ui/` design system + `features/*` modules; all screens (overview, workers, employee detail, chat, connectors, settings, hire wizard); real data where the backend exists, typed fixtures elsewhere
 7. **Memory & retrieval** ✅ — chunk/embed/ingest pipeline (BYOK), hybrid (vector + full-text) retrieval, LLM-based re-ranker, hard-capped context assembler, permission-scoping, episodic memory, wired into `runAgent()`; eval gained a retrieval precision/recall grader
 8. **Structured workflow** ✅ — decompose → execute → validate → rollback, with a single-step bypass for trivial turns, mechanical-first validation/compression, capped retries, and cost (`$`) instrumentation added to the eval harness
-9. **The 5 employees + tools** — clone the proven pattern; built-in + MCP/HTTP tools (content/quality work, not new eng)
-10. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
-11. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
-12. **Polish & ship** — landing, <2-min onboarding, Sentry, analytics, private beta
+9. **The five specialized employees** — clone the proven Customer Support pattern to Content Writer, Research Analyst, Financial Analyst, Team Organizer (content/quality work, not new eng); no tools yet
+10. **Tool system** — built-in + MCP/HTTP tools, wired into all 5 employees and the Phase 8 workflow loop
+11. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
+12. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
+13. **Polish & ship** — landing, <2-min onboarding, Sentry, analytics, private beta
 
 **Vertical first:** Customer Support goes through the agent-engine phases (4–5, 7–8) before the other four are cloned in Phase 9. Spend disproportionate time on the retrieval re-ranker and the procedural playbooks — that's where "works on any LLM" actually lives. Keep `core/` and `agents/` framework-agnostic (the moat + the open spec). The full design-faithful UI lands in Phase 6; later phases light up each screen with real data (no UI rework).
 
