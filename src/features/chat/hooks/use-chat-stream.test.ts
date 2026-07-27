@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useChatStream } from "./use-chat-stream";
 
-function streamResponse(chunks: string[]): Response {
+function streamResponse(chunks: string[], conversationId = "conv-1"): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -11,7 +11,10 @@ function streamResponse(chunks: string[]): Response {
       controller.close();
     },
   });
-  return new Response(stream, { status: 200 });
+  return new Response(stream, {
+    status: 200,
+    headers: { "X-Conversation-Id": conversationId },
+  });
 }
 
 describe("useChatStream", () => {
@@ -83,5 +86,53 @@ describe("useChatStream", () => {
       result.current.clear();
     });
     expect(result.current.messages).toEqual([]);
+  });
+
+  it("captures conversationId from the response header on the first turn", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(streamResponse(["hi"], "conv-123")));
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    expect(result.current.conversationId).toBeUndefined();
+    await act(async () => {
+      await result.current.send("Hi");
+    });
+    expect(result.current.conversationId).toBe("conv-123");
+  });
+
+  it("sends only the new message and the existing conversationId — never the full transcript", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(streamResponse(["ok"], "conv-123"));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    await act(async () => {
+      await result.current.send("First message");
+    });
+    await act(async () => {
+      await result.current.send("Second message");
+    });
+
+    const secondCallBody = JSON.parse(fetchMock.mock.calls[1]![1].body);
+    expect(secondCallBody).toEqual({
+      agentId: "a",
+      provider: "p",
+      model: "m",
+      conversationId: "conv-123",
+      content: "Second message",
+    });
+  });
+
+  it("clear() resets conversationId, starting a new conversation on the next send", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(streamResponse(["ok"], "conv-123")));
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    await act(async () => {
+      await result.current.send("Hi");
+    });
+    expect(result.current.conversationId).toBe("conv-123");
+
+    act(() => {
+      result.current.clear();
+    });
+    expect(result.current.conversationId).toBeUndefined();
   });
 });

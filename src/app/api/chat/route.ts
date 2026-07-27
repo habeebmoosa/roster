@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { ByokError, mapProviderError } from "@/core/providers";
-import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
+import { AgentNotFoundError } from "@/server/agents/service";
 import { auth } from "@/server/auth";
+import { ConversationNotFoundError, sendChatMessage } from "@/server/chat/service";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,9 +11,8 @@ const bodySchema = z.object({
   agentId: z.string().min(1),
   provider: z.string().min(1),
   model: z.string().min(1),
-  messages: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1) }))
-    .min(1),
+  conversationId: z.string().min(1).optional(),
+  content: z.string().min(1),
 });
 
 export async function POST(req: Request) {
@@ -26,14 +26,20 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: "Invalid request." } }, { status: 400 });
   }
 
-  // Pre-stream failures (missing agent, no key, bad base URL) → clean status code.
-  let result: Awaited<ReturnType<typeof streamAgentChat>>;
+  // Pre-stream failures (missing agent/conversation, no key, bad base URL) → clean status code.
+  let result: Awaited<ReturnType<typeof sendChatMessage>>;
   try {
-    result = await streamAgentChat({ userId: session.user.id, ...parsed.data });
+    result = await sendChatMessage({ userId: session.user.id, ...parsed.data });
   } catch (err) {
     if (err instanceof AgentNotFoundError) {
       return Response.json(
         { error: { code: "agent_not_found", message: "That agent doesn't exist." } },
+        { status: 404 },
+      );
+    }
+    if (err instanceof ConversationNotFoundError) {
+      return Response.json(
+        { error: { code: "conversation_not_found", message: "That conversation doesn't exist." } },
         { status: 404 },
       );
     }
@@ -60,6 +66,10 @@ export async function POST(req: Request) {
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Conversation-Id": result.conversationId,
+    },
   });
 }

@@ -9,9 +9,15 @@ export interface UseChatStreamOptions {
   model: string;
 }
 
-/** Drives /api/chat: optimistic user turn, streamed assistant turn, error recovery. */
+/**
+ * Drives /api/chat: optimistic user turn, streamed assistant turn, error recovery.
+ * The server owns conversation history (Phase 11.2) — only the new message is ever
+ * sent; `conversationId` is created on the first turn and reused for every turn
+ * after, read back from the response's `X-Conversation-Id` header.
+ */
 export function useChatStream({ agentId, provider, model }: UseChatStreamOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,8 +34,11 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
     const trimmed = content.trim();
     if (!trimmed || running) return;
 
-    const history = [...messages, { role: "user", content: trimmed } satisfies ChatMessage];
-    setMessages([...history, { role: "assistant", content: "" }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: trimmed },
+      { role: "assistant", content: "" },
+    ]);
     setError("");
     setRunning(true);
 
@@ -37,7 +46,7 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId, provider, model, messages: history }),
+        body: JSON.stringify({ agentId, provider, model, conversationId, content: trimmed }),
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => null);
@@ -45,6 +54,9 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
         setMessages((prev) => prev.slice(0, -1)); // drop the empty assistant turn
         return;
       }
+      const newConversationId = res.headers.get("X-Conversation-Id");
+      if (newConversationId) setConversationId(newConversationId);
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       for (;;) {
@@ -63,7 +75,8 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
   function clear() {
     setMessages([]);
     setError("");
+    setConversationId(undefined);
   }
 
-  return { messages, running, error, send, clear };
+  return { messages, running, error, send, clear, conversationId };
 }
