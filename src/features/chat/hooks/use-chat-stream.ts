@@ -78,5 +78,12 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
     setConversationId(undefined);
   }
 
-  return { messages, running, error, send, clear, conversationId };
+  /** Loads an existing conversation (History drawer selection, 11.3) — its messages become the thread, and its id is reused for the next send(). */
+  function loadConversation(id: string, loadedMessages: ChatMessage[]) {
+    setMessages(loadedMessages);
+    setConversationId(id);
+    setError("");
+  }
+
+  return { messages, running, error, send, clear, loadConversation, conversationId };
 }

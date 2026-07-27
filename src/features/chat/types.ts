@@ -9,7 +9,7 @@ export interface AgentOption {
   role: string;
 }
 
-/** A past conversation shown in the History drawer — fixture until Phase 10 persistence. */
+/** A past conversation shown in the History drawer — real since Phase 11 (server/db/repositories/conversation.repository.ts). */
 export interface ConversationSummary {
   id: string;
   employeeId: string;

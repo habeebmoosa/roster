@@ -1,18 +1,28 @@
 import Link from "next/link";
-import { Chat, fixtureConversationsForAgents } from "@/features/chat";
+import { Chat, formatConversationDate, type ConversationSummary } from "@/features/chat";
 import { listAgentSummaries } from "@/server/agents/service";
 import { auth } from "@/server/auth";
+import { listConversations } from "@/server/db/repositories/conversation.repository";
 import { listUserProviders } from "@/server/providers/service";
 import { Card, CardDescription, CardTitle } from "@/ui";
 
 export default async function ChatPage() {
   const session = await auth();
-  const [agents, keys] = await Promise.all([
+  const userId = session?.user?.id;
+  const [agents, keys, rawConversations] = await Promise.all([
     listAgentSummaries(),
-    session?.user?.id ? listUserProviders(session.user.id) : Promise.resolve([]),
+    userId ? listUserProviders(userId) : Promise.resolve([]),
+    userId ? listConversations(userId) : Promise.resolve([]),
   ]);
   const configured = keys.map((key) => key.provider);
-  const conversations = fixtureConversationsForAgents(agents);
+  const agentNameById = new Map(agents.map((agent) => [agent.id, agent.name]));
+  const conversations: ConversationSummary[] = rawConversations.map((conversation) => ({
+    id: conversation.id,
+    employeeId: conversation.agentId,
+    employeeName: agentNameById.get(conversation.agentId) ?? conversation.agentId,
+    title: conversation.title ?? "New conversation",
+    date: formatConversationDate(conversation.updatedAt),
+  }));
 
   if (configured.length === 0) {
     return (

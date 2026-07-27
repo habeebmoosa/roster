@@ -34,7 +34,7 @@ describe("HistoryDrawer", () => {
     expect(screen.getByText("Ada — Customer Support · Today")).toBeInTheDocument();
   });
 
-  it("calls onSelect with the conversation's employeeId when clicked", async () => {
+  it("calls onSelect with the conversation's own id when clicked", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(
@@ -47,6 +47,6 @@ describe("HistoryDrawer", () => {
     );
 
     await user.click(screen.getByText("Refund for order #48213"));
-    expect(onSelect).toHaveBeenCalledWith("customer-support");
+    expect(onSelect).toHaveBeenCalledWith("customer-support-0");
   });
 });

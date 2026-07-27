@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentOption, ConversationSummary } from "../types";
 import { Chat } from "./chat";
+
+const toastMock = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => toastMock(...args) }));
 
 const AGENTS: AgentOption[] = [
   { id: "customer-support", name: "Ada — Customer Support", role: "Support Specialist" },
@@ -70,16 +73,62 @@ describe("Chat", () => {
     expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
   });
 
-  it("selecting a conversation from History switches to that employee and closes the drawer", async () => {
+  it("selecting a conversation from History fetches it, switches employee, loads its messages, and closes the drawer", async () => {
     const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            conversation: {
+              id: "content-writer-0",
+              agentId: "content-writer",
+              title: "Blog post draft",
+              messages: [
+                { role: "user", content: "Draft a blog post about onboarding" },
+                { role: "assistant", content: "Here's a draft outline…" },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
     render(<Chat agents={AGENTS} configured={["google"]} conversations={CONVERSATIONS} />);
 
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByText("Blog post draft"));
 
-    expect(screen.getByText("Ask Milo — Content Writer anything")).toBeInTheDocument();
+    expect(await screen.findByText("Draft a blog post about onboarding")).toBeInTheDocument();
+    expect(screen.getByText("Here's a draft outline…")).toBeInTheDocument();
+    // Employee switched to match the loaded conversation.
+    expect(screen.getByRole("button", { name: /Milo — Content Writer/ })).toBeInTheDocument();
     // Drawer stays mounted (for its CSS transition) — check it's hidden, not gone.
     const drawerWrapper = screen.getByRole("dialog", { hidden: true }).parentElement!;
     expect(drawerWrapper).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("shows an error toast when the selected conversation can't be loaded", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ error: { message: "Not found" } }), { status: 404 }),
+        ),
+    );
+    render(<Chat agents={AGENTS} configured={["google"]} conversations={CONVERSATIONS} />);
+
+    await user.click(screen.getByRole("button", { name: "History" }));
+    await user.click(screen.getByText("Blog post draft"));
+
+    await waitFor(() => {
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Couldn't open that conversation" }),
+      );
+    });
+    // Stays on the originally-selected employee — nothing loaded.
+    expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
   });
 });

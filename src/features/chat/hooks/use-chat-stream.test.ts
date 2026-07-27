@@ -135,4 +135,31 @@ describe("useChatStream", () => {
     });
     expect(result.current.conversationId).toBeUndefined();
   });
+
+  it("loadConversation() replaces messages and sets conversationId for the next send()", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(streamResponse(["reply"], "conv-existing"));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    act(() => {
+      result.current.loadConversation("conv-existing", [
+        { role: "user", content: "earlier message" },
+        { role: "assistant", content: "earlier reply" },
+      ]);
+    });
+
+    expect(result.current.conversationId).toBe("conv-existing");
+    expect(result.current.messages).toEqual([
+      { role: "user", content: "earlier message" },
+      { role: "assistant", content: "earlier reply" },
+    ]);
+
+    await act(async () => {
+      await result.current.send("new message");
+    });
+
+    const callBody = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(callBody.conversationId).toBe("conv-existing");
+    expect(callBody.content).toBe("new message");
+  });
 });

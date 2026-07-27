@@ -1,3 +1,3 @@
 export type { ChatMessage, AgentOption, ConversationSummary } from "./types";
-export { fixtureConversationsForAgents } from "./fixtures";
+export { formatConversationDate } from "./format-date";
 export { Chat } from "./components/chat";

@@ -10,7 +10,7 @@ export function HistoryDrawer({
   open: boolean;
   onClose: () => void;
   conversations: ConversationSummary[];
-  onSelect: (employeeId: string) => void;
+  onSelect: (conversationId: string) => void;
 }) {
   return (
     <Drawer open={open} onClose={onClose} title="History">
@@ -25,7 +25,7 @@ export function HistoryDrawer({
             <li key={conversation.id}>
               <button
                 type="button"
-                onClick={() => onSelect(conversation.employeeId)}
+                onClick={() => onSelect(conversation.id)}
                 className="hover:bg-bg-subtle flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors"
               >
                 <Avatar name={conversation.employeeName} size="sm" />
