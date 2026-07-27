@@ -1,5 +1,7 @@
+import type { UIMessageChunk } from "ai";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
+import { AgentNotFoundError } from "@/server/agents/service";
 import { prisma } from "@/server/db/prisma";
 import { upsertAgent } from "@/server/db/repositories/agent.repository";
 import {
@@ -12,8 +14,9 @@ import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-s
 
 /**
  * sendChatMessage() end-to-end (offline): persists the user turn, resolves a BYOK
- * model, streams through streamAgentChat against a mock provider, and persists the
- * assistant's full reply once the stream finishes. Also proves the server — not the
+ * model, streams a UI Message Stream (text + step-event + error parts) through
+ * streamAgentChat against a mock provider, and persists the assistant's full reply
+ * (plus any step events) once the stream finishes. Also proves the server — not the
  * client — is the source of truth for history on a second turn.
  */
 const API_KEY = "test-key-123";
@@ -47,10 +50,27 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function drain(stream: AsyncIterable<string>): Promise<string> {
+interface Drained {
+  text: string;
+  stepEvents: unknown[];
+  errorText?: string;
+}
+
+async function drain(stream: ReadableStream<UIMessageChunk>): Promise<Drained> {
+  const reader = stream.getReader();
   let text = "";
-  for await (const chunk of stream) text += chunk;
-  return text;
+  const stepEvents: unknown[] = [];
+  let errorText: string | undefined;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value.type === "text-delta") text += value.delta;
+    else if (value.type === "data-stepEvent") stepEvents.push(value.data);
+    else if (value.type === "error") errorText = value.errorText;
+  }
+
+  return { text, stepEvents, errorText };
 }
 
 describe("sendChatMessage", () => {
@@ -63,8 +83,9 @@ describe("sendChatMessage", () => {
       content: "I want a refund for order 123",
     });
 
-    const streamed = await drain(result.textStream);
-    expect(streamed).toBe("Hello world"); // the mock provider's fixed reply
+    const drained = await drain(result.stream);
+    expect(drained.text).toBe("Hello world"); // the mock provider's fixed reply
+    expect(drained.errorText).toBeUndefined();
 
     const conversation = await getConversationWithMessages(userId, result.conversationId);
     expect(conversation).not.toBeNull();
@@ -86,7 +107,7 @@ describe("sendChatMessage", () => {
       model: "mock-model",
       content: longMessage,
     });
-    await drain(result.textStream);
+    await drain(result.stream);
 
     const conversation = await getConversationWithMessages(userId, result.conversationId);
     expect(conversation!.title!.length).toBeLessThan(longMessage.length);
@@ -101,7 +122,7 @@ describe("sendChatMessage", () => {
       model: "mock-model",
       content: "My order is delayed",
     });
-    await drain(first.textStream);
+    await drain(first.stream);
 
     const second = await sendChatMessage({
       userId,
@@ -111,7 +132,7 @@ describe("sendChatMessage", () => {
       conversationId: first.conversationId,
       content: "Any update?",
     });
-    await drain(second.textStream);
+    await drain(second.stream);
 
     expect(second.conversationId).toBe(first.conversationId);
 
@@ -152,5 +173,72 @@ describe("sendChatMessage", () => {
         content: "hi",
       }),
     ).rejects.toBeInstanceOf(ConversationNotFoundError);
+  });
+
+  it("throws AgentNotFoundError for an unknown agent on a new conversation (checked before any streaming starts)", async () => {
+    await expect(
+      sendChatMessage({
+        userId,
+        agentId: "does-not-exist",
+        provider: "custom",
+        model: "mock-model",
+        content: "hi",
+      }),
+    ).rejects.toBeInstanceOf(AgentNotFoundError);
+  });
+
+  it("uses the conversation's own agent on a later turn, ignoring a mismatched input.agentId", async () => {
+    const first = await sendChatMessage({
+      userId,
+      agentId: "customer-support",
+      provider: "custom",
+      model: "mock-model",
+      content: "hello",
+    });
+    await drain(first.stream);
+
+    // A client bug/stale state passing a different agentId shouldn't redirect the turn.
+    const second = await sendChatMessage({
+      userId,
+      agentId: "does-not-exist",
+      provider: "custom",
+      model: "mock-model",
+      conversationId: first.conversationId,
+      content: "hi again",
+    });
+    const drained = await drain(second.stream);
+    expect(drained.errorText).toBeUndefined();
+    expect(drained.text).toBe("Hello world");
+  });
+
+  it("surfaces a missing BYOK key as a structured in-stream error part, since it's only discoverable by attempting the model call", async () => {
+    const userWithNoKey = await prisma.user.create({
+      data: { email: `chat-service-no-key-${Date.now()}@test.local` },
+    });
+
+    try {
+      const result = await sendChatMessage({
+        userId: userWithNoKey.id,
+        agentId: "customer-support",
+        provider: "custom",
+        model: "mock-model",
+        content: "hi",
+      });
+
+      const drained = await drain(result.stream);
+      expect(drained.errorText).toBe("Unknown provider.");
+      expect(drained.text).toBe("");
+
+      // The user's turn is still persisted even though the assistant never replied.
+      const conversation = await getConversationWithMessages(
+        userWithNoKey.id,
+        result.conversationId,
+      );
+      expect(conversation!.messages).toHaveLength(1);
+      expect(conversation!.messages[0]).toMatchObject({ role: "user", content: "hi" });
+    } finally {
+      await prisma.conversation.deleteMany({ where: { userId: userWithNoKey.id } });
+      await prisma.user.delete({ where: { id: userWithNoKey.id } });
+    }
   });
 });

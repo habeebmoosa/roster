@@ -1,6 +1,8 @@
 import { Avatar } from "@/ui";
 import { cn } from "@/lib/cn";
+import { deriveStepRows } from "../step-rows";
 import type { AgentOption, ChatMessage } from "../types";
+import { StepEventsList } from "./step-events-list";
 
 export function ChatThread({
   messages,
@@ -30,19 +32,35 @@ export function ChatThread({
       {messages.map((message, i) => {
         const isUser = message.role === "user";
         const isStreamingPlaceholder = !isUser && running && i === messages.length - 1;
+        const stepRows = message.stepEvents ? deriveStepRows(message.stepEvents) : [];
         return (
           <div
             key={i}
             className={cn("flex items-end gap-2.5", isUser ? "flex-row-reverse" : "flex-row")}
           >
             {isUser ? null : <Avatar name={employee?.name} size="sm" className="shrink-0" />}
-            <div
-              className={cn(
-                "max-w-lg rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap",
-                isUser ? "bg-accent text-accent-contrast" : "bg-bg-subtle text-text",
-              )}
-            >
-              {message.content || (isStreamingPlaceholder ? "…" : "")}
+            <div className="max-w-lg">
+              {!isUser && stepRows.length > 0 ? <StepEventsList rows={stepRows} /> : null}
+              {message.content || message.error ? (
+                <div
+                  className={cn(
+                    "rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap",
+                    isUser ? "bg-accent text-accent-contrast" : "bg-bg-subtle text-text",
+                  )}
+                >
+                  {message.content || (isStreamingPlaceholder ? "…" : "")}
+                </div>
+              ) : isStreamingPlaceholder ? (
+                <div className="bg-bg-subtle text-text rounded-2xl px-4 py-2.5 text-sm">…</div>
+              ) : null}
+              {!isUser && message.error ? (
+                <div
+                  role="alert"
+                  className="border-danger/30 bg-danger-soft text-danger mt-1.5 rounded-lg border px-3 py-2 text-xs"
+                >
+                  ⚠️ {message.error}
+                </div>
+              ) : null}
             </div>
           </div>
         );

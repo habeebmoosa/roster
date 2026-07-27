@@ -1,6 +1,7 @@
 import type { LanguageModel, Tool } from "ai";
 import { type AgentDefinition, type AgentMessage, runAgent } from "@/core/agent";
 import { resolveBuiltInTools } from "@/core/tools";
+import type { WorkflowStepEvent } from "@/core/workflow";
 import { getAgentDefinition, listAgentSummaries } from "@/server/db/repositories/agent.repository";
 import { listEpisodicMemories } from "@/server/db/repositories/episodic-memory.repository";
 import { resolveMcpToolsForAgent } from "@/server/mcp/agent-tools-service";
@@ -22,6 +23,8 @@ export interface StreamAgentChatInput {
   provider: string;
   model: string;
   messages: AgentMessage[];
+  /** Step-boundary events for the chat UI to render live (Phase 11.4) — only fires on the multi-step workflow path. */
+  onStepEvent?: (event: WorkflowStepEvent) => void;
 }
 
 /**
@@ -103,5 +106,6 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
     retrievedContext,
     episodicMemory,
     tools,
+    onStepEvent: input.onStepEvent,
   });
 }

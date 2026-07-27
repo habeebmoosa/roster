@@ -1,5 +1,5 @@
+import { createUIMessageStreamResponse } from "ai";
 import { z } from "zod";
-import { ByokError, mapProviderError } from "@/core/providers";
 import { AgentNotFoundError } from "@/server/agents/service";
 import { auth } from "@/server/auth";
 import { ConversationNotFoundError, sendChatMessage } from "@/server/chat/service";
@@ -26,7 +26,9 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: "Invalid request." } }, { status: 400 });
   }
 
-  // Pre-stream failures (missing agent/conversation, no key, bad base URL) → clean status code.
+  // Only request-validity failures (unknown agent/conversation) happen before we commit
+  // to a streaming response — BYOK failures happen inside the stream itself as a
+  // structured `error` part (11.4), since only attempting the model call reveals them.
   let result: Awaited<ReturnType<typeof sendChatMessage>>;
   try {
     result = await sendChatMessage({ userId: session.user.id, ...parsed.data });
@@ -43,33 +45,11 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
-    const byok = err instanceof ByokError ? err : mapProviderError(err);
-    return Response.json(
-      { error: { code: byok.code, message: byok.userMessage } },
-      { status: 400 },
-    );
+    return Response.json({ error: { message: "Something went wrong." } }, { status: 500 });
   }
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      try {
-        for await (const chunk of result.textStream) {
-          controller.enqueue(encoder.encode(chunk));
-        }
-      } catch (err) {
-        controller.enqueue(encoder.encode(`\n\n⚠️ ${mapProviderError(err).userMessage}`));
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Conversation-Id": result.conversationId,
-    },
+  return createUIMessageStreamResponse({
+    stream: result.stream,
+    headers: { "X-Conversation-Id": result.conversationId },
   });
 }

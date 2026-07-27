@@ -24,7 +24,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       id: conversation.id,
       agentId: conversation.agentId,
       title: conversation.title,
-      messages: conversation.messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: conversation.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        stepEvents: m.stepEvents ?? undefined,
+      })),
     },
   });
 }

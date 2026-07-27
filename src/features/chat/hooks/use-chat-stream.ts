@@ -1,6 +1,9 @@
 "use client";
 
+import { parseJsonEventStream } from "ai";
 import { useState } from "react";
+import { z } from "zod";
+import type { WorkflowStepEvent } from "@/core/workflow";
 import type { ChatMessage } from "../types";
 
 export interface UseChatStreamOptions {
@@ -9,10 +12,14 @@ export interface UseChatStreamOptions {
   model: string;
 }
 
+/** Loose shape shared by every chunk in the UI Message Stream — enough to route on `type`, without re-declaring the SDK's full discriminated union. */
+const chunkSchema = z.object({ type: z.string() }).passthrough();
+
 /**
- * Drives /api/chat: optimistic user turn, streamed assistant turn, error recovery.
- * The server owns conversation history (Phase 11.2) — only the new message is ever
- * sent; `conversationId` is created on the first turn and reused for every turn
+ * Drives /api/chat: optimistic user turn, streamed assistant turn (text, live
+ * step events, and structured errors — 11.4), error recovery. The server owns
+ * conversation history (11.2) — only the new message is ever sent;
+ * `conversationId` is created on the first turn and reused for every turn
  * after, read back from the response's `X-Conversation-Id` header.
  */
 export function useChatStream({ agentId, provider, model }: UseChatStreamOptions) {
@@ -21,11 +28,11 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
-  function appendToLastAssistant(chunk: string) {
+  function updateLastAssistant(updater: (message: ChatMessage) => ChatMessage) {
     setMessages((prev) => {
       const copy = [...prev];
       const last = copy[copy.length - 1];
-      if (last) copy[copy.length - 1] = { role: "assistant", content: last.content + chunk };
+      if (last) copy[copy.length - 1] = updater(last);
       return copy;
     });
   }
@@ -57,12 +64,23 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
       const newConversationId = res.headers.get("X-Conversation-Id");
       if (newConversationId) setConversationId(newConversationId);
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
+      const reader = parseJsonEventStream({ stream: res.body, schema: chunkSchema }).getReader();
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        appendToLastAssistant(decoder.decode(value, { stream: true }));
+        if (!value.success) continue; // skip a malformed frame rather than aborting the whole turn
+
+        const chunk = value.value;
+        if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
+          const delta = chunk.delta;
+          updateLastAssistant((m) => ({ ...m, content: m.content + delta }));
+        } else if (chunk.type === "data-stepEvent" && chunk.data) {
+          const event = chunk.data as WorkflowStepEvent;
+          updateLastAssistant((m) => ({ ...m, stepEvents: [...(m.stepEvents ?? []), event] }));
+        } else if (chunk.type === "error" && typeof chunk.errorText === "string") {
+          const errorText = chunk.errorText;
+          updateLastAssistant((m) => ({ ...m, error: errorText }));
+        }
       }
     } catch {
       setError("Network error.");
