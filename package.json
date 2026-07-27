@@ -1,6 +1,6 @@
 {
   "name": "roster",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Roster — hireable, specialized AI employees that perform like experts on any LLM you bring.",
   "type": "module",

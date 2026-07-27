@@ -156,7 +156,8 @@ Managed via Prisma migrations. Vector columns via the custom-migration approach 
 | `Agent`                                     | id, name, role, definition (persona/voice/expertise), defaultTools                                                                                                                                                                                                                                                               |
 | `AgentKnowledge`                            | agentId, chunk, embedding (`vector`), source, **permissions**                                                                                                                                                                                                                                                                    |
 | `Playbook`                                  | agentId, name, content (markdown decision tree)                                                                                                                                                                                                                                                                                  |
-| `Conversation` / `Message`                  | userId, agentId, history                                                                                                                                                                                                                                                                                                         |
+| `Conversation`                              | userId, agentId, title (derived from the first user message), createdAt, updatedAt                                                                                                                                                                                                                                               |
+| `Message`                                   | conversationId, role (user/assistant), content, stepEvents (JSON — the assistant turn's Phase 8 `WorkflowStepEvent[]`, so a reloaded conversation can re-render its steps), createdAt                                                                                                                                            |
 | `McpServer`                                 | a directory entry or a user-added custom server: name, slug, description, iconUrl, developer, connectorUrl, authType (oauth_dcr/static_headers/none), categories, cached capability list (tools + resources), trust tier (verified/community/custom), optional pre-registered OAuth client id/secret, docs/support/privacy links |
 | `McpConnection`                             | userId, mcpServerId, **encrypted OAuth tokens or static header value (AES-256-GCM)**, expiresAt, status                                                                                                                                                                                                                          |
 | `AgentMcpServer`                            | which connected MCP servers are enabled for which agent                                                                                                                                                                                                                                                                          |
@@ -601,21 +602,39 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 **Goal:** Make the chat surface (UI shell built in Phase 6) fully real: durable history and visible workflow steps.
 
+**Where things actually stand today (confirmed by investigation before writing this section):** `/api/chat` streams **raw plain text** — no framing, no `conversationId` anywhere in the client/API/DB, and the client hook resends the _entire_ message transcript on every turn (the server has no memory of a conversation at all). `WorkflowStepEvent`/`onStepEvent` (Phase 8) already works end-to-end inside `core/workflow`/`core/agent`, but `server/agents/service.ts`'s `streamAgentChat()` never passes the callback through — that wire has been sitting unconnected since Phase 8. The model picker (provider dropdown scoped to `listUserProviders()`, free-text model field) is genuinely real, not fixture, and already correct per Phase 6. Chat history (`fixtures.ts`, `ConversationSummary[]`) is entirely fake — deterministically hashed fake titles/dates, no relation to real messages; selecting a history item today only switches the employee, it doesn't load any messages (there are none to load).
+
 **Deliverables**
 
-- **Persistence:** `Conversation`/`Message` models + repository; the Phase 6 chat UI and History drawer now read/write real conversations (replacing the fixture history).
-- **Visible tool-call / workflow steps** ("🔍 searching knowledge base…", "✅ validating…") streamed into the thread — powered by Phase 8's step boundaries.
-- Model picker scoped to the user's configured providers (already wired in Phase 6); confirm multi-turn + long-stream robustness.
-- Clean handling of BYOK errors inline in chat.
+- **Persistence:** `Conversation`/`Message` models + repository. The server becomes the source of truth for a conversation's history — the client stops resending the full transcript every turn once a `conversationId` exists. The Phase 6 chat UI and History drawer read/write real conversations, replacing `fixtures.ts` entirely.
+- **Visible tool-call / workflow steps** streamed into the thread, powered by Phase 8's step boundaries. This requires replacing `/api/chat`'s raw-text stream with the AI SDK's UI Message Stream protocol (`createUIMessageStream` + its client-side parser) rather than inventing a bespoke framing — it already has a "data" part type suited to exactly this, and gives us a real client parser instead of a hand-rolled one. `onStepEvent` gets wired from `runAgent()` through `streamAgentChat()` into the route for the first time.
+- Confirm the model picker (already real) survives multi-turn conversations and long streams under the new persistence + streaming-protocol changes.
+- Clean, structured BYOK error handling inline in chat — no more `\n\n⚠️ {message}` appended into the assistant's text bubble; an error becomes its own distinguishable part in the new stream protocol.
+
+**Key decisions**
+
+- **The server, not the client, owns conversation history.** Once a `conversationId` exists, the client sends only the new user message; the server loads prior turns from `Message` itself before calling `runAgent()`. This is a correctness fix as much as a persistence feature — resending the whole transcript from client state was fragile and made "reload shows history" impossible to satisfy honestly.
+- **Adopt the AI SDK's UI Message Stream protocol instead of a custom one.** The current plain-text stream has no room for a second content type (step events) without inventing a delimiter scheme from scratch; the AI SDK already ships this exact capability (text parts + data parts + a client-side stream parser), and Roster's tech stack is already committed to the AI SDK as the provider abstraction — reusing its streaming protocol is the "environment over reinventing" call, not scope creep.
+- **`stepEvents` persist per assistant message (JSON column), not in a separate table.** A step event only ever belongs to the one assistant turn that produced it, and reloading a conversation needs to re-render them next to that turn — no query ever needs to filter/join on individual step events across messages.
 
 **Definition of Done**
 
-- A user picks an employee and a model, chats with streaming responses, sees tool/workflow steps, and their history persists.
+- A user picks an employee and a model, chats with streaming responses, sees tool/workflow steps live during a turn, and reloading the page (or picking the conversation from History) shows the exact same thread, steps included.
+- A forced BYOK error (bad key, rate limit) surfaces as a clean, structured error in the thread — not text spliced into an assistant reply.
 
 **How we test it**
 
-- E2E: pick employee + model → streamed multi-turn conversation with visible steps → reload shows history.
-- Integration: model picker only offers configured providers; streaming survives long responses.
+- Unit: the `Conversation`/`Message` repository; the stream-protocol encode/decode round trip (text + step-event parts) in isolation.
+- Integration: `streamAgentChat()` persists both turns of a conversation and threads `onStepEvent` into stored `stepEvents`, mirroring `agent-run.test.ts`'s existing mock-provider pattern; a second turn against an existing `conversationId` loads real prior messages rather than trusting client-sent history; the History drawer lists real conversations for a user.
+- E2E: pick employee + model → streamed multi-turn conversation with visible steps → reload shows the same history including steps → a forced provider error renders as a distinct error state, not garbled into the reply text.
+
+**Sub-phases**
+
+- **11.1 — Data model.** `Conversation`/`Message` Prisma models + repository (list conversations for a user, get one with its messages, create a conversation, append a message). No wiring into the API/UI yet.
+- **11.2 — Persistence wired into `/api/chat` + the chat hook.** A turn creates or reuses a `conversationId`; the server loads prior messages from the DB (not client-resent history) before calling `runAgent()`; both turns of the exchange get persisted afterward.
+- **11.3 — History drawer + conversation switching on real data.** Replaces `fixtures.ts`; selecting a past conversation loads its real messages into the thread.
+- **11.4 — Visible workflow/tool-call steps + structured error handling.** Switch `/api/chat` to the AI SDK's UI Message Stream protocol; wire `onStepEvent` through `streamAgentChat()`; render live step events and structured BYOK errors in `ChatThread`; persist `stepEvents` per assistant message so reloads reproduce them.
+- **11.5 — Final Phase 11 verification sweep.** Full gate; end-to-end smoke test covering a multi-turn conversation with visible steps, a page reload, and a forced provider error.
 
 ---
 
