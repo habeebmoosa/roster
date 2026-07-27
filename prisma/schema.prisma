@@ -37,6 +37,7 @@ model User {
   episodicMemories EpisodicMemory[]
   mcpConnections   McpConnection[]
   agentMcpServers  AgentMcpServer[]
+  conversations    Conversation[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -126,6 +127,7 @@ model Agent {
   knowledge        AgentKnowledge[]
   episodicMemories EpisodicMemory[]
   mcpServers       AgentMcpServer[]
+  conversations    Conversation[]
 
   @@map("agents")
 }
@@ -308,4 +310,43 @@ model AgentMcpServer {
   @@unique([userId, agentId, mcpServerId])
   @@index([userId, agentId])
   @@map("agent_mcp_servers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Conversation / Message (Phase 11) — durable chat history. A conversation
+// is scoped to one user talking to one agent; messages are its ordered
+// turns. `Message.stepEvents` caches the assistant turn's Phase 8
+// WorkflowStepEvent[] (only ever produced on the multi-step workflow path,
+// never the single-step bypass most turns take) so reloading a conversation
+// can re-render its visible steps without re-running anything.
+// ─────────────────────────────────────────────────────────────
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  agentId   String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, agentId])
+  @@index([userId, updatedAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String // "user" | "assistant"
+  content        String
+  stepEvents     Json?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }
