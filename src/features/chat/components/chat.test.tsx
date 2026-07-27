@@ -73,7 +73,7 @@ describe("Chat", () => {
     expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
   });
 
-  it("selecting a conversation from History fetches it, switches employee, loads its messages, and closes the drawer", async () => {
+  it("selecting a conversation from History fetches it, switches employee, loads its messages (steps included), and closes the drawer", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -86,7 +86,14 @@ describe("Chat", () => {
               title: "Blog post draft",
               messages: [
                 { role: "user", content: "Draft a blog post about onboarding" },
-                { role: "assistant", content: "Here's a draft outline…" },
+                {
+                  role: "assistant",
+                  content: "Here's a draft outline…",
+                  stepEvents: [
+                    { type: "step-start", index: 1, goal: "Look up the style guide" },
+                    { type: "step-complete", index: 1, passed: true, attempts: 1 },
+                  ],
+                },
               ],
             },
           }),
@@ -101,6 +108,9 @@ describe("Chat", () => {
 
     expect(await screen.findByText("Draft a blog post about onboarding")).toBeInTheDocument();
     expect(screen.getByText("Here's a draft outline…")).toBeInTheDocument();
+    // A reloaded conversation reproduces its step events, not just its text.
+    expect(screen.getByTestId("step-events-list")).toBeInTheDocument();
+    expect(screen.getByText("Look up the style guide")).toBeInTheDocument();
     // Employee switched to match the loaded conversation.
     expect(screen.getByRole("button", { name: /Milo — Content Writer/ })).toBeInTheDocument();
     // Drawer stays mounted (for its CSS transition) — check it's hidden, not gone.

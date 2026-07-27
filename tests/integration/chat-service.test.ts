@@ -1,4 +1,5 @@
-import type { UIMessageChunk } from "ai";
+import { createUIMessageStreamResponse, parseJsonEventStream, type UIMessageChunk } from "ai";
+import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { AgentNotFoundError } from "@/server/agents/service";
@@ -240,5 +241,41 @@ describe("sendChatMessage", () => {
       await prisma.conversation.deleteMany({ where: { userId: userWithNoKey.id } });
       await prisma.user.delete({ where: { id: userWithNoKey.id } });
     }
+  });
+
+  it("round-trips through the real wire protocol: server encode (createUIMessageStreamResponse) → HTTP bytes → client decode (parseJsonEventStream)", async () => {
+    // Proves the server half (server/chat/service.ts + the route's
+    // createUIMessageStreamResponse) and the client half
+    // (use-chat-stream.ts's parseJsonEventStream) are actually compatible —
+    // each is otherwise only tested against its own hand-built fixtures.
+    const result = await sendChatMessage({
+      userId,
+      agentId: "customer-support",
+      provider: "custom",
+      model: "mock-model",
+      content: "Round-trip check",
+    });
+
+    const response = createUIMessageStreamResponse({ stream: result.stream });
+    expect(response.body).not.toBeNull();
+
+    const chunkSchema = z.object({ type: z.string() }).passthrough();
+    const reader = parseJsonEventStream({
+      stream: response.body!,
+      schema: chunkSchema,
+    }).getReader();
+
+    let text = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      expect(value.success).toBe(true);
+      if (!value.success) continue;
+      if (value.value.type === "text-delta" && typeof value.value.delta === "string") {
+        text += value.value.delta;
+      }
+    }
+
+    expect(text).toBe("Hello world");
   });
 });

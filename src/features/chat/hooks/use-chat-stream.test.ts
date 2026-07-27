@@ -165,6 +165,32 @@ describe("useChatStream", () => {
     ]);
   });
 
+  it("survives a long stream — many small deltas concatenate without truncation or reordering", async () => {
+    const words = Array.from({ length: 300 }, (_, i) => `word${i}`);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          sseResponse([
+            { type: "start" },
+            { type: "text-start", id: "t1" },
+            ...words.map((word) => ({ type: "text-delta", id: "t1", delta: `${word} ` })),
+            { type: "text-end", id: "t1" },
+            { type: "finish" },
+          ]),
+        ),
+    );
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    await act(async () => {
+      await result.current.send("Give me a long answer");
+    });
+
+    expect(result.current.messages[1]!.content).toBe(`${words.join(" ")} `);
+    expect(result.current.error).toBe("");
+  });
+
   it("clear() resets messages and error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(textReply("ok")));
     const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));

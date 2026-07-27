@@ -200,7 +200,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~13 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–8) → the five employees + tools (9–10) → chat real-time & access surfaces (11–12) → ship (13). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–10 complete · ⬜ Phase 11 (Chat: real-time & persistence) is next · ⬜ Phases 12–13 remaining.
+> **Progress:** ✅ Phases 1–11 complete · ⬜ Phase 12 (REST API & platform keys) is next · ⬜ Phase 13 remaining.
 
 ---
 
@@ -598,7 +598,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 11 — Chat: real-time, persistence & visible steps ⬅️ NEXT
+### Phase 11 — Chat: real-time, persistence & visible steps ✅
 
 **Goal:** Make the chat surface (UI shell built in Phase 6) fully real: durable history and visible workflow steps.
 
@@ -638,7 +638,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 12 — REST API & platform keys
+### Phase 12 — REST API & platform keys ⬅️ NEXT
 
 **Goal:** Programmatic access to the same employees, for developers and integrations.
 

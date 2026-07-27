@@ -60,7 +60,7 @@ Everything else is plumbing.
 
 ## Build sequence (13 phases — see `MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–10 complete; Phase 11 (Chat: real-time & persistence) is next.**
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–11 complete; Phase 12 (REST API & platform keys) is next.**
 
 1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
 2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)
