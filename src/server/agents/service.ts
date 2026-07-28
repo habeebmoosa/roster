@@ -1,5 +1,6 @@
 import type { LanguageModel, Tool } from "ai";
 import { type AgentDefinition, type AgentMessage, runAgent } from "@/core/agent";
+import { resolveModel } from "@/core/providers";
 import { resolveBuiltInTools } from "@/core/tools";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { getAgentDefinition, listAgentSummaries } from "@/server/db/repositories/agent.repository";
@@ -25,6 +26,12 @@ export interface StreamAgentChatInput {
   messages: AgentMessage[];
   /** Step-boundary events for the chat UI to render live (Phase 11.4) — only fires on the multi-step workflow path. */
   onStepEvent?: (event: WorkflowStepEvent) => void;
+  /**
+   * REST API only (Phase 12.2): resolve the model from this caller-supplied
+   * key instead of a stored provider key. Never persisted anywhere — it lives
+   * only for the duration of this call.
+   */
+  ephemeralKey?: { apiKey: string; baseUrl?: string };
 }
 
 /**
@@ -91,7 +98,14 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
   const definition = await getAgentDefinition(input.agentId);
   if (!definition) throw new AgentNotFoundError(input.agentId);
 
-  const model = await getModelForUser(input.userId, input.provider, input.model);
+  const model = input.ephemeralKey
+    ? resolveModel({
+        provider: input.provider,
+        model: input.model,
+        apiKey: input.ephemeralKey.apiKey,
+        baseUrl: input.ephemeralKey.baseUrl ?? null,
+      })
+    : await getModelForUser(input.userId, input.provider, input.model);
 
   const [retrievedContext, episodicMemory, tools] = await Promise.all([
     tryRetrieveGroundingContext(input, definition, model),
