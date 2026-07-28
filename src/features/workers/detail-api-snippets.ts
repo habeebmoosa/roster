@@ -3,7 +3,12 @@ export type ApiLanguage = "curl" | "javascript" | "python";
 
 const ENDPOINT_BASE = "https://api.rosterai.com/v1/agents";
 
-/** Real agent id, aspirational endpoint — the REST API itself lands in Phase 11. */
+/**
+ * Real agent id, aspirational public domain — the real route it documents
+ * (`POST /api/v1/agents/{id}/chat`, Phase 12) accepts exactly this shape:
+ * `{messages, provider?, model?, apiKey?, baseUrl?}`, auth via
+ * `Authorization: Bearer <platform key>`.
+ */
 export function apiEndpointFor(agentId: string): string {
   return `${ENDPOINT_BASE}/${agentId}/chat`;
 }

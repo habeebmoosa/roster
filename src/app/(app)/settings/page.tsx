@@ -7,6 +7,7 @@ import {
   WorkspaceTab,
 } from "@/features/settings";
 import { auth } from "@/server/auth";
+import { listApiKeys } from "@/server/db/repositories/api-key.repository";
 import { listUserProviders } from "@/server/providers/service";
 
 export default async function SettingsPage({
@@ -16,7 +17,10 @@ export default async function SettingsPage({
 }) {
   const { tab } = await searchParams;
   const session = await auth();
-  const keys = session?.user?.id ? await listUserProviders(session.user.id) : [];
+  const [keys, apiKeys] = await Promise.all([
+    session?.user?.id ? listUserProviders(session.user.id) : Promise.resolve([]),
+    session?.user?.id ? listApiKeys(session.user.id) : Promise.resolve([]),
+  ]);
 
   const name = session?.user?.name ?? "Account";
   const email = session?.user?.email ?? "";
@@ -31,7 +35,7 @@ export default async function SettingsPage({
           workspace={<WorkspaceTab initialName={name} />}
           profile={<ProfileTab name={name} email={email} />}
           providers={<ProvidersTab keys={keys} />}
-          apiKeys={<ApiKeysTab />}
+          apiKeys={<ApiKeysTab keys={apiKeys} />}
           billing={<BillingTab />}
         />
       </div>
