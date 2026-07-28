@@ -1,6 +1,6 @@
 {
   "name": "roster",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Roster — hireable, specialized AI employees that perform like experts on any LLM you bring.",
   "type": "module",
@@ -42,6 +42,7 @@
     "@ai-sdk/openai-compatible": "^3.0.12",
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^6",
+    "@upstash/redis": "^1.38.0",
     "ai": "^7.0.31",
     "gpt-tokenizer": "^3.4.0",
     "luxon": "^3.7.2",

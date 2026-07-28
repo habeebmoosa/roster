@@ -38,6 +38,7 @@ model User {
   mcpConnections   McpConnection[]
   agentMcpServers  AgentMcpServer[]
   conversations    Conversation[]
+  apiKeys          ApiKey[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -349,4 +350,29 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@map("messages")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ApiKey (Phase 12) — a hashed platform API key for programmatic access to
+// POST /v1/agents/{id}/chat. Unlike ProviderKey (AES-256-GCM, decrypted at
+// request time because the raw value must reach the LLM provider), a
+// platform key only ever needs to be *compared* — so only its SHA-256 hash
+// is stored; the raw value is shown to the user once at creation and never
+// retrievable again. `keyPrefix` (e.g. "rk_live_4f2a9c") is safe to store
+// and display in plaintext for the user to tell keys apart.
+// ─────────────────────────────────────────────────────────────
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String
+  keyPrefix  String
+  hashedKey  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
 }

@@ -60,4 +60,23 @@ describe("parseEnv", () => {
   it("rejects an ENCRYPTION_KEY that is not 32 bytes", () => {
     expect(() => parseEnv({ ...VALID, ENCRYPTION_KEY: "too-short" })).toThrow(/ENCRYPTION_KEY/);
   });
+
+  it("treats the Upstash env vars as optional", () => {
+    expect(() => parseEnv(VALID)).not.toThrow();
+  });
+
+  it("accepts a configured Upstash URL and token", () => {
+    const env = parseEnv({
+      ...VALID,
+      UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+      UPSTASH_REDIS_REST_TOKEN: "test-token",
+    });
+    expect(env.UPSTASH_REDIS_REST_URL).toBe("https://example.upstash.io");
+  });
+
+  it("rejects an invalid UPSTASH_REDIS_REST_URL", () => {
+    expect(() => parseEnv({ ...VALID, UPSTASH_REDIS_REST_URL: "not-a-url" })).toThrow(
+      /UPSTASH_REDIS_REST_URL/,
+    );
+  });
 });

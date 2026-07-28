@@ -29,6 +29,11 @@ export const envSchema = z.object({
   ENCRYPTION_KEY: z.string().refine((v) => decodesTo32Bytes(v), {
     message: "must be 32 bytes, base64-encoded — run `openssl rand -base64 32`",
   }),
+
+  // Optional: Upstash Redis REST credentials for shared rate limiting across
+  // instances. Falls back to an in-memory limiter when unset.
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 });
 
 function decodesTo32Bytes(value: string): boolean {
