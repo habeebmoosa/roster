@@ -161,7 +161,7 @@ Managed via Prisma migrations. Vector columns via the custom-migration approach 
 | `McpServer`                                 | a directory entry or a user-added custom server: name, slug, description, iconUrl, developer, connectorUrl, authType (oauth_dcr/static_headers/none), categories, cached capability list (tools + resources), trust tier (verified/community/custom), optional pre-registered OAuth client id/secret, docs/support/privacy links |
 | `McpConnection`                             | userId, mcpServerId, **encrypted OAuth tokens or static header value (AES-256-GCM)**, expiresAt, status                                                                                                                                                                                                                          |
 | `AgentMcpServer`                            | which connected MCP servers are enabled for which agent                                                                                                                                                                                                                                                                          |
-| `ApiKey`                                    | hashed platform API keys for programmatic access                                                                                                                                                                                                                                                                                 |
+| `ApiKey`                                    | userId, label, keyPrefix (shown in UI), **hashedKey (SHA-256 — compared, never decrypted)**, lastUsedAt, revokedAt                                                                                                                                                                                                               |
 | `EvalRun`                                   | agentId, modelTier, successRate, tokens, retrievalPrecision/Recall, latency, timestamp                                                                                                                                                                                                                                           |
 
 > **BYOK security:** encrypt with AES-256-GCM using a server-side secret before storing. Never store raw, never log. Decrypt only inside the request that uses it. Validate keys with a cheap ~1-token ping on save. The `config` JSON + `baseUrl` make each provider entry fully self-describing (an OpenAI-compatible endpoint, an Azure deployment, a Bedrock region, a local Ollama URL — all just data).
@@ -640,28 +640,42 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ### Phase 12 — REST API & platform keys ⬅️ NEXT
 
-**Goal:** Programmatic access to the same employees, for developers and integrations.
+**Goal:** Programmatic access to the same employees, for developers and integrations — one engine (`runAgent()`), two surfaces (the chat UI from Phase 11, and this REST API).
+
+**Where things actually stand today (confirmed before writing this section):** Phase 6 already built the employee-detail "API access" tab with real, unit-tested code snippets (`detail-api-snippets.ts`) documenting the exact intended contract: `POST /v1/agents/{id}/chat`, `Authorization: Bearer YOUR_API_KEY`, body `{"messages": [{"role": "user", "content": "..."}]}` — no `conversationId`, no `provider`/`model` shown in the simple case. That contract is the source of truth for what Phase 12 has to actually implement. The Settings "API keys" tab (`api-keys-tab.tsx`) is a full fixture (local React state, an id-derived fake prefix, no server at all). Neither `ApiKey` nor any `/v1/` route exists yet; `server/ratelimit/` is an empty placeholder directory with no rate-limiting code at all, and no Upstash/Redis dependency is installed.
 
 **Deliverables**
 
-- `POST /v1/agents/{id}/chat` (versioned), authenticated by **platform API key** (`ApiKey`, hashed).
-- Accepts either a reference to a stored provider key or a per-request key.
-- **Per-user rate limiting** via Upstash/Redis; consistent BYOK error responses.
-- API key management UI (`settings/api-keys/`); minimal API docs.
+- **`ApiKey` data model**: userId, label, `keyPrefix` (shown in the UI, e.g. `rk_live_4f2a9c`), `hashedKey` (SHA-256 of the full key), `lastUsedAt`, `revokedAt`.
+- **Rate-limiting abstraction**: a `RateLimiter` interface with an in-memory implementation (the default — fully offline-testable, no external service required) and an Upstash-Redis-backed implementation that activates only when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are configured — the same "bring your own backend, nothing hardcoded" treatment the database and LLM providers already get.
+- **`POST /v1/agents/{id}/chat`** (versioned): authenticated by `Authorization: Bearer rk_live_...` (hashed lookup → `userId`, never a session cookie). Body: `{messages, provider?, model?, apiKey?, baseUrl?}` — `provider`/`model` default to the agent's own configured default model (`AgentDefinition.model`, set by the Hire wizard since Phase 6) when omitted, matching the simple documented contract exactly; `apiKey`/`baseUrl`, when present, let a caller use a key that was never stored in their account at all (the "per-request key" mode) instead of a stored provider key. Rate-limited per user. Same BYOK error taxonomy as chat, returned as clean JSON.
+- **API key management UI** (`settings/api-keys/`), wired to real data — replacing the Phase 6 fixture: create (the full key is shown exactly once), list (masked prefix, created, last used), revoke.
+- Confirm the Phase 6 "API access" tab's snippets still match the real, now-implemented contract.
 
 **Key decisions**
 
-- The API calls the exact same `runAgent()` as chat — one engine, two surfaces.
-- Versioned from day one (`/v1`).
+- **The API calls the exact same `runAgent()` as chat — one engine, two surfaces.** `server/agents/service.ts`'s `streamAgentChat()` gains an optional ephemeral-key override so it can resolve a model from either a stored provider key (chat UI, and the REST API's default mode) or a request-supplied key (REST-only), without forking the engine.
+- **The REST surface is stateless, unlike the chat UI.** No `conversationId`, no `Conversation`/`Message` persistence — a caller supplies its own message history each call, exactly like OpenAI's own chat-completions convention and exactly like Phase 6's already-documented snippet. Conversation persistence is a chat-UI-specific feature (Phase 11), not part of the REST contract.
+- **Platform API keys are hashed, never encrypted/decrypted.** Unlike BYOK provider keys (AES-256-GCM, decrypted at request time because the raw key must reach the provider), a platform key only ever needs to be _compared_ — SHA-256 hashed at creation, the raw value shown to the user exactly once and never retrievable again (the same pattern GitHub PATs / Stripe restricted keys use).
+- **Rate limiting is configurable, not hardcoded to Upstash.** An in-memory limiter is the default and what every test runs against; Upstash activates only when its env vars are present.
+- **Versioned from day one (`/v1`).**
 
 **Definition of Done**
 
-- A `curl` request with a platform key streams an agent response; rate limits enforce; invalid keys / quota errors return clean, specific responses.
+- A `curl` request with a platform key streams an agent response; a revoked or invalid key is rejected with a clean 401; exceeding the rate limit returns a clean 429; a per-request provider key works without ever being stored.
 
 **How we test it**
 
-- Integration: auth, rate limiting, both key-passing modes, error taxonomy.
-- E2E: create platform key in UI → call the API → get a streamed response.
+- Unit: API-key hashing/prefix generation; the in-memory rate limiter's window/reset behavior.
+- Integration: the full route — a valid key streams a reply, an invalid/revoked key 401s, the rate limit enforces and resets, both provider-key modes (stored vs. per-request) resolve correctly, the BYOK error taxonomy matches the chat surface.
+- E2E: create a platform key in Settings → call the API with it → get a streamed response. (Same environment limitation noted in Phases 10–11: no way to click through a real signed-in browser session here — substituted with integration tests hitting the route directly.)
+
+**Sub-phases**
+
+- **12.1 — `ApiKey` data model + rate-limiter abstraction.** Prisma model + repository (create/list/revoke, hash+prefix generation). `RateLimiter` interface + in-memory implementation; an Upstash-backed implementation wired but inert unless configured. No route wiring yet.
+- **12.2 — `POST /v1/agents/{id}/chat`.** Platform-key auth, rate limiting, both provider-key modes, calls `runAgent()` via an extended `streamAgentChat()`, consistent error taxonomy.
+- **12.3 — API key management UI, wired to real data.** Replaces the Phase 6 fixture in `settings/api-keys/`; confirms the employee-detail API tab's snippets match the real contract.
+- **12.4 — Final Phase 12 verification sweep.**
 
 ---
 
