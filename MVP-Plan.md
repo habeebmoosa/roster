@@ -683,22 +683,42 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 **Goal:** A coherent, fast, sub-2-minute onboarding and a shippable private beta.
 
+**Where things actually stand today (confirmed before writing this section):** The landing page already exists and is real (`src/app/(marketing)/page.tsx` — hero, tagline, 5 employee cards, sign-in CTA), not a stub — the route-group split between `(marketing)` (public) and `(app)` (authenticated) is already clean. The actual gap is the onboarding _path_: sign-in → `/dashboard` → `/hire` (a real wizard) → `step-model.tsx` requires a provider key and, if none exists, links out to `/settings?tab=providers` in a **new tab** with no auto-refresh on return → finishing the wizard redirects to `/workers/[id]`, not chat — a user must then separately find their way to `/chat` and pick the employee. That's several extra clicks and a context switch past what "sign in → add key → pick employee → chat" implies. Sentry, analytics, and an in-app feedback mechanism are all **completely missing** — no `@sentry/*` dependency, no `instrumentation.ts`, no `error.tsx`/`global-error.tsx` anywhere in `src/app` (zero route-level error or loading boundaries exist at all), no analytics library or custom event tracking, no feedback UI. `EmptyState` is used in only 6 places and `Skeleton` has **zero usages** anywhere despite being a real exported component; the `connectors` feature has no empty state; there's no `ErrorBanner`-style component in `ui/` for ad-hoc error text. Only `/api/chat` and `/api/v1/agents/{id}/chat` set `maxDuration`; the other 14 routes don't (expected — they're fast CRUD, not streams). `DIRECT_URL`/`DATABASE_URL` are already split in `schema.prisma` and documented in `.env.example`, but no actual pooled-connection guidance exists for a real (non-Docker) Postgres host. Deploy target is **Vercel**; analytics is a **self-hosted event log** (a Postgres table + a server-side logging helper) — no new client-side vendor script, consistent with the project's provider-agnostic/BYOK philosophy elsewhere.
+
 **Deliverables**
 
-- Landing page with employees as "hire" cards.
-- **Onboarding under 2 minutes**: sign in → add key → pick employee → chat.
-- Sentry error tracking, basic product analytics, in-app feedback button.
-- Final UI polish pass across the app (the design-faithful UI shipped in Phase 6; this is launch-readiness refinement, empty/loading/error states, a11y sweep).
-- Deployment hardening (function duration limits for long streams, env/secrets, DB pooling) on the chosen host.
+- **Onboarding flow fix**: inline BYOK provider-key entry inside the hire wizard (no more new-tab detour to Settings), and a straight-to-chat redirect (with the new employee pre-selected) once the wizard finishes, instead of landing on the employee detail page.
+- **Sentry**: `@sentry/nextjs` wired for client/server/edge + `instrumentation.ts`; `global-error.tsx` and route-level `error.tsx` boundaries (none exist today); exceptions captured at existing API-route catch sites.
+- **Analytics + feedback**: a self-hosted `AnalyticsEvent` model + a small `logEvent()` server helper fired at funnel points (sign-up, provider key added, employee hired, first chat message sent); a `Feedback` model + a small in-app feedback button/modal, backed by a simple submit route.
+- **UI polish pass**: wire the currently-unused `Skeleton` into real loading states; add a consistent `ErrorBanner` component to `ui/`; fill the `connectors` feature's missing empty state; add `loading.tsx` for the main authenticated routes; fix the 4 raw `<img>` tags found without a confirmed `alt`; a general a11y pass (the existing `next/core-web-vitals` ESLint config already bundles `jsx-a11y` rules — fix what it and a quick manual scan surface).
+- **Deployment hardening (Vercel)**: audit `maxDuration` across all routes (confirm the 2 streaming routes are the only ones that need it, document why); a pooled-`DATABASE_URL` + `DIRECT_URL` setup guide for a real Postgres host (Neon/Supabase-style pooler); an env/secrets deployment checklist.
+
+**Key decisions**
+
+- **Deploy target is Vercel.** Deployment hardening targets Vercel's serverless model specifically (function duration limits, its own env var UI) rather than writing generic multi-host deployment artifacts from scratch; the existing `docker-compose.yml` remains dev-only.
+- **Analytics is a self-hosted event log, not a third-party vendor.** A Postgres table + a server-side helper, no client-side tracking script — matches the project's existing "bring your own backend" posture (BYOK providers, provider-agnostic DB) rather than introducing PostHog/Vercel Analytics/etc. as a new dependency.
+- **The onboarding fix is the one change that's actually load-bearing against the DoD.** Landing page, Sentry, analytics, and polish all matter for a shippable beta, but only the wizard's new-tab detour and its post-completion redirect are concretely in the way of "sign in → add key → pick employee → chat" being fast — everything else is genuine launch-readiness work, not a blocker for the timed flow itself.
+- **`stepEvents`-style co-location applies to analytics too:** `AnalyticsEvent`/`Feedback` are simple, independently-queried tables (not joined into existing models), same shape as `ApiKey`/`Conversation` before them — no schema coupling to unrelated features.
 
 **Definition of Done**
 
-- A brand-new user reaches their first employee response in under 2 minutes. Errors report to Sentry; feedback works. Private beta is live.
+- A brand-new user reaches their first employee response in under 2 minutes, without leaving the hire wizard to configure a provider key in a separate tab. Errors report to Sentry; feedback works; key funnel events are logged. Private beta is deploy-ready on Vercel.
 
 **How we test it**
 
-- E2E: full cold-start onboarding flow timed under 2 minutes.
-- Manual: cross-employee smoke test on cheap + frontier models; error paths verified in Sentry.
+- Unit: the analytics `logEvent()` helper; any pure UI-state logic (e.g. wizard step validity) touched by the onboarding fix.
+- Integration: the hire-wizard-to-chat flow (inline key add → wizard completion → correct redirect target) mirroring existing repository-level test patterns; a forced server error is captured by Sentry (mocked, offline); feedback submission persists.
+- E2E: full cold-start onboarding flow timed under 2 minutes. (Same environment limitation noted in Phases 10–12: no real signed-in browser session here — substituted with integration tests hitting the underlying flow directly, plus a manual pass once deployed.)
+- Manual: cross-employee smoke test on cheap + frontier models; error paths verified in Sentry; a real deploy-to-Vercel dry run.
+
+**Sub-phases**
+
+- **13.1 — Onboarding flow fix.** Inline provider-key entry in the hire wizard's model step (no new-tab detour); redirect straight to `/chat` with the new employee selected once the wizard completes, instead of `/workers/[id]`.
+- **13.2 — Sentry.** Install and configure `@sentry/nextjs` (client/server/edge + `instrumentation.ts`); add `global-error.tsx` and route-level `error.tsx` boundaries; capture exceptions at existing API-route error paths.
+- **13.3 — Analytics + feedback.** `AnalyticsEvent` model + `logEvent()` helper fired at funnel points; `Feedback` model + a small in-app feedback button/modal + submit route.
+- **13.4 — UI polish pass.** `Skeleton`-backed loading states, a new `ErrorBanner` component, `connectors`' missing empty state, route-level `loading.tsx`, the 4 unlabeled `<img>` tags, a general a11y pass.
+- **13.5 — Deployment hardening (Vercel).** `maxDuration` audit across all routes; pooled-`DATABASE_URL`/`DIRECT_URL` guidance for a real Postgres host; an env/secrets deployment checklist.
+- **13.6 — Final Phase 13 verification sweep.** Full gate; walk `MVP-Plan.md` §9's Definition of Done line by line and confirm each — this closes out the entire 13-phase MVP.
 
 ---
 
