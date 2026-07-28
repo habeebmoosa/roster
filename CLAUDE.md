@@ -60,7 +60,7 @@ Everything else is plumbing.
 
 ## Build sequence (13 phases — see `MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–11 complete; Phase 12 (REST API & platform keys) is next.**
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ Phases 1–12 complete; Phase 13 (Polish & ship) is next.**
 
 1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
 2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)
@@ -71,9 +71,9 @@ Foundation → prove BYOK end-to-end → agent skeleton + eval → full product 
 7. **Memory & retrieval** ✅ — chunk/embed/ingest pipeline (BYOK), hybrid (vector + full-text) retrieval, LLM-based re-ranker, hard-capped context assembler, permission-scoping, episodic memory, wired into `runAgent()`; eval gained a retrieval precision/recall grader
 8. **Structured workflow** ✅ — decompose → execute → validate → rollback, with a single-step bypass for trivial turns, mechanical-first validation/compression, capped retries, and cost (`$`) instrumentation added to the eval harness
 9. **The five specialized employees** ✅ — cloned the proven Customer Support pattern to Content Writer, Research Analyst, Financial Analyst, Team Organizer (content/quality work, not new eng); each has a persona, knowledge base, 2 playbooks, and basic + grounded eval sets; no tools yet
-10. **Tool system** — two sources only: built-in local tools (file conversion, basic utilities, no network) + MCP connectors (curated directory + custom-MCP-server option, OAuth 2.1 + static-header fallback, Tools **and** Resources); no generic HTTP tools; wired into all 5 employees and the Phase 8 workflow loop
-11. **Chat: real-time & persistence** — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
-12. **REST API + platform keys** — same `runAgent()`, versioned, rate-limited
+10. **Tool system** ✅ — two sources only: built-in local tools (file conversion, basic utilities, no network) + MCP connectors (curated directory + custom-MCP-server option, OAuth 2.1 + static-header fallback, Tools **and** Resources); no generic HTTP tools; wired into all 5 employees and the Phase 8 workflow loop
+11. **Chat: real-time & persistence** ✅ — wire the Phase 6 chat UI to durable `Conversation`/`Message` + visible workflow steps
+12. **REST API + platform keys** ✅ — same `runAgent()`, versioned, rate-limited
 13. **Polish & ship** — landing, <2-min onboarding, Sentry, analytics, private beta
 
 **Vertical first:** Customer Support goes through the agent-engine phases (4–5, 7–8) before the other four are cloned in Phase 9. Spend disproportionate time on the retrieval re-ranker and the procedural playbooks — that's where "works on any LLM" actually lives. Keep `core/` and `agents/` framework-agnostic (the moat + the open spec). The full design-faithful UI lands in Phase 6; later phases light up each screen with real data (no UI rework).

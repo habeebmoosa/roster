@@ -200,7 +200,7 @@ This is the product. The phases below build it piece by piece; this section is t
 
 **~13 phases.** Foundation (1–2) → BYOK/AI proven end-to-end (3) → agent-engine skeleton + eval harness (4–5) → full product frontend from the design (6) → agent engine built and measured capability-by-capability (7–8) → the five employees + tools (9–10) → chat real-time & access surfaces (11–12) → ship (13). Each phase is independently testable and leaves `main` in a working state.
 
-> **Progress:** ✅ Phases 1–11 complete · ⬜ Phase 12 (REST API & platform keys) is next · ⬜ Phase 13 remaining.
+> **Progress:** ✅ Phases 1–12 complete · ⬜ Phase 13 (Polish & ship) is next.
 
 ---
 
@@ -638,7 +638,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 
 ---
 
-### Phase 12 — REST API & platform keys ⬅️ NEXT
+### Phase 12 — REST API & platform keys ✅
 
 **Goal:** Programmatic access to the same employees, for developers and integrations — one engine (`runAgent()`), two surfaces (the chat UI from Phase 11, and this REST API).
 
@@ -675,11 +675,11 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **12.1 — `ApiKey` data model + rate-limiter abstraction.** ✅ Prisma model + repository (create/list/revoke, hash+prefix generation). `RateLimiter` interface + in-memory implementation; an Upstash-backed implementation wired but inert unless configured. No route wiring yet.
 - **12.2 — `POST /v1/agents/{id}/chat`.** ✅ Platform-key auth, rate limiting, both provider-key modes, calls `runAgent()` via an extended `streamAgentChat()`, consistent error taxonomy.
 - **12.3 — API key management UI, wired to real data.** ✅ Replaces the Phase 6 fixture in `settings/api-keys/`; confirms the employee-detail API tab's snippets match the real contract.
-- **12.4 — Final Phase 12 verification sweep.**
+- **12.4 — Final Phase 12 verification sweep.** ✅
 
 ---
 
-### Phase 13 — Polish & ship (private beta)
+### Phase 13 — Polish & ship (private beta) ⬅️ NEXT
 
 **Goal:** A coherent, fast, sub-2-minute onboarding and a shippable private beta.
 
