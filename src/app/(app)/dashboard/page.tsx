@@ -55,7 +55,9 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2">
           <WorkerPreview rows={workerRows} />
         </div>
-        <UsageCost entries={workerRows.map((r) => ({ name: r.name, spendUsd: r.spendUsd }))} />
+        <UsageCost
+          entries={workerRows.map((r) => ({ id: r.id, name: r.name, spendUsd: r.spendUsd }))}
+        />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Button, CardDescription, Input, Modal } from "@/ui";
 
@@ -12,24 +12,27 @@ export function CreateApiKeyForm() {
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
   const [rawKey, setRawKey] = useState<string | null>(null);
+  const hasRefreshedRef = useRef(false);
 
   function openModal() {
     setName("");
     setStatus("idle");
     setMessage("");
     setRawKey(null);
+    hasRefreshedRef.current = false;
     setModalOpen(true);
   }
 
   function closeModal() {
-    // Guarded on the previous open state so this stays a no-op the second
-    // time: the "Done" button calls this directly, and the dialog's native
-    // close event (Modal's onClose) fires it again right after via the
-    // open-prop effect — only the first call should trigger a refresh.
-    setModalOpen((wasOpen) => {
-      if (wasOpen && rawKey) router.refresh();
-      return false;
-    });
+    // The "Done" button calls this directly, and the dialog's native close
+    // event (Modal's onClose) fires it again right after — guard with a ref
+    // (not a setState updater, which must stay pure) so only the first call
+    // triggers a refresh.
+    if (rawKey && !hasRefreshedRef.current) {
+      hasRefreshedRef.current = true;
+      router.refresh();
+    }
+    setModalOpen(false);
   }
 
   async function onSubmit(e: FormEvent) {

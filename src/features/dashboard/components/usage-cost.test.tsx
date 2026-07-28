@@ -8,8 +8,8 @@ describe("UsageCost", () => {
     render(
       <UsageCost
         entries={[
-          { name: "Ada", spendUsd: 30 },
-          { name: "Milo", spendUsd: 10 },
+          { id: "ada", name: "Ada", spendUsd: 30 },
+          { id: "milo", name: "Milo", spendUsd: 10 },
         ]}
       />,
     );
