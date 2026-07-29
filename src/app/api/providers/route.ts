@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { ByokError } from "@/core/providers";
 import { auth } from "@/server/auth";
@@ -38,6 +39,9 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+    // A ByokError means the provider rejected the request (expected, user-actionable);
+    // anything else here is genuinely unexpected — worth knowing about.
+    Sentry.captureException(err);
     return NextResponse.json(
       { error: { code: "unknown", message: "Unexpected error." } },
       { status: 500 },

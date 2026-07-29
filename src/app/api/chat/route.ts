@@ -1,4 +1,5 @@
 import { createUIMessageStreamResponse } from "ai";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { AgentNotFoundError } from "@/server/agents/service";
 import { auth } from "@/server/auth";
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+    // Unknown agent/conversation are expected, user-actionable 404s; anything
+    // else here — before the stream even starts — is genuinely unexpected.
+    Sentry.captureException(err);
     return Response.json({ error: { message: "Something went wrong." } }, { status: 500 });
   }
 

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -9,4 +10,16 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "pdf-parse"],
 };
 
-export default nextConfig;
+// Source-map upload only activates when SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT
+// are set (e.g. in CI) — the plugin reads those env vars itself and no-ops for
+// plain local builds, same "configured or inert" treatment as Upstash/rate limiting.
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+      // Error tracking only for this MVP (tracesSampleRate: 0 everywhere) — safe to treeshake.
+      removeTracing: true,
+    },
+  },
+});
