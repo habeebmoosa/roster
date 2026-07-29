@@ -44,6 +44,30 @@ describe("Chat", () => {
     expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
   });
 
+  it("pre-selects initialAgentId, e.g. arriving from the hire wizard via ?agentId=", () => {
+    render(
+      <Chat
+        agents={AGENTS}
+        configured={["google"]}
+        conversations={[]}
+        initialAgentId="content-writer"
+      />,
+    );
+    expect(screen.getByText("Ask Milo — Content Writer anything")).toBeInTheDocument();
+  });
+
+  it("falls back to the first employee when initialAgentId doesn't match any agent", () => {
+    render(
+      <Chat
+        agents={AGENTS}
+        configured={["google"]}
+        conversations={[]}
+        initialAgentId="does-not-exist"
+      />,
+    );
+    expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
+  });
+
   it("switching employee via the switcher resets the thread", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(streamResponse("Hi!")));

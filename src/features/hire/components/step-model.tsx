@@ -2,8 +2,9 @@
 
 // Pure data only — safe to import into a client bundle (no AI SDK / server code).
 import { getProvider, getProviderCatalog } from "@/core/providers/catalog";
+import { AddProviderForm } from "@/features/providers";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
-import { Button, CardDescription, CardTitle, EmptyState, Input, Select } from "@/ui";
+import { CardDescription, CardTitle, Input, Select } from "@/ui";
 
 export function StepModel({
   providerKeys,
@@ -21,18 +22,11 @@ export function StepModel({
       <div>
         <CardTitle>Provider & model</CardTitle>
         <CardDescription>
-          Pick which of your connected providers this employee talks to by default.
+          Connect a provider to continue — no need to leave this wizard.
         </CardDescription>
-        <EmptyState
-          className="mt-4"
-          title="No providers connected yet"
-          description="Connect a provider in Settings, then come back to finish hiring this employee."
-          action={
-            <a href="/settings?tab=providers" target="_blank" rel="noopener noreferrer">
-              <Button variant="secondary">Open settings</Button>
-            </a>
-          }
-        />
+        <div className="mt-4">
+          <AddProviderForm embedded />
+        </div>
       </div>
     );
   }

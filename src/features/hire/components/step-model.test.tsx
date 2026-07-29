@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { StepModel } from "./step-model";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 const OPENAI_KEY: ProviderKeyRecord = {
   id: "key-1",
   provider: "openai",
@@ -15,13 +19,13 @@ const OPENAI_KEY: ProviderKeyRecord = {
 };
 
 describe("StepModel", () => {
-  it("shows an empty state with a link to Settings when no provider is connected", () => {
+  it("shows an inline add-provider form when no provider is connected, instead of linking away", () => {
     render(<StepModel providerKeys={[]} provider="" model="" onChange={vi.fn()} />);
-    expect(screen.getByText("No providers connected yet")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open settings" })).toHaveAttribute(
-      "href",
-      "/settings?tab=providers",
-    );
+    expect(
+      screen.getByText("Connect a provider to continue — no need to leave this wizard."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate & save" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open settings" })).not.toBeInTheDocument();
   });
 
   it("lists connected providers and lets a user pick one", () => {

@@ -15,12 +15,19 @@ export function Chat({
   agents,
   configured,
   conversations,
+  initialAgentId,
 }: {
   agents: AgentOption[];
   configured: string[];
   conversations: ConversationSummary[];
+  /** Pre-selects an employee, e.g. arriving from the hire wizard via `/chat?agentId=...`. Falls back to the first agent if unknown. */
+  initialAgentId?: string;
 }) {
-  const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
+  const [agentId, setAgentId] = useState(
+    initialAgentId && agents.some((a) => a.id === initialAgentId)
+      ? initialAgentId
+      : (agents[0]?.id ?? ""),
+  );
   const [provider, setProvider] = useState(configured[0] ?? "");
   const [model, setModel] = useState(getProvider(configured[0] ?? "")?.suggestedModels[0] ?? "");
   const [historyOpen, setHistoryOpen] = useState(false);

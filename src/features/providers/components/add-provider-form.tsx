@@ -6,7 +6,12 @@ import { useMemo, useState } from "react";
 import { getProviderCatalog } from "@/core/providers/catalog";
 import { Button, Card, CardDescription, CardTitle, Input, Select } from "@/ui";
 
-export function AddProviderForm() {
+export function AddProviderForm({
+  /** Skip the outer Card — for embedding inside a parent that already provides one (e.g. the hire wizard). */
+  embedded = false,
+}: {
+  embedded?: boolean;
+} = {}) {
   const catalog = useMemo(() => getProviderCatalog(), []);
   const router = useRouter();
 
@@ -56,8 +61,8 @@ export function AddProviderForm() {
     }
   }
 
-  return (
-    <Card>
+  const body = (
+    <>
       <CardTitle>Add a provider</CardTitle>
       <CardDescription>
         We validate the key with a 1-token request before saving. Keys are encrypted at rest.
@@ -131,6 +136,8 @@ export function AddProviderForm() {
           ) : null}
         </div>
       </form>
-    </Card>
+    </>
   );
+
+  return embedded ? body : <Card>{body}</Card>;
 }

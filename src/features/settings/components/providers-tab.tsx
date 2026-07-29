@@ -1,7 +1,7 @@
 import { getProvider } from "@/core/providers/catalog";
+import { AddProviderForm } from "@/features/providers";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { Card, CardDescription, CardTitle } from "@/ui";
-import { AddProviderForm } from "./add-provider-form";
 import { DeleteProviderButton } from "./delete-provider-button";
 
 export function ProvidersTab({ keys }: { keys: ProviderKeyRecord[] }) {

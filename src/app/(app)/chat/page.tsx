@@ -6,7 +6,12 @@ import { listConversations } from "@/server/db/repositories/conversation.reposit
 import { listUserProviders } from "@/server/providers/service";
 import { Card, CardDescription, CardTitle } from "@/ui";
 
-export default async function ChatPage() {
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ agentId?: string }>;
+}) {
+  const { agentId } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
   const [agents, keys, rawConversations] = await Promise.all([
@@ -53,7 +58,12 @@ export default async function ChatPage() {
 
   return (
     <div className="h-full">
-      <Chat agents={agents} configured={configured} conversations={conversations} />
+      <Chat
+        agents={agents}
+        configured={configured}
+        conversations={conversations}
+        initialAgentId={agentId}
+      />
     </div>
   );
 }

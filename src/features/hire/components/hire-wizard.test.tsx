@@ -6,8 +6,9 @@ import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.re
 import { HireWizard } from "./hire-wizard";
 
 const push = vi.fn();
+const refresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, refresh }),
 }));
 
 const OPENAI_KEY: ProviderKeyRecord = {
@@ -22,6 +23,7 @@ const OPENAI_KEY: ProviderKeyRecord = {
 describe("HireWizard", () => {
   beforeEach(() => {
     push.mockClear();
+    refresh.mockClear();
     window.sessionStorage.clear();
   });
 
@@ -71,7 +73,7 @@ describe("HireWizard", () => {
     await user.click(screen.getByRole("button", { name: "Create employee" }));
 
     expect(await screen.findByRole("button", { name: "Create employee" })).toBeInTheDocument();
-    expect(push).toHaveBeenCalledWith("/workers/ada-customer-support");
+    expect(push).toHaveBeenCalledWith("/chat?agentId=ada-customer-support");
 
     const fetchMock = vi.mocked(fetch);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -111,7 +113,7 @@ describe("HireWizard", () => {
     expect(window.sessionStorage.getItem("roster:hire-wizard-draft")).not.toBeNull();
   });
 
-  it("shows an empty state on the model step when no provider is connected", async () => {
+  it("shows an inline add-provider form on the model step when no provider is connected, instead of sending the user away", async () => {
     const user = userEvent.setup();
     render(<HireWizard providerKeys={[]} />);
 
@@ -125,7 +127,36 @@ describe("HireWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("No providers connected yet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate & save" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+  });
+
+  it("adopts a provider connected inline (via a refreshed providerKeys prop) without losing wizard progress", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<HireWizard providerKeys={[]} />);
+
+    await user.click(screen.getByRole("radio", { name: /Start from scratch/ }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText("Name"), "Bo");
+    await user.type(screen.getByLabelText("Role title"), "Ops");
+    await user.type(screen.getByLabelText("Identity"), "Sharp.");
+    await user.type(screen.getByLabelText("Voice"), "Direct.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+
+    // Simulates the parent server component re-fetching providerKeys after
+    // AddProviderForm's router.refresh() — the wizard's own step/form state
+    // (still on step 5, "Bo" already typed) must survive this re-render.
+    rerender(<HireWizard providerKeys={[OPENAI_KEY]} />);
+
+    expect(screen.getByRole("option", { name: "OpenAI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).not.toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByLabelText("Name")).toHaveValue("Bo");
   });
 });

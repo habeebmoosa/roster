@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { getProvider } from "@/core/providers/catalog";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { Card, Steps } from "@/ui";
 import { useHireWizard } from "../hooks/use-hire-wizard";
@@ -24,6 +26,18 @@ const STEPS = [
 export function HireWizard({ providerKeys }: { providerKeys: ProviderKeyRecord[] }) {
   const router = useRouter();
   const wizard = useHireWizard(providerKeys[0]?.provider ?? "");
+  const { patch, form } = wizard;
+
+  // providerKeys is empty on first render whenever a user reaches step 5 with
+  // none connected yet — StepModel lets them add one inline, which refreshes
+  // this server-fetched prop without unmounting the wizard. Adopt the newly
+  // available provider once that happens, since useHireWizard only seeds it
+  // from the initial (possibly empty) value at mount.
+  useEffect(() => {
+    if (form.provider || !providerKeys[0]) return;
+    const entry = getProvider(providerKeys[0].provider);
+    patch({ provider: providerKeys[0].provider, model: entry?.suggestedModels[0] ?? "" });
+  }, [providerKeys, form.provider, patch]);
 
   async function handleContinue() {
     if (wizard.step < wizard.stepCount) {
@@ -31,7 +45,7 @@ export function HireWizard({ providerKeys }: { providerKeys: ProviderKeyRecord[]
       return;
     }
     const result = await wizard.submit();
-    if (result.ok) router.push(`/workers/${result.id}`);
+    if (result.ok) router.push(`/chat?agentId=${result.id}`);
   }
 
   function handleSaveAndExit() {
