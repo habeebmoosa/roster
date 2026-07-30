@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { Button } from "@/ui";
+import { Button, EmptyState } from "@/ui";
 import type { Connector } from "../types";
 import { AddCustomConnectorDialog } from "./add-custom-connector-dialog";
 import { ConnectRedirectToast } from "./connect-redirect-toast";
@@ -26,15 +26,22 @@ export function ConnectorsBoard({ connectors }: { connectors: Connector[] }) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {connectors.map((connector) => (
-          <ConnectorCard
-            key={connector.id}
-            connector={connector}
-            onOpen={() => setOpenId(connector.id)}
-          />
-        ))}
-      </div>
+      {connectors.length === 0 ? (
+        <EmptyState
+          title="No connectors available"
+          description="The MCP connector directory is empty right now — check back later or add a custom server above."
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {connectors.map((connector) => (
+            <ConnectorCard
+              key={connector.id}
+              connector={connector}
+              onOpen={() => setOpenId(connector.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {selected ? (
         <ConnectorDetailDialog connector={selected} onClose={() => setOpenId(null)} />

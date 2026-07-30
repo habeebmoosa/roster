@@ -1,4 +1,4 @@
-import { Avatar } from "@/ui";
+import { Avatar, ErrorBanner } from "@/ui";
 import { cn } from "@/lib/cn";
 import { deriveStepRows } from "../step-rows";
 import type { AgentOption, ChatMessage } from "../types";
@@ -54,12 +54,9 @@ export function ChatThread({
                 <div className="bg-bg-subtle text-text rounded-2xl px-4 py-2.5 text-sm">…</div>
               ) : null}
               {!isUser && message.error ? (
-                <div
-                  role="alert"
-                  className="border-danger/30 bg-danger-soft text-danger mt-1.5 rounded-lg border px-3 py-2 text-xs"
-                >
+                <ErrorBanner size="xs" className="mt-1.5">
                   ⚠️ {message.error}
-                </div>
+                </ErrorBanner>
               ) : null}
             </div>
           </div>

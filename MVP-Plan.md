@@ -716,7 +716,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **13.1 — Onboarding flow fix.** ✅ Inline provider-key entry in the hire wizard's model step (no new-tab detour); redirect straight to `/chat` with the new employee selected once the wizard completes, instead of `/workers/[id]`.
 - **13.2 — Sentry.** ✅ Install and configure `@sentry/nextjs` (client/server/edge + `instrumentation.ts`); add `global-error.tsx` and route-level `error.tsx` boundaries; capture exceptions at existing API-route error paths.
 - **13.3 — Analytics + feedback.** ✅ `AnalyticsEvent` model + `logEvent()` helper fired at funnel points; `Feedback` model + a small in-app feedback button/modal + submit route.
-- **13.4 — UI polish pass.** `Skeleton`-backed loading states, a new `ErrorBanner` component, `connectors`' missing empty state, route-level `loading.tsx`, the 4 unlabeled `<img>` tags, a general a11y pass.
+- **13.4 — UI polish pass.** ✅ `Skeleton`-backed loading states, a new `ErrorBanner` component, `connectors`' missing empty state, route-level `loading.tsx`, the 4 unlabeled `<img>` tags, a general a11y pass.
 - **13.5 — Deployment hardening (Vercel).** `maxDuration` audit across all routes; pooled-`DATABASE_URL`/`DIRECT_URL` guidance for a real Postgres host; an env/secrets deployment checklist.
 - **13.6 — Final Phase 13 verification sweep.** Full gate; walk `MVP-Plan.md` §9's Definition of Done line by line and confirm each — this closes out the entire 13-phase MVP.
 

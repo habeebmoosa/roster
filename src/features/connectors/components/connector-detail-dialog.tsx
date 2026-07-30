@@ -46,11 +46,13 @@ function HeaderRow({
   return (
     <div className="flex gap-2">
       <Input
+        aria-label="Header name"
         placeholder="Header name (e.g. Authorization)"
         value={value.name}
         onChange={(e) => onChange({ ...value, name: e.target.value })}
       />
       <Input
+        aria-label="Header value"
         placeholder="Value"
         value={value.header}
         onChange={(e) => onChange({ ...value, header: e.target.value })}

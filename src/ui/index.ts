@@ -17,6 +17,8 @@ export { StatTile } from "./stat-tile";
 export { Steps, stepState } from "./steps";
 export type { Step, StepState } from "./steps";
 export { EmptyState } from "./empty-state";
+export { ErrorBanner } from "./error-banner";
+export type { ErrorBannerProps } from "./error-banner";
 export { Skeleton } from "./skeleton";
 export { Tooltip } from "./tooltip";
 export {

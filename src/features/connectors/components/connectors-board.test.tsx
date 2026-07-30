@@ -60,4 +60,9 @@ describe("ConnectorsBoard", () => {
     await user.click(screen.getByRole("button", { name: "+ Add custom connector" }));
     expect(screen.getByText("Add a custom MCP server")).toBeInTheDocument();
   });
+
+  it("shows an empty state instead of a bare grid when there are no connectors", () => {
+    render(<ConnectorsBoard connectors={[]} />);
+    expect(screen.getByText("No connectors available")).toBeInTheDocument();
+  });
 });
