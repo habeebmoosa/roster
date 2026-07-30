@@ -63,3 +63,17 @@ jobs:
 
       - name: E2E tests
         run: npm run test:e2e
+      # Dormant until EVAL_FRONTIER_API_KEY (etc.) are added as repo secrets —
+      # this calls real, paid LLM APIs, so it's opt-in rather than forced on
+      # every push. Once configured, blocks any change that regresses success
+      # rate on any tier vs. evals/baseline.json (core/eval/gate.ts).
+      # Note: grounded eval tasks additionally need EVAL_EMBEDDING_PROVIDER/
+      # API_KEY, and this job doesn't run `npm run ingest` — so until that's
+      # added too, grounded tasks run ungrounded here even with this enabled.
+      - name: Eval gate (opt-in — needs EVAL_* secrets configured)
+        if: ${{ secrets.EVAL_FRONTIER_API_KEY != '' }}
+        env:
+          EVAL_FRONTIER_API_KEY: ${{ secrets.EVAL_FRONTIER_API_KEY }}
+          EVAL_MID_API_KEY: ${{ secrets.EVAL_MID_API_KEY }}
+          EVAL_CHEAP_API_KEY: ${{ secrets.EVAL_CHEAP_API_KEY }}
+        run: npm run eval:gate

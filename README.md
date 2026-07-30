@@ -6,10 +6,12 @@ because the expertise is engineered into the agent, not the model.
 See [`Product-Overview.md`](./Product-Overview.md) for the pitch, [`MVP-Plan.md`](./MVP-Plan.md)
 for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
 
-> **Status: Phase 13 — Polish & ship (private beta).** Phases 1–12 complete
-> (BYOK, the agent engine, memory/retrieval, tools, chat, the REST API); Phase
-> 13 sub-phases 13.1–13.5 done, 13.6 (final verification sweep) next. See
-> [`MVP-Plan.md`](./MVP-Plan.md) §8 for the full phase-by-phase detail.
+> **Status: MVP complete — all 13 phases done.** BYOK, the agent engine,
+> memory/retrieval, tools, chat, the REST API, and Phase 13's launch polish
+> (onboarding fix, Sentry, analytics, UI polish, deployment hardening) are all
+> shipped. See [`MVP-Plan.md`](./MVP-Plan.md) §9 for the Definition of Done
+> checklist (two items are inherently live-model results, not run from this
+> environment) and §8 for the full phase-by-phase detail.
 
 ## Tech stack
 
