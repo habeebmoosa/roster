@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@/server/auth";
 import { Button, Card, CardDescription, CardTitle, Container } from "@/ui";
 
 const EMPLOYEES = [
@@ -9,7 +10,9 @@ const EMPLOYEES = [
   { name: "Team Organizer", blurb: "Turns goals into plans and agendas." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+
   return (
     <Container className="py-20">
       <main>
@@ -24,9 +27,15 @@ export default function HomePage() {
         </p>
 
         <div className="mt-8">
-          <Link href="/signin">
-            <Button>Sign in</Button>
-          </Link>
+          {session?.user ? (
+            <Link href="/dashboard">
+              <Button>Go to dashboard</Button>
+            </Link>
+          ) : (
+            <Link href="/signin">
+              <Button>Sign in</Button>
+            </Link>
+          )}
         </div>
 
         <section className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
