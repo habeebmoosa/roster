@@ -4,6 +4,10 @@ import { completeOAuthConnect } from "@/server/mcp/connect-service";
 import { takePendingOAuthConnect } from "@/server/mcp/oauth-pending-cookie";
 
 export const runtime = "nodejs";
+// completeOAuthConnect exchanges the code for a token against the target MCP
+// server's own token endpoint — one outbound request, latency-dependent on
+// that third party, not us.
+export const maxDuration = 30;
 
 function redirectWithError(req: Request, message: string) {
   return NextResponse.redirect(

@@ -6,6 +6,10 @@ import { auth } from "@/server/auth";
 import { addProviderKey } from "@/server/providers/service";
 
 export const runtime = "nodejs";
+// addProviderKey validates the key with a live 1-token request to the
+// provider before persisting — one outbound call, latency-dependent on that
+// provider, not us.
+export const maxDuration = 30;
 
 const bodySchema = z.object({
   provider: z.string().min(1),

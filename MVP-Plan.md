@@ -691,7 +691,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **Sentry**: `@sentry/nextjs` wired for client/server/edge + `instrumentation.ts`; `global-error.tsx` and route-level `error.tsx` boundaries (none exist today); exceptions captured at existing API-route catch sites.
 - **Analytics + feedback**: a self-hosted `AnalyticsEvent` model + a small `logEvent()` server helper fired at funnel points (sign-up, provider key added, employee hired, first chat message sent); a `Feedback` model + a small in-app feedback button/modal, backed by a simple submit route.
 - **UI polish pass**: wire the currently-unused `Skeleton` into real loading states; add a consistent `ErrorBanner` component to `ui/`; fill the `connectors` feature's missing empty state; add `loading.tsx` for the main authenticated routes; fix the 4 raw `<img>` tags found without a confirmed `alt`; a general a11y pass (the existing `next/core-web-vitals` ESLint config already bundles `jsx-a11y` rules — fix what it and a quick manual scan surface).
-- **Deployment hardening (Vercel)**: audit `maxDuration` across all routes (confirm the 2 streaming routes are the only ones that need it, document why); a pooled-`DATABASE_URL` + `DIRECT_URL` setup guide for a real Postgres host (Neon/Supabase-style pooler); an env/secrets deployment checklist.
+- **Deployment hardening (Vercel + Supabase)**: audit `maxDuration` across all routes (confirm the 2 streaming routes are the only ones that need it, document why); a pooled-`DATABASE_URL` + `DIRECT_URL` setup guide specifically for Supabase's connection pooler (Vercel's serverless functions need it — direct-to-Postgres exhausts connections fast); an env/secrets deployment checklist.
 
 **Key decisions**
 
@@ -717,7 +717,7 @@ Every screen reads through a typed module boundary. Where the backend exists (au
 - **13.2 — Sentry.** ✅ Install and configure `@sentry/nextjs` (client/server/edge + `instrumentation.ts`); add `global-error.tsx` and route-level `error.tsx` boundaries; capture exceptions at existing API-route error paths.
 - **13.3 — Analytics + feedback.** ✅ `AnalyticsEvent` model + `logEvent()` helper fired at funnel points; `Feedback` model + a small in-app feedback button/modal + submit route.
 - **13.4 — UI polish pass.** ✅ `Skeleton`-backed loading states, a new `ErrorBanner` component, `connectors`' missing empty state, route-level `loading.tsx`, the 4 unlabeled `<img>` tags, a general a11y pass.
-- **13.5 — Deployment hardening (Vercel).** `maxDuration` audit across all routes; pooled-`DATABASE_URL`/`DIRECT_URL` guidance for a real Postgres host; an env/secrets deployment checklist.
+- **13.5 — Deployment hardening (Vercel + Supabase).** ✅ `maxDuration` audit across all routes; pooled-`DATABASE_URL`/`DIRECT_URL` guidance for Supabase specifically; an env/secrets deployment checklist.
 - **13.6 — Final Phase 13 verification sweep.** Full gate; walk `MVP-Plan.md` §9's Definition of Done line by line and confirm each — this closes out the entire 13-phase MVP.
 
 ---
