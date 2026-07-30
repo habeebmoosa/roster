@@ -1,9 +1,13 @@
 import {
   BookOpen,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
+  ExternalLink,
   LayoutGrid,
+  Link2,
   LogOut,
   Menu,
   MessageSquare,
@@ -12,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Users,
+  X,
   type LucideProps,
 } from "lucide-react";
 
@@ -39,5 +44,10 @@ export const IconMenu = withDefaultStroke(Menu);
 export const IconBook = withDefaultStroke(BookOpen);
 export const IconSparkle = withDefaultStroke(Sparkles);
 export const IconLogOut = withDefaultStroke(LogOut);
+export const IconClose = withDefaultStroke(X);
+export const IconLink = withDefaultStroke(Link2);
+export const IconCopy = withDefaultStroke(Copy);
+export const IconExternalLink = withDefaultStroke(ExternalLink);
+export const IconCheck = withDefaultStroke(Check);
 
 export type { LucideProps as IconProps };

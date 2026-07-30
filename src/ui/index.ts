@@ -12,6 +12,11 @@ export {
   IconBook,
   IconSparkle,
   IconLogOut,
+  IconClose,
+  IconLink,
+  IconCopy,
+  IconExternalLink,
+  IconCheck,
 } from "./icons";
 export type { IconProps } from "./icons";
 export { Button } from "./button";

@@ -3,16 +3,29 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+export type ModalSize = "md" | "panel";
+
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
   className?: string;
+  /**
+   * "md" (default) is the standard centered form dialog. "panel" is a large,
+   * near-fullscreen scrollable surface for rich detail views (e.g. a
+   * connector's full detail page) — its own header/body layout, no padding.
+   */
+  size?: ModalSize;
 }
 
+const sizeClasses: Record<ModalSize, string> = {
+  md: "w-full max-w-md p-6",
+  panel: "flex h-[88vh] max-h-[920px] w-[92vw] max-w-4xl flex-col overflow-hidden p-0",
+};
+
 /** Centered dialog built on the native <dialog> element (built-in focus trap + Escape). */
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, children, className, size = "md" }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -41,7 +54,8 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       onCancel={onClose}
       onClick={onBackdropClick}
       className={cn(
-        "border-border bg-bg-elevated text-text backdrop:bg-overlay m-auto w-full max-w-md rounded-2xl border p-6 shadow-md",
+        "border-border bg-bg-elevated text-text backdrop:bg-overlay m-auto rounded-2xl border shadow-md",
+        sizeClasses[size],
         className,
       )}
     >
