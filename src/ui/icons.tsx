@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Link2,
   LogOut,
+  Megaphone,
   Menu,
   MessageSquare,
   Plug,
@@ -49,5 +50,6 @@ export const IconLink = withDefaultStroke(Link2);
 export const IconCopy = withDefaultStroke(Copy);
 export const IconExternalLink = withDefaultStroke(ExternalLink);
 export const IconCheck = withDefaultStroke(Check);
+export const IconFeedback = withDefaultStroke(Megaphone);
 
 export type { LucideProps as IconProps };

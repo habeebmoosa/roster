@@ -17,6 +17,7 @@ export {
   IconCopy,
   IconExternalLink,
   IconCheck,
+  IconFeedback,
 } from "./icons";
 export type { IconProps } from "./icons";
 export { Button } from "./button";
