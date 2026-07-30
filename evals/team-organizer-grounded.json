@@ -1,0 +1,70 @@
+{
+  "agentId": "team-organizer",
+  "tasks": [
+    {
+      "id": "standup-three-questions",
+      "input": "What three questions should each person answer at a daily standup?",
+      "graders": [
+        { "type": "includes", "values": ["blocker"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://pm-frameworks/agile-basics.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "moscow-meaning",
+      "input": "What does the 'W' stand for in the MoSCoW prioritization framework?",
+      "graders": [
+        { "type": "includes", "values": ["won't"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://pm-frameworks/prioritization-frameworks.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "retro-timing",
+      "input": "When should a sprint retrospective happen, relative to the sprint?",
+      "graders": [
+        { "type": "includes", "values": ["end of"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://pm-frameworks/meeting-types-and-cadence.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "task-breakdown-first-step",
+      "input": "What's the first step when breaking down a task, according to our playbook?",
+      "graders": [
+        { "type": "includes", "values": ["outcome"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://task-breakdown"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "standup-off-topic-handling",
+      "input": "If a standup drifts into problem-solving, what should we do according to our playbook?",
+      "graders": [
+        { "type": "includes", "values": ["park"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://status-meeting-facilitation"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

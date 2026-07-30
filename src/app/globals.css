@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/*
+ * Roster design tokens — ported verbatim from the RosterAI Claude Design
+ * project (OKLCH light/dark palette). Raw values live under [data-theme] so
+ * flipping the attribute swaps every token at once; @theme maps them into
+ * Tailwind's utility namespace (bg-bg, text-text-muted, border-border, …).
+ */
+
+:root,
+[data-theme="light"] {
+  --rst-bg: oklch(98.3% 0.003 90);
+  --rst-bg-elevated: oklch(100% 0 0);
+  --rst-bg-subtle: oklch(95.3% 0.004 90);
+  --rst-border: oklch(89.5% 0.004 90);
+  --rst-text: oklch(19% 0.006 90);
+  --rst-text-muted: oklch(48% 0.006 90);
+  --rst-text-faint: oklch(66% 0.006 90);
+  --rst-accent: oklch(58% 0.17 280);
+  --rst-accent-soft: oklch(94% 0.03 280);
+  --rst-accent-contrast: oklch(99% 0 0);
+  --rst-success: oklch(54% 0.13 150);
+  --rst-success-soft: oklch(93% 0.05 150);
+  --rst-warning: oklch(62% 0.15 55);
+  --rst-warning-soft: oklch(93% 0.06 60);
+  --rst-danger: oklch(56% 0.19 25);
+  --rst-danger-soft: oklch(94% 0.05 25);
+  --rst-overlay: oklch(20% 0 0 / 40%);
+  --rst-shadow-sm: 0 1px 2px oklch(20% 0 0 / 6%);
+  --rst-shadow-md: 0 10px 28px oklch(20% 0 0 / 10%), 0 2px 6px oklch(20% 0 0 / 6%);
+}
+
+[data-theme="dark"] {
+  --rst-bg: oklch(15.5% 0.007 260);
+  --rst-bg-elevated: oklch(19.5% 0.008 260);
+  --rst-bg-subtle: oklch(23.5% 0.009 260);
+  --rst-border: oklch(30% 0.012 260);
+  --rst-text: oklch(94% 0.004 260);
+  --rst-text-muted: oklch(67% 0.01 260);
+  --rst-text-faint: oklch(48% 0.01 260);
+  --rst-accent: oklch(68% 0.18 280);
+  --rst-accent-soft: oklch(28% 0.07 280);
+  --rst-accent-contrast: oklch(99% 0 0);
+  --rst-success: oklch(70% 0.15 150);
+  --rst-success-soft: oklch(27% 0.06 150);
+  --rst-warning: oklch(76% 0.14 65);
+  --rst-warning-soft: oklch(29% 0.07 65);
+  --rst-danger: oklch(68% 0.18 25);
+  --rst-danger-soft: oklch(29% 0.07 25);
+  --rst-overlay: oklch(0% 0 0 / 60%);
+  --rst-shadow-sm: 0 1px 2px oklch(0% 0 0 / 35%);
+  --rst-shadow-md: 0 14px 32px oklch(0% 0 0 / 45%), 0 2px 6px oklch(0% 0 0 / 35%);
+}
+
+@theme {
+  --color-bg: var(--rst-bg);
+  --color-bg-elevated: var(--rst-bg-elevated);
+  --color-bg-subtle: var(--rst-bg-subtle);
+  --color-border: var(--rst-border);
+  --color-text: var(--rst-text);
+  --color-text-muted: var(--rst-text-muted);
+  --color-text-faint: var(--rst-text-faint);
+  --color-accent: var(--rst-accent);
+  --color-accent-soft: var(--rst-accent-soft);
+  --color-accent-contrast: var(--rst-accent-contrast);
+  --color-success: var(--rst-success);
+  --color-success-soft: var(--rst-success-soft);
+  --color-warning: var(--rst-warning);
+  --color-warning-soft: var(--rst-warning-soft);
+  --color-danger: var(--rst-danger);
+  --color-danger-soft: var(--rst-danger-soft);
+  --color-overlay: var(--rst-overlay);
+
+  --shadow-sm: var(--rst-shadow-sm);
+  --shadow-md: var(--rst-shadow-md);
+
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SFMono Regular", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-text antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+button {
+  font-family: inherit;
+}
+
+/*
+ * No global `a { color }` rule: Tailwind's utility classes live in a CSS
+ * cascade layer, and unlayered rules always win over layered ones regardless
+ * of specificity — a blanket color here would silently override every
+ * component's own text color classes (e.g. the sidebar's active-link
+ * styling). Links set their own color explicitly, component by component.
+ */
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-faint);
+}
+
+input,
+textarea {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 8px;
+}

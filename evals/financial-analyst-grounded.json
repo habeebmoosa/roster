@@ -1,0 +1,70 @@
+{
+  "agentId": "financial-analyst",
+  "tasks": [
+    {
+      "id": "three-financial-statements",
+      "input": "What are the three core financial statements?",
+      "graders": [
+        { "type": "includes", "values": ["income statement", "balance sheet", "cash flow"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://financial-concepts/financial-statement-basics.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "healthy-ltv-cac-ratio",
+      "input": "What's considered a healthy LTV to CAC ratio for a SaaS business?",
+      "graders": [
+        { "type": "includes", "values": ["3:1"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://financial-concepts/unit-economics-metrics.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "sensitivity-analysis-definition",
+      "input": "What is sensitivity analysis in the context of forecasting?",
+      "graders": [
+        { "type": "includes", "values": ["one assumption"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://financial-concepts/forecasting-assumptions.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "model-review-first-step",
+      "input": "When reviewing a financial model, what should we check first?",
+      "graders": [
+        { "type": "includes", "values": ["assumptions"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://financial-model-review"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "variance-types",
+      "input": "When explaining a budget variance, what two types of variance should we distinguish?",
+      "graders": [
+        { "type": "includes", "values": ["volume"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://variance-analysis"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

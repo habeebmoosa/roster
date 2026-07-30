@@ -1,0 +1,18 @@
+{
+  "id": "monday",
+  "name": "monday.com",
+  "description": "Read and update items, boards, and updates in monday.com",
+  "developer": "monday.com Ltd.",
+  "connectorUrl": "https://mcp.monday.com/sse",
+  "authType": "oauth_dcr",
+  "categories": ["Project Management"],
+  "trustTier": "community",
+  "documentationUrl": "https://developer.monday.com",
+  "tools": [
+    { "name": "search-items", "description": "Search items across boards" },
+    { "name": "get-board", "description": "Fetch a board's columns and items" },
+    { "name": "create-item", "description": "Create a new item on a board" },
+    { "name": "update-item", "description": "Update an item's column values" }
+  ],
+  "resources": [{ "name": "board", "description": "A single board's structure and items" }]
+}

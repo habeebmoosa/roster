@@ -1,0 +1,20 @@
+{
+  "id": "intercom",
+  "name": "Intercom",
+  "description": "Search conversations and manage support tickets in Intercom",
+  "developer": "Intercom, Inc.",
+  "connectorUrl": "https://mcp.intercom.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Customer Support"],
+  "trustTier": "community",
+  "documentationUrl": "https://developers.intercom.com",
+  "tools": [
+    {
+      "name": "search-conversations",
+      "description": "Search support conversations by content or state"
+    },
+    { "name": "get-conversation", "description": "Fetch a conversation's full thread" },
+    { "name": "reply-conversation", "description": "Post a reply into a conversation" }
+  ],
+  "resources": [{ "name": "conversation", "description": "A single conversation's full thread" }]
+}

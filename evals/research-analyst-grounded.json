@@ -1,0 +1,70 @@
+{
+  "agentId": "research-analyst",
+  "tasks": [
+    {
+      "id": "research-brief-sections",
+      "input": "What section of a research brief should a reader be able to read alone and still get the answer?",
+      "graders": [
+        { "type": "includes", "values": ["executive summary"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://research-methods/research-brief-structure.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "source-recency-threshold",
+      "input": "For a fast-moving domain like technology, how old can a source be before we should treat it with caution?",
+      "graders": [
+        { "type": "includes", "values": ["2 years"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://research-methods/source-credibility-criteria.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "survivorship-bias-definition",
+      "input": "What is survivorship bias?",
+      "graders": [
+        { "type": "includes", "values": ["failed"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://research-methods/common-research-biases.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "competitive-analysis-first-step",
+      "input": "What's the first step in doing a competitive analysis, according to our playbook?",
+      "graders": [
+        { "type": "includes", "values": ["scope"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://competitive-analysis"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "conflicting-sources-first-step",
+      "input": "If two sources disagree on a fact, what's the first thing we should do?",
+      "graders": [
+        { "type": "includes", "values": ["disagreement"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://synthesizing-conflicting-sources"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,408 @@
+// Roster — Prisma schema.
+//
+// Database is provider-agnostic: driven entirely by DATABASE_URL / DIRECT_URL.
+// Works on any Postgres with the `pgvector` extension available.
+//
+// pgvector note: Prisma has no native vector type yet (mid-2026), so the
+// extension is enabled via a custom migration and vector columns are declared
+// as `Unsupported("vector(N)")`. Vector reads/writes and `<=>` similarity run
+// through raw SQL in the repository layer (see src/server/db/repositories).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth.js (Phase 2) — user identity & OAuth account linking.
+// Session strategy is JWT (edge-friendly middleware), so the Session table
+// is created for adapter completeness but not used for session storage.
+// The User table is the anchor every later domain table references.
+// ─────────────────────────────────────────────────────────────
+model User {
+  id               String           @id @default(cuid())
+  name             String?
+  email            String?          @unique
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  providerKeys     ProviderKey[]
+  episodicMemories EpisodicMemory[]
+  mcpConnections   McpConnection[]
+  agentMcpServers  AgentMcpServer[]
+  conversations    Conversation[]
+  apiKeys          ApiKey[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// BYOK (Phase 3) — a user's LLM provider credentials.
+// The API key is stored AES-256-GCM encrypted; `config` holds provider-specific
+// settings (custom headers, org id, azure deployment/api-version, …) as data,
+// so new OpenAI-compatible providers rarely need code. One config per provider
+// per user (distinct catalog ids cover Groq, DeepSeek, a custom endpoint, etc.).
+// ─────────────────────────────────────────────────────────────
+model ProviderKey {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String // catalog id, e.g. "openai", "anthropic", "groq", "custom"
+  label        String?
+  encryptedKey String
+  baseUrl      String?
+  config       Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("provider_keys")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Agent (Phase 4) — an employee, seeded from its YAML definition file.
+// The full portable definition is stored as JSON; name/role are denormalized
+// for cheap listing. `id` is the definition's kebab-case id (not a cuid).
+// ─────────────────────────────────────────────────────────────
+model Agent {
+  id         String   @id
+  name       String
+  role       String
+  definition Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  knowledge        AgentKnowledge[]
+  episodicMemories EpisodicMemory[]
+  mcpServers       AgentMcpServer[]
+  conversations    Conversation[]
+
+  @@map("agents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AgentKnowledge (Phase 7) — chunked knowledge (semantic) and playbooks
+// (procedural) for retrieval. One row per chunk. `embedding` is a fixed
+// 1536-dim column so every agent's knowledge lives in one column regardless
+// of which BYOK embedding provider ingested it — a given agent's chunks are
+// always ingested (and later queried) through the same recorded
+// provider/model, so cosine distance stays meaningful; models producing
+// fewer dimensions (e.g. Google's 768-dim) are zero-padded, which preserves
+// relative cosine similarity exactly.
+// `permissions` scopes what a retrieval call may recall — empty means
+// public; every tag listed must be present in the caller's granted
+// permission set.
+// ─────────────────────────────────────────────────────────────
+model AgentKnowledge {
+  id                String                       @id @default(cuid())
+  agentId           String
+  kind              String // "semantic" | "procedural"
+  sourceUri         String // e.g. "kb://support-docs/refunds.md", "playbook://refund-flow"
+  chunkIndex        Int
+  content           String
+  embedding         Unsupported("vector(1536)")?
+  embeddingProvider String
+  embeddingModel    String
+  permissions       String[]                     @default([])
+  createdAt         DateTime                     @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, kind])
+  @@map("agent_knowledge")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EpisodicMemory (Phase 7) — per-user, per-agent history/preferences that
+// persist across sessions (working memory is just the in-session message
+// list; this is what survives between conversations). Simple key/value for
+// now — e.g. key "preference:tone", value "prefers short replies".
+// ─────────────────────────────────────────────────────────────
+model EpisodicMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  agentId   String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId, key])
+  @@index([userId, agentId])
+  @@map("episodic_memory")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EvalRun (Phase 5) — one row per (agent, tier) eval run. The eval harness is
+// the moat made measurable: track success rate across model tiers over time.
+// ─────────────────────────────────────────────────────────────
+model EvalRun {
+  id           String   @id @default(cuid())
+  agentId      String
+  modelTier    String // frontier | mid | cheap
+  modelLabel   String
+  total        Int
+  passed       Int
+  successRate  Float
+  avgTokens    Float
+  avgLatencyMs Float
+  avgCostUsd   Float    @default(0) // 0 when the tier's model had no known per-token pricing
+  createdAt    DateTime @default(now())
+
+  @@index([agentId, modelTier])
+  @@map("eval_runs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Foundation smoke model (Phase 1).
+// Proves the full Prisma + pgvector pipeline end-to-end: migrations,
+// repository read/write, and cosine-distance (<=>) similarity search.
+// Phase 7 introduced the real knowledge/embedding table (AgentKnowledge) for
+// domain retrieval — this stays on purpose as a minimal infra health-check
+// independent of that table's ingestion/permission/kind complexity.
+// ─────────────────────────────────────────────────────────────
+model EmbeddingProbe {
+  id        String                    @id
+  content   String
+  embedding Unsupported("vector(3)")?
+  createdAt DateTime                  @default(now())
+
+  @@map("embedding_probe")
+}
+
+// ─────────────────────────────────────────────────────────────
+// McpServer (Phase 10.5) — a directory entry (curated, seeded from
+// mcp-servers/*.json — definitions-as-files, same pattern as Agent/agents/)
+// or a user-added custom server (created directly, no definition file).
+// `cachedTools`/`cachedResources` are a snapshot of the server's own
+// tools/list + resources/list, refreshed on connect — good enough for the
+// Connectors UI to render capability lists without a live connection.
+// authType: "oauth_dcr" | "static_headers" | "none".
+// trustTier: "verified" | "community" | "custom".
+// ─────────────────────────────────────────────────────────────
+model McpServer {
+  id                           String   @id // kebab-case slug for curated servers; a generated id for custom ones
+  name                         String
+  description                  String
+  iconUrl                      String?
+  developer                    String?
+  connectorUrl                 String
+  authType                     String
+  categories                   String[] @default([])
+  trustTier                    String
+  cachedTools                  Json     @default("[]")
+  cachedResources              Json     @default("[]")
+  documentationUrl             String?
+  supportUrl                   String?
+  privacyPolicyUrl             String?
+  // Set when the server issues a fixed OAuth client out-of-band instead of via
+  // Dynamic Client Registration. Secret is encrypted with the same vault as
+  // connection credentials (server/mcp/vault.ts).
+  preRegisteredClientId        String?
+  encryptedPreRegisteredSecret String?
+  // Null for curated directory servers; set to the adding user for a custom server.
+  createdByUserId              String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  connections  McpConnection[]
+  agentServers AgentMcpServer[]
+
+  @@map("mcp_servers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// McpConnection (Phase 10.5) — one user's authenticated connection to one
+// MCP server. `credentials` is the AES-256-GCM-encrypted JSON blob produced
+// by server/mcp/vault.ts (10.4): either OAuth tokens or a static_headers map.
+// status: "active" | "expired" | "revoked" | "error".
+// ─────────────────────────────────────────────────────────────
+model McpConnection {
+  id          String    @id @default(cuid())
+  userId      String
+  mcpServerId String
+  credentials String
+  status      String    @default("active")
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mcpServerId])
+  @@index([userId])
+  @@map("mcp_connections")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AgentMcpServer (Phase 10.5) — which of a user's connected MCP servers are
+// enabled for which agent. Enablement is per-user (not just per-agent) since
+// the underlying connection is per-user — two users hiring the same employee
+// each turn their own connected servers on independently.
+// ─────────────────────────────────────────────────────────────
+model AgentMcpServer {
+  id          String   @id @default(cuid())
+  agentId     String
+  mcpServerId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  agent     Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId, mcpServerId])
+  @@index([userId, agentId])
+  @@map("agent_mcp_servers")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Conversation / Message (Phase 11) — durable chat history. A conversation
+// is scoped to one user talking to one agent; messages are its ordered
+// turns. `Message.stepEvents` caches the assistant turn's Phase 8
+// WorkflowStepEvent[] (only ever produced on the multi-step workflow path,
+// never the single-step bypass most turns take) so reloading a conversation
+// can re-render its visible steps without re-running anything.
+// ─────────────────────────────────────────────────────────────
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  agentId   String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, agentId])
+  @@index([userId, updatedAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String // "user" | "assistant"
+  content        String
+  stepEvents     Json?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ApiKey (Phase 12) — a hashed platform API key for programmatic access to
+// POST /v1/agents/{id}/chat. Unlike ProviderKey (AES-256-GCM, decrypted at
+// request time because the raw value must reach the LLM provider), a
+// platform key only ever needs to be *compared* — so only its SHA-256 hash
+// is stored; the raw value is shown to the user once at creation and never
+// retrievable again. `keyPrefix` (e.g. "rk_live_4f2a9c") is safe to store
+// and display in plaintext for the user to tell keys apart.
+// ─────────────────────────────────────────────────────────────
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String
+  keyPrefix  String
+  hashedKey  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AnalyticsEvent + Feedback (Phase 13.3) — a self-hosted event log, not a
+// third-party vendor: a Postgres table + a server-side logging helper,
+// consistent with the project's provider-agnostic/BYOK posture elsewhere.
+// `userId` is a plain column (no relation/FK) on purpose — both tables are
+// simple, independently-queried logs, never joined into other models, and
+// keeping a row after its user is deleted is fine for an event/feedback log
+// (same reasoning as an audit trail outliving the account it recorded).
+// ─────────────────────────────────────────────────────────────
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([userId])
+  @@map("analytics_events")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  createdAt DateTime @default(now())
+
+  @@map("feedback")
+}

@@ -1,0 +1,22 @@
+{
+  "id": "notion",
+  "name": "Notion",
+  "description": "Search, read, and update Notion pages and databases",
+  "developer": "Notion Labs, Inc.",
+  "connectorUrl": "https://mcp.notion.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Productivity", "Docs"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.notion.com",
+  "tools": [
+    { "name": "search", "description": "Search pages and databases by title or content" },
+    { "name": "fetch", "description": "Fetch the full content of a page or database by id" },
+    { "name": "create-page", "description": "Create a new page, optionally inside a database" },
+    { "name": "update-page", "description": "Update a page's properties or content" },
+    { "name": "query-database", "description": "Query a database with filters and sorts" }
+  ],
+  "resources": [
+    { "name": "page", "description": "The content of a single Notion page" },
+    { "name": "database", "description": "A database's schema and entries" }
+  ]
+}

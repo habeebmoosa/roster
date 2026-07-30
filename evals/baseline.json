@@ -1,0 +1,12 @@
+{
+  "customer-support": {
+    "frontier": 0.6,
+    "mid": 0.6,
+    "cheap": 0.6
+  },
+  "customer-support-grounded": {
+    "frontier": 0.8,
+    "mid": 0.8,
+    "cheap": 0.8
+  }
+}

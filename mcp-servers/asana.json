@@ -1,0 +1,19 @@
+{
+  "id": "asana",
+  "name": "Asana",
+  "description": "Manage Asana tasks, projects, and status updates",
+  "developer": "Asana, Inc.",
+  "connectorUrl": "https://mcp.asana.com/sse",
+  "authType": "oauth_dcr",
+  "categories": ["Project Management"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.asana.com/docs/using-the-asana-mcp-server",
+  "tools": [
+    { "name": "search-tasks", "description": "Search tasks across projects" },
+    { "name": "get-task", "description": "Fetch a single task's full detail" },
+    { "name": "create-task", "description": "Create a new task in a project" },
+    { "name": "update-task", "description": "Update a task's assignee, due date, or status" },
+    { "name": "list-projects", "description": "List projects in a workspace" }
+  ],
+  "resources": [{ "name": "task", "description": "A single task's full detail" }]
+}

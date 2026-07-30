@@ -1,0 +1,22 @@
+{
+  "id": "linear",
+  "name": "Linear",
+  "description": "Create, search, and update Linear issues and projects",
+  "developer": "Linear Orbit, Inc.",
+  "connectorUrl": "https://mcp.linear.app/sse",
+  "authType": "oauth_dcr",
+  "categories": ["Project Management", "Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://linear.app/docs/mcp",
+  "tools": [
+    { "name": "search-issues", "description": "Search issues by title, description, or filters" },
+    { "name": "get-issue", "description": "Fetch a single issue's full detail" },
+    { "name": "create-issue", "description": "Create a new issue in a team" },
+    { "name": "update-issue", "description": "Update an issue's status, assignee, or fields" },
+    { "name": "list-projects", "description": "List projects and their current status" }
+  ],
+  "resources": [
+    { "name": "issue", "description": "A single issue's full detail" },
+    { "name": "project", "description": "A project's roadmap and progress" }
+  ]
+}

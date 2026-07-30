@@ -1,0 +1,70 @@
+{
+  "agentId": "content-writer",
+  "tasks": [
+    {
+      "id": "seo-meta-description-length",
+      "input": "How many characters should a meta description be, for good SEO?",
+      "graders": [
+        { "type": "includes", "values": ["150"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://writing-guides/seo-fundamentals.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "blog-post-word-count",
+      "input": "Roughly how many words should a standard SEO blog post be?",
+      "graders": [
+        { "type": "includes", "values": ["800"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://writing-guides/content-formats.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "blog-structure-hook",
+      "input": "What should the opening of a blog post do, according to our playbook?",
+      "graders": [
+        { "type": "includes", "values": ["hook"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://blog-post-structure"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "style-guide-oxford-comma",
+      "input": "Do we use the Oxford comma in our writing?",
+      "graders": [
+        { "type": "regex", "pattern": "yes" },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["kb://writing-guides/style-guide.md"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    },
+    {
+      "id": "self-edit-checklist-cta",
+      "input": "During a self-edit pass, how many calls to action should a piece have?",
+      "graders": [
+        { "type": "includes", "values": ["one"] },
+        {
+          "type": "retrieval",
+          "expectedSourceUris": ["playbook://brand-voice-editing"],
+          "minRecall": 1,
+          "minPrecision": 0
+        }
+      ]
+    }
+  ]
+}

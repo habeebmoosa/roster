@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: roster
+          POSTGRES_PASSWORD: roster
+          POSTGRES_DB: roster
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U roster -d roster"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://roster:roster@localhost:5434/roster?schema=public
+      DIRECT_URL: postgresql://roster:roster@localhost:5434/roster?schema=public
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Integration tests (pgvector)
+        run: npm run test:integration
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: npm run test:e2e
+      # Dormant until EVAL_FRONTIER_API_KEY (etc.) are added as repo secrets —
+      # this calls real, paid LLM APIs, so it's opt-in rather than forced on
+      # every push. Once configured, blocks any change that regresses success
+      # rate on any tier vs. evals/baseline.json (core/eval/gate.ts).
+      # Note: grounded eval tasks additionally need EVAL_EMBEDDING_PROVIDER/
+      # API_KEY, and this job doesn't run `npm run ingest` — so until that's
+      # added too, grounded tasks run ungrounded here even with this enabled.
+      - name: Eval gate (opt-in — needs EVAL_* secrets configured)
+        if: ${{ secrets.EVAL_FRONTIER_API_KEY != '' }}
+        env:
+          EVAL_FRONTIER_API_KEY: ${{ secrets.EVAL_FRONTIER_API_KEY }}
+          EVAL_MID_API_KEY: ${{ secrets.EVAL_MID_API_KEY }}
+          EVAL_CHEAP_API_KEY: ${{ secrets.EVAL_CHEAP_API_KEY }}
+        run: npm run eval:gate

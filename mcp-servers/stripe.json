@@ -1,0 +1,19 @@
+{
+  "id": "stripe",
+  "name": "Stripe",
+  "description": "Look up customers, payments, subscriptions, and invoices in Stripe",
+  "developer": "Stripe, Inc.",
+  "connectorUrl": "https://mcp.stripe.com",
+  "authType": "oauth_dcr",
+  "categories": ["Payments", "Finance"],
+  "trustTier": "verified",
+  "documentationUrl": "https://docs.stripe.com/mcp",
+  "tools": [
+    { "name": "search-customers", "description": "Search customers by email or metadata" },
+    { "name": "get-payment", "description": "Fetch a payment's status and detail" },
+    { "name": "list-invoices", "description": "List invoices for a customer" },
+    { "name": "list-subscriptions", "description": "List a customer's active subscriptions" },
+    { "name": "create-refund", "description": "Refund a charge, in full or in part" }
+  ],
+  "resources": [{ "name": "customer", "description": "A customer's profile and billing history" }]
+}
