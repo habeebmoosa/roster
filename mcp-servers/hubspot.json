@@ -3,7 +3,7 @@
   "name": "HubSpot",
   "description": "Search and update contacts, companies, and deals in HubSpot",
   "developer": "HubSpot, Inc.",
-  "connectorUrl": "https://mcp.hubspot.com/anthropic",
+  "connectorUrl": "https://mcp.hubspot.com",
   "authType": "oauth_dcr",
   "categories": ["CRM", "Marketing"],
   "trustTier": "community",
