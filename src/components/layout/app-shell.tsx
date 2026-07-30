@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { FeedbackButton } from "@/features/feedback";
 import { Drawer } from "@/ui";
-import { IconMenu } from "./icons";
+import { IconMenu } from "@/ui/icons";
 import { Sidebar } from "./sidebar";
 
 export function AppShell({

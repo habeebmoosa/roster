@@ -11,7 +11,7 @@ import {
   dropdownMenuItemClasses,
 } from "@/ui";
 import { ThemeToggle } from "@/ui/theme";
-import { IconBook, IconLogOut, IconSparkle } from "./icons";
+import { IconBook, IconLogOut, IconSparkle } from "@/ui/icons";
 
 export function ProfileMenu({ workspaceName, email }: { workspaceName: string; email: string }) {
   return (

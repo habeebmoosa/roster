@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import { IconChat, IconConnectors, IconOverview, IconSettings, IconWorkers } from "./icons";
+import { IconChat, IconConnectors, IconOverview, IconSettings, IconWorkers } from "@/ui/icons";
 
 export interface NavItem {
   href: string;

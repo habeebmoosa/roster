@@ -6,7 +6,7 @@ import { Badge, Button } from "@/ui";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS } from "./nav-items";
 import { ProfileMenu } from "./profile-menu";
-import { IconPlus } from "./icons";
+import { IconPlus } from "@/ui/icons";
 
 export function Sidebar({
   workspaceName,
