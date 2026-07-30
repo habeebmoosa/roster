@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="px-6 py-6">
+    <div className="py-6">
       <h1 className="text-text text-2xl font-bold tracking-tight">{getGreeting()}</h1>
       <p className="text-text-muted mt-1">Here&apos;s what your roster is up to today.</p>
 

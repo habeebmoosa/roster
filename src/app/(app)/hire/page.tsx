@@ -7,7 +7,7 @@ export default async function HirePage() {
   const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
 
   return (
-    <div className="px-6 py-6">
+    <div className="py-6">
       <h1 className="text-text text-2xl font-bold tracking-tight">Hire a new employee</h1>
       <p className="text-text-muted mt-1">
         Set up an AI employee&apos;s identity, knowledge, abilities, and model.
