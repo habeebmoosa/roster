@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseAgentDefinition } from "@/core/agent";
+import { ANALYTICS_EVENTS } from "@/server/analytics/events";
+import { logEvent } from "@/server/analytics/log-event";
 import { auth } from "@/server/auth";
 import { getAgentDefinition, upsertAgent } from "@/server/db/repositories/agent.repository";
 
@@ -40,5 +42,10 @@ export async function POST(req: Request) {
   }
 
   await upsertAgent(definition);
+  await logEvent({
+    userId: session.user.id,
+    event: ANALYTICS_EVENTS.EMPLOYEE_HIRED,
+    metadata: { agentId: definition.id },
+  });
   return NextResponse.json({ id: definition.id }, { status: 201 });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { AgentNotFoundError } from "@/server/agents/service";
+import { listAnalyticsEventsForUser } from "@/server/db/repositories/analytics-event.repository";
 import { prisma } from "@/server/db/prisma";
 import { upsertAgent } from "@/server/db/repositories/agent.repository";
 import {
@@ -277,5 +278,47 @@ describe("sendChatMessage", () => {
     }
 
     expect(text).toBe("Hello world");
+  });
+
+  it("logs first_chat_message_sent on a user's very first conversation, but not on their second", async () => {
+    const freshUser = await prisma.user.create({
+      data: { email: `chat-service-first-message-${Date.now()}@test.local` },
+    });
+    try {
+      await addProviderKey({
+        userId: freshUser.id,
+        provider: "custom",
+        apiKey: API_KEY,
+        model: "mock-model",
+        baseUrl: mock.url,
+      });
+
+      const first = await sendChatMessage({
+        userId: freshUser.id,
+        agentId: "customer-support",
+        provider: "custom",
+        model: "mock-model",
+        content: "hello",
+      });
+      await drain(first.stream);
+
+      const second = await sendChatMessage({
+        userId: freshUser.id,
+        agentId: "customer-support",
+        provider: "custom",
+        model: "mock-model",
+        content: "a second, separate conversation",
+      });
+      await drain(second.stream);
+
+      const events = await listAnalyticsEventsForUser(freshUser.id);
+      const firstMessageEvents = events.filter((e) => e.event === "first_chat_message_sent");
+      expect(firstMessageEvents).toHaveLength(1);
+    } finally {
+      await prisma.conversation.deleteMany({ where: { userId: freshUser.id } });
+      await prisma.analyticsEvent.deleteMany({ where: { userId: freshUser.id } });
+      await prisma.providerKey.deleteMany({ where: { userId: freshUser.id } });
+      await prisma.user.delete({ where: { id: freshUser.id } });
+    }
   });
 });

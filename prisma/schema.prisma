@@ -376,3 +376,33 @@ model ApiKey {
   @@index([userId])
   @@map("api_keys")
 }
+
+// ─────────────────────────────────────────────────────────────
+// AnalyticsEvent + Feedback (Phase 13.3) — a self-hosted event log, not a
+// third-party vendor: a Postgres table + a server-side logging helper,
+// consistent with the project's provider-agnostic/BYOK posture elsewhere.
+// `userId` is a plain column (no relation/FK) on purpose — both tables are
+// simple, independently-queried logs, never joined into other models, and
+// keeping a row after its user is deleted is fine for an event/feedback log
+// (same reasoning as an audit trail outliving the account it recorded).
+// ─────────────────────────────────────────────────────────────
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([userId])
+  @@map("analytics_events")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  message   String
+  createdAt DateTime @default(now())
+
+  @@map("feedback")
+}

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { streamCompletion } from "@/core/providers";
+import { listAnalyticsEventsForUser } from "@/server/db/repositories/analytics-event.repository";
 import { prisma } from "@/server/db/prisma";
 import {
   addProviderKey,
@@ -72,6 +73,15 @@ describe("BYOK provider service (mock provider)", () => {
     const row = await prisma.providerKey.findFirst({ where: { userId } });
     expect(row?.encryptedKey).toBeTruthy();
     expect(row?.encryptedKey).not.toContain(API_KEY);
+  });
+
+  it("logs a provider_key_added analytics event only on success, not on a rejected validation", async () => {
+    const events = await listAnalyticsEventsForUser(userId);
+    const added = events.filter((e) => e.event === "provider_key_added");
+    // Exactly one — from the successful add above, not from the invalid-key
+    // or bad-base-url attempts earlier in this suite.
+    expect(added).toHaveLength(1);
+    expect(added[0]!.metadata).toEqual({ provider: "custom" });
   });
 
   it("streams a completion using the stored (decrypted) key", async () => {

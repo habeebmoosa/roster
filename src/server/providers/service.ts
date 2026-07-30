@@ -8,6 +8,8 @@ import {
   type ResolveEmbeddingModelInput,
   type ResolveModelInput,
 } from "@/core/providers";
+import { ANALYTICS_EVENTS } from "@/server/analytics/events";
+import { logEvent } from "@/server/analytics/log-event";
 import { decryptSecret, encryptSecret } from "@/server/crypto/vault";
 import {
   deleteProviderKey,
@@ -61,6 +63,12 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     encryptedKey: encryptSecret(input.apiKey),
     baseUrl: input.baseUrl ?? null,
     config: input.config ?? {},
+  });
+
+  await logEvent({
+    userId: input.userId,
+    event: ANALYTICS_EVENTS.PROVIDER_KEY_ADDED,
+    metadata: { provider: input.provider },
   });
 }
 

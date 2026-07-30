@@ -31,11 +31,12 @@ describe("AppShell", () => {
 
   it("opens the mobile nav drawer from the menu button", async () => {
     const user = userEvent.setup();
-    renderShell();
+    const { container } = renderShell();
 
-    // Icons also set aria-hidden, so target the Drawer's own wrapper
-    // specifically via its role="dialog" panel's parent.
-    const drawerWrapper = screen.getByRole("dialog", { hidden: true }).parentElement!;
+    // The feedback button's Modal is also a role="dialog" element (a native
+    // <dialog>) — query the Drawer's own div[role="dialog"] specifically to
+    // avoid ambiguity between the two.
+    const drawerWrapper = container.querySelector('div[role="dialog"]')!.parentElement!;
     expect(drawerWrapper).toHaveAttribute("aria-hidden", "true");
 
     await user.click(screen.getByRole("button", { name: "Open menu" }));

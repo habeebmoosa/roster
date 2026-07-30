@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/server/db/prisma";
 import { authConfig } from "./config";
+import { onUserCreated } from "./on-user-created";
 
 /**
  * Full (Node) Auth.js instance: the edge-safe config plus the Prisma adapter,
@@ -11,4 +12,5 @@ import { authConfig } from "./config";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   ...authConfig,
+  events: { createUser: onUserCreated },
 });

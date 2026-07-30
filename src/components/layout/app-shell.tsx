@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { FeedbackButton } from "@/features/feedback";
 import { Drawer } from "@/ui";
 import { IconMenu } from "./icons";
 import { Sidebar } from "./sidebar";
@@ -42,6 +43,8 @@ export function AppShell({
 
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+
+      <FeedbackButton />
     </div>
   );
 }

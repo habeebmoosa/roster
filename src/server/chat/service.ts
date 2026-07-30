@@ -3,11 +3,14 @@ import type { AgentMessage } from "@/core/agent";
 import { ByokError, mapProviderError } from "@/core/providers";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
+import { ANALYTICS_EVENTS } from "@/server/analytics/events";
+import { logEvent } from "@/server/analytics/log-event";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
 import {
   appendMessage,
   createConversation,
   getConversationWithMessages,
+  listConversations,
 } from "@/server/db/repositories/conversation.repository";
 
 export class ConversationNotFoundError extends Error {
@@ -62,6 +65,7 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
   let conversationId = input.conversationId;
   let agentId = input.agentId;
   let priorMessages: AgentMessage[] = [];
+  let isFirstEverConversation = false;
 
   if (conversationId) {
     const existing = await getConversationWithMessages(input.userId, conversationId);
@@ -74,11 +78,16 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
     }));
   } else {
     if (!(await getAgentDefinition(agentId))) throw new AgentNotFoundError(agentId);
+    // Checked before creating the new conversation below, so it never sees itself.
+    isFirstEverConversation = (await listConversations(input.userId)).length === 0;
     const created = await createConversation(input.userId, agentId, deriveTitle(input.content));
     conversationId = created.id;
   }
 
   await appendMessage({ conversationId, role: "user", content: input.content });
+  if (isFirstEverConversation) {
+    await logEvent({ userId: input.userId, event: ANALYTICS_EVENTS.FIRST_CHAT_MESSAGE_SENT });
+  }
 
   const messages: AgentMessage[] = [...priorMessages, { role: "user", content: input.content }];
   const finalConversationId = conversationId;
