@@ -3,10 +3,32 @@
  * change here, not new code (MVP-Plan §3: config over hardcoding).
  *
  * `kind` selects how the registry instantiates the model:
- *   - openai / anthropic / google → native AI SDK providers
- *   - openai-compatible          → any endpoint speaking the OpenAI API
+ *   - openai / anthropic / google / cohere / perplexity / fireworks /
+ *     cerebras / deepinfra / huggingface / openrouter → native AI SDK providers,
+ *     all a plain bearer apiKey + optional baseURL
+ *   - azure          → Azure OpenAI (resourceName/baseURL + apiVersion, in `config`)
+ *   - amazon-bedrock → AWS Bedrock (region required in `config`; secret bundle
+ *                      of accessKeyId/secretAccessKey/sessionToken or apiKey,
+ *                      JSON-encoded as the credential's `apiKey` string)
+ *   - google-vertex  → Vertex AI (project/location required in `config`;
+ *                      secret bundle of clientEmail/privateKey or apiKey)
+ *   - openai-compatible → any endpoint speaking the OpenAI API, no native package
  */
-export type ProviderKind = "openai" | "anthropic" | "google" | "openai-compatible";
+export type ProviderKind =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "google-vertex"
+  | "azure"
+  | "amazon-bedrock"
+  | "cohere"
+  | "perplexity"
+  | "fireworks"
+  | "cerebras"
+  | "deepinfra"
+  | "huggingface"
+  | "openrouter"
+  | "openai-compatible";
 
 export interface ProviderCatalogEntry {
   id: string;
@@ -99,6 +121,90 @@ const CATALOG: ProviderCatalogEntry[] = [
     baseUrlEditable: false,
     requiresBaseUrl: false,
     suggestedModels: ["grok-2-latest"],
+  },
+  {
+    id: "cohere",
+    label: "Cohere",
+    kind: "cohere",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["command-a-03-2025", "command-r-plus"],
+  },
+  {
+    id: "perplexity",
+    label: "Perplexity",
+    kind: "perplexity",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["sonar", "sonar-pro", "sonar-reasoning-pro"],
+  },
+  {
+    id: "fireworks",
+    label: "Fireworks AI",
+    kind: "fireworks",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: [
+      "accounts/fireworks/models/kimi-k2p6",
+      "accounts/fireworks/models/deepseek-v4p1",
+    ],
+  },
+  {
+    id: "cerebras",
+    label: "Cerebras",
+    kind: "cerebras",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["llama3.1-70b", "llama-4-scout-17b-16e-instruct", "gpt-oss-120b"],
+  },
+  {
+    id: "deepinfra",
+    label: "DeepInfra",
+    kind: "deepinfra",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["meta-llama/Llama-3.3-70B-Instruct", "deepseek-ai/DeepSeek-V3"],
+  },
+  {
+    id: "huggingface",
+    label: "Hugging Face",
+    kind: "huggingface",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["openai/gpt-oss-120b:cheapest", "deepseek-ai/DeepSeek-V3:together"],
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    kind: "openrouter",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    suggestedModels: ["anthropic/claude-sonnet-4.5", "openai/gpt-5", "deepseek/deepseek-v4"],
+  },
+  {
+    id: "azure",
+    label: "Azure OpenAI",
+    kind: "azure",
+    baseUrlEditable: true,
+    requiresBaseUrl: false,
+    // The "model" is your deployment name, not a shared model id — see the AI SDK docs.
+    suggestedModels: [],
+  },
+  {
+    id: "amazon-bedrock",
+    label: "AWS Bedrock",
+    kind: "amazon-bedrock",
+    baseUrlEditable: false,
+    requiresBaseUrl: false,
+    suggestedModels: ["anthropic.claude-3-5-sonnet-20241022-v2:0", "us.amazon.nova-pro-v1:0"],
+  },
+  {
+    id: "google-vertex",
+    label: "Google Vertex AI",
+    kind: "google-vertex",
+    baseUrlEditable: false,
+    requiresBaseUrl: false,
+    suggestedModels: ["gemini-2.5-pro", "claude-3-5-sonnet@20240620"],
   },
   {
     id: "custom",

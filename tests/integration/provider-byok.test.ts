@@ -141,3 +141,33 @@ describe("BYOK provider service (mock provider)", () => {
     expect(credentials.filter((c) => c.isDefault)).toHaveLength(1);
   });
 });
+
+describe("BYOK with a native (non-openai-compatible-kind) provider package", () => {
+  // Fireworks' first-party @ai-sdk/fireworks package is built on the same
+  // @ai-sdk/openai-compatible request path as the "custom" kind under the
+  // hood (confirmed via its re-exported OpenAICompatibleErrorData type) — so
+  // this mock server can stand in for it too, proving the new "fireworks"
+  // registry kind (10.9 Phase 2) round-trips end to end, not just that
+  // resolveModel() returns an object.
+  it("adds, validates, and streams through the native fireworks provider kind", async () => {
+    await addProviderKey({
+      userId,
+      provider: "fireworks",
+      apiKey: API_KEY,
+      model: "accounts/fireworks/models/test-model",
+      baseUrl: mock.url,
+    });
+
+    const input = await getResolveInputForUser(
+      userId,
+      "fireworks",
+      "accounts/fireworks/models/test-model",
+    );
+    const result = streamCompletion(input, "hello");
+
+    let text = "";
+    for await (const chunk of result.textStream) text += chunk;
+
+    expect(text).toBe("Hello world");
+  });
+});

@@ -82,6 +82,7 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     apiKey: input.apiKey,
     baseUrl: input.baseUrl ?? null,
     headers,
+    config: input.config,
   });
 
   const requestedLabel = input.label?.trim();
@@ -168,6 +169,7 @@ export async function getResolveInputForUser(
     apiKey: decryptSecret(record.encryptedKey),
     baseUrl: record.baseUrl,
     headers: extractHeaders(record.config),
+    config: record.config,
   };
 }
 
