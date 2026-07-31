@@ -12,10 +12,14 @@ import { ANALYTICS_EVENTS } from "@/server/analytics/events";
 import { logEvent } from "@/server/analytics/log-event";
 import { decryptSecret, encryptSecret } from "@/server/crypto/vault";
 import {
-  deleteProviderKey,
-  getProviderKeyWithSecret,
-  listProviderKeys,
-  upsertProviderKey,
+  createProviderKey,
+  deleteAllCredentialsForProvider,
+  deleteProviderKeyById,
+  getDefaultProviderKey,
+  listCredentialsForProvider,
+  listDefaultProviderKeys,
+  setDefaultProviderKey,
+  updateProviderKey,
   type ProviderKeyRecord,
 } from "@/server/db/repositories/provider-key.repository";
 
@@ -23,6 +27,11 @@ import {
  * Server-side orchestration for BYOK: validate → encrypt → persist, and
  * request-time decrypt → resolve. The only place the plaintext key is handled,
  * and it is never logged or returned to the client.
+ *
+ * A provider can have several stored credentials (e.g. a personal key and a
+ * work key) — everything outside Settings resolves through the provider's
+ * current *default* credential, so runAgent()/chat/REST/eval never need to
+ * know a provider might have more than one.
  */
 export interface AddProviderKeyInput {
   userId: string;
@@ -32,10 +41,29 @@ export interface AddProviderKeyInput {
   baseUrl?: string | null;
   label?: string | null;
   config?: Record<string, unknown>;
+  makeDefault?: boolean;
 }
 
+/** One row per configured provider — that provider's default credential. Used everywhere outside Settings. */
 export function listUserProviders(userId: string): Promise<ProviderKeyRecord[]> {
-  return listProviderKeys(userId);
+  return listDefaultProviderKeys(userId);
+}
+
+/** Every credential configured for one provider — for the Settings "manage credentials" dialog. */
+export function listProviderCredentials(
+  userId: string,
+  provider: string,
+): Promise<ProviderKeyRecord[]> {
+  return listCredentialsForProvider(userId, provider);
+}
+
+async function nextAvailableLabel(userId: string, provider: string, desired: string): Promise<string> {
+  const taken = new Set((await listCredentialsForProvider(userId, provider)).map((c) => c.label));
+  if (!taken.has(desired)) return desired;
+  for (let n = 2; ; n++) {
+    const candidate = `${desired} ${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
 }
 
 export async function addProviderKey(input: AddProviderKeyInput): Promise<void> {
@@ -56,13 +84,23 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     headers,
   });
 
-  await upsertProviderKey({
+  const requestedLabel = input.label?.trim();
+  if (requestedLabel) {
+    const taken = (await listCredentialsForProvider(input.userId, input.provider)).some(
+      (c) => c.label === requestedLabel,
+    );
+    if (taken) throw new ByokError("duplicate_label");
+  }
+  const label = requestedLabel || (await nextAvailableLabel(input.userId, input.provider, "Default"));
+
+  await createProviderKey({
     userId: input.userId,
     provider: input.provider,
-    label: input.label ?? null,
+    label,
     encryptedKey: encryptSecret(input.apiKey),
     baseUrl: input.baseUrl ?? null,
     config: input.config ?? {},
+    makeDefault: input.makeDefault,
   });
 
   await logEvent({
@@ -72,17 +110,55 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
   });
 }
 
+/** Deletes every credential configured for a provider — today's "remove provider" action. */
 export function removeProviderKey(userId: string, provider: string): Promise<void> {
-  return deleteProviderKey(userId, provider);
+  return deleteAllCredentialsForProvider(userId, provider);
 }
 
-/** Build a ready-to-use model input for a user's stored provider (decrypts here). */
+/** Deletes one specific credential (promotes a new default if it was the default — see the repository). */
+export function removeProviderCredential(userId: string, credentialId: string): Promise<void> {
+  return deleteProviderKeyById(userId, credentialId);
+}
+
+/** Marks one credential as its provider's default. */
+export function setDefaultProviderCredential(
+  userId: string,
+  provider: string,
+  credentialId: string,
+): Promise<void> {
+  return setDefaultProviderKey(userId, provider, credentialId);
+}
+
+export interface UpdateProviderCredentialInput {
+  label?: string;
+  apiKey?: string; // omit to keep the existing secret unchanged
+  baseUrl?: string | null;
+  config?: Record<string, unknown>;
+}
+
+/** Edits a credential in place; re-encrypts a new secret only if one was supplied. */
+export async function updateProviderCredential(
+  userId: string,
+  credentialId: string,
+  input: UpdateProviderCredentialInput,
+): Promise<ProviderKeyRecord> {
+  const updated = await updateProviderKey(userId, credentialId, {
+    label: input.label,
+    encryptedKey: input.apiKey ? encryptSecret(input.apiKey) : undefined,
+    baseUrl: input.baseUrl,
+    config: input.config,
+  });
+  if (!updated) throw new ByokError("not_found");
+  return updated;
+}
+
+/** Build a ready-to-use model input for a user's stored provider (decrypts here). Resolves to the provider's current default credential. */
 export async function getResolveInputForUser(
   userId: string,
   provider: string,
   model: string,
 ): Promise<ResolveModelInput> {
-  const record = await getProviderKeyWithSecret(userId, provider);
+  const record = await getDefaultProviderKey(userId, provider);
   if (!record) {
     throw new ByokError("unknown_provider", "No key is configured for this provider.");
   }
@@ -117,7 +193,7 @@ const EMBEDDING_PROVIDER_PREFERENCE = ["openai", "google"];
 export async function getEmbeddingResolveInputForUser(
   userId: string,
 ): Promise<ResolveEmbeddingModelInput & { provider: string }> {
-  const keys = await listProviderKeys(userId);
+  const keys = await listDefaultProviderKeys(userId);
   const capable = keys.filter((k) => isEmbeddingCapable(k.provider));
   const candidate =
     EMBEDDING_PROVIDER_PREFERENCE.map((provider) =>
@@ -131,7 +207,7 @@ export async function getEmbeddingResolveInputForUser(
     );
   }
 
-  const record = await getProviderKeyWithSecret(userId, candidate.provider);
+  const record = await getDefaultProviderKey(userId, candidate.provider);
   if (!record) {
     throw new ByokError("embeddings_unsupported", "No key is configured for this provider.");
   }

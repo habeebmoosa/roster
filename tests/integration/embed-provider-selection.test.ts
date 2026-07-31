@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { encryptSecret } from "@/server/crypto/vault";
-import { upsertProviderKey } from "@/server/db/repositories/provider-key.repository";
+import { createProviderKey } from "@/server/db/repositories/provider-key.repository";
 import { prisma } from "@/server/db/prisma";
 import { getEmbeddingResolveInputForUser } from "@/server/providers/service";
 
@@ -28,9 +28,10 @@ afterAll(async () => {
 });
 
 function addKey(provider: string) {
-  return upsertProviderKey({
+  return createProviderKey({
     userId,
     provider,
+    label: "Default",
     encryptedKey: encryptSecret("test-key"),
     baseUrl: null,
     config: {},

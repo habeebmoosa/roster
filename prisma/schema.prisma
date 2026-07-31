@@ -56,7 +56,8 @@ model ProviderKey {
   id           String   @id @default(cuid())
   userId       String
   provider     String // catalog id, e.g. "openai", "anthropic", "groq", "custom"
-  label        String?
+  label        String // user-assigned name — a user may have several credentials per provider
+  isDefault    Boolean  @default(false) // the credential runAgent()/chat/REST/eval use for this provider
   encryptedKey String
   baseUrl      String?
   config       Json     @default("{}")
@@ -65,8 +66,8 @@ model ProviderKey {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, provider])
-  @@index([userId])
+  @@unique([userId, provider, label])
+  @@index([userId, provider])
   @@map("provider_keys")
 }
 

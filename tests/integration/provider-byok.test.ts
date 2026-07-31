@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { streamCompletion } from "@/core/providers";
 import { listAnalyticsEventsForUser } from "@/server/db/repositories/analytics-event.repository";
+import { listCredentialsForProvider } from "@/server/db/repositories/provider-key.repository";
 import { prisma } from "@/server/db/prisma";
 import {
   addProviderKey,
@@ -92,5 +93,51 @@ describe("BYOK provider service (mock provider)", () => {
     for await (const chunk of result.textStream) text += chunk;
 
     expect(text).toBe("Hello world");
+  });
+
+  it("adding a second credential for the same provider auto-labels it rather than overwriting the first", async () => {
+    // "custom" already has one credential ("Default") from the earlier test in this suite.
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+    });
+
+    const credentials = await listCredentialsForProvider(userId, "custom");
+    expect(credentials.map((c) => c.label).sort()).toEqual(["Default", "Default 2"]);
+    // The original stays the default; the newly added one does not silently take over.
+    expect(credentials.find((c) => c.label === "Default")?.isDefault).toBe(true);
+    expect(credentials.find((c) => c.label === "Default 2")?.isDefault).toBe(false);
+  });
+
+  it("rejects an explicit label that collides with an existing credential for the same provider", async () => {
+    await expect(
+      addProviderKey({
+        userId,
+        provider: "custom",
+        apiKey: API_KEY,
+        model: "mock-model",
+        baseUrl: mock.url,
+        label: "Default",
+      }),
+    ).rejects.toMatchObject({ code: "duplicate_label" });
+  });
+
+  it("a new makeDefault credential becomes the one getResolveInputForUser resolves to", async () => {
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+      label: "Newest",
+      makeDefault: true,
+    });
+
+    const credentials = await listCredentialsForProvider(userId, "custom");
+    expect(credentials.find((c) => c.label === "Newest")?.isDefault).toBe(true);
+    expect(credentials.filter((c) => c.isDefault)).toHaveLength(1);
   });
 });

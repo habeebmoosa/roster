@@ -12,6 +12,8 @@ export type ByokErrorCode =
   | "model_not_found"
   | "unknown_provider"
   | "embeddings_unsupported"
+  | "duplicate_label"
+  | "not_found"
   | "unknown";
 
 const USER_MESSAGES: Record<ByokErrorCode, string> = {
@@ -23,6 +25,8 @@ const USER_MESSAGES: Record<ByokErrorCode, string> = {
   unknown_provider: "Unknown provider.",
   embeddings_unsupported:
     "This provider doesn't support embeddings. Connect OpenAI or Google to ingest knowledge.",
+  duplicate_label: "You already have a credential with that name for this provider.",
+  not_found: "That credential doesn't exist.",
   unknown: "Something went wrong talking to the provider.",
 };
 
