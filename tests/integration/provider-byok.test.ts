@@ -7,6 +7,7 @@ import {
   addProviderKey,
   getResolveInputForUser,
   listUserProviders,
+  updateProviderCredential,
 } from "@/server/providers/service";
 import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-server";
 
@@ -169,5 +170,69 @@ describe("BYOK with a native (non-openai-compatible-kind) provider package", () 
     for await (const chunk of result.textStream) text += chunk;
 
     expect(text).toBe("Hello world");
+  });
+});
+
+describe("multi-secret credential bundling (10.9 Phase 4)", () => {
+  // The mock server just checks the literal Authorization header value, so
+  // giving it the exact JSON string encodeSecretBundle() should produce lets
+  // this prove the real encode → validate → encrypt → decrypt → decode round
+  // trip end to end, without needing to fake AWS SigV4/Vertex JWT signing.
+  const BUNDLE = { accessKeyId: "AKIA123", secretAccessKey: "shh-secret" };
+  const ENCODED_BUNDLE = JSON.stringify(BUNDLE);
+
+  it("JSON-encodes a multi-key secrets bundle and authenticates the live ping with it", async () => {
+    const bundleMock = await startMockOpenAIServer({ apiKey: ENCODED_BUNDLE });
+    try {
+      await addProviderKey({
+        userId,
+        provider: "custom",
+        secrets: BUNDLE,
+        model: "mock-model",
+        baseUrl: bundleMock.url,
+        label: "Bundle test",
+      });
+
+      const stored = await prisma.providerKey.findFirst({
+        where: { userId, provider: "custom", label: "Bundle test" },
+      });
+      const { decryptSecret } = await import("@/server/crypto/vault");
+      expect(decryptSecret(stored!.encryptedKey)).toBe(ENCODED_BUNDLE);
+    } finally {
+      await bundleMock.close();
+    }
+  });
+});
+
+describe("updateProviderCredential — edit re-validation (10.9 Phase 4)", () => {
+  it("re-validates against the effective (merged) credential when a model is given", async () => {
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+      label: "Edit target",
+    });
+    const [created] = await listCredentialsForProvider(userId, "custom").then((cs) =>
+      cs.filter((c) => c.label === "Edit target"),
+    );
+
+    // Renaming without a model: no live re-check, so a bad base URL is accepted.
+    const renamed = await updateProviderCredential(userId, created!.id, { label: "Renamed" });
+    expect(renamed.label).toBe("Renamed");
+
+    // Supplying a model re-validates — a wrong secret against the real mock server fails cleanly.
+    await expect(
+      updateProviderCredential(userId, created!.id, {
+        apiKey: "wrong-key",
+        model: "mock-model",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    // This specific credential is untouched by the failed edit attempt (still the old, valid key).
+    const { decryptSecret } = await import("@/server/crypto/vault");
+    const row = await prisma.providerKey.findUniqueOrThrow({ where: { id: created!.id } });
+    expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
   });
 });

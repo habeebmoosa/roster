@@ -1,10 +1,25 @@
-import { getProvider } from "@/core/providers/catalog";
-import { AddProviderForm } from "@/features/providers";
-import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
-import { Card, CardDescription, CardTitle } from "@/ui";
-import { DeleteProviderButton } from "./delete-provider-button";
+"use client";
 
-export function ProvidersTab({ keys }: { keys: ProviderKeyRecord[] }) {
+import { useState } from "react";
+import { getProvider } from "@/core/providers/catalog";
+import {
+  AddProviderDialog,
+  ManageCredentialsDialog,
+  ProviderLogo,
+} from "@/features/providers";
+import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
+import { Button, Card, CardDescription, CardTitle } from "@/ui";
+
+export function ProvidersTab({
+  credentialsByProvider,
+}: {
+  credentialsByProvider: Record<string, ProviderKeyRecord[]>;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const [manageProviderId, setManageProviderId] = useState<string | null>(null);
+
+  const configuredIds = Object.keys(credentialsByProvider);
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-text-muted text-sm">
@@ -12,32 +27,57 @@ export function ProvidersTab({ keys }: { keys: ProviderKeyRecord[] }) {
       </p>
 
       <Card>
-        <CardTitle>Configured providers</CardTitle>
-        {keys.length === 0 ? (
-          <CardDescription>No providers yet. Add one below to get started.</CardDescription>
+        <div className="flex items-center justify-between">
+          <CardTitle>Configured providers</CardTitle>
+          <Button onClick={() => setAddOpen(true)}>+ Add provider</Button>
+        </div>
+
+        {configuredIds.length === 0 ? (
+          <CardDescription>No providers yet. Add one to get started.</CardDescription>
         ) : (
-          <ul className="divide-border mt-4 divide-y">
-            {keys.map((key) => {
-              const entry = getProvider(key.provider);
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {configuredIds.map((id) => {
+              const entry = getProvider(id);
+              if (!entry) return null;
+              const credentials = credentialsByProvider[id]!;
+              const defaultCredential = credentials.find((c) => c.isDefault);
               return (
-                <li key={key.id} className="flex items-center justify-between py-3">
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setManageProviderId(id)}
+                  className="border-border bg-bg-elevated hover:bg-bg-subtle flex items-center gap-3 rounded-xl border p-3 text-left transition"
+                >
+                  <ProviderLogo id={entry.id} label={entry.label} className="h-10 w-10" />
                   <div className="min-w-0">
-                    <p className="text-text truncate text-sm font-medium">
-                      {entry?.label ?? key.provider}
-                    </p>
-                    <p className="text-text-muted truncate text-sm">
-                      {key.baseUrl ?? entry?.defaultBaseUrl ?? "default endpoint"}
+                    <p className="text-text truncate text-sm font-semibold">{entry.label}</p>
+                    <p className="text-text-muted truncate text-xs">
+                      {credentials.length} credential{credentials.length === 1 ? "" : "s"}
+                      {defaultCredential ? ` · default: ${defaultCredential.label}` : ""}
                     </p>
                   </div>
-                  <DeleteProviderButton provider={key.provider} />
-                </li>
+                </button>
               );
             })}
-          </ul>
+          </div>
         )}
       </Card>
 
-      <AddProviderForm />
+      {addOpen ? <AddProviderDialog onClose={() => setAddOpen(false)} /> : null}
+      {manageProviderId ? (
+        (() => {
+          const entry = getProvider(manageProviderId);
+          const credentials = credentialsByProvider[manageProviderId];
+          if (!entry || !credentials) return null;
+          return (
+            <ManageCredentialsDialog
+              provider={entry}
+              credentials={credentials}
+              onClose={() => setManageProviderId(null)}
+            />
+          );
+        })()
+      ) : null}
     </div>
   );
 }

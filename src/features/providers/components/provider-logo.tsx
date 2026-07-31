@@ -46,10 +46,18 @@ export function ProviderLogo({
   id,
   label,
   className,
+  /**
+   * True in every current usage — the logo always sits next to the
+   * provider's visible name, so its own alt text would just duplicate that
+   * name in the accessible name computation. Pass `false` only if a future
+   * usage ever shows the logo with no adjacent text label.
+   */
+  decorative = true,
 }: {
   id: string;
   label: string;
   className?: string;
+  decorative?: boolean;
 }) {
   return (
     <span
@@ -60,9 +68,17 @@ export function ProviderLogo({
     >
       {hasProviderLogo(id) ? (
         // eslint-disable-next-line @next/next/no-img-element -- a fixed local SVG, not a remote/optimizable image
-        <img src={`/logos/${id}.svg`} alt={label} className="h-full w-full object-contain" />
+        <img
+          src={`/logos/${id}.svg`}
+          alt={decorative ? "" : label}
+          className="h-full w-full object-contain"
+        />
       ) : (
-        <Cpu className="h-full w-full text-neutral-500" aria-label={label} />
+        <Cpu
+          className="h-full w-full text-neutral-500"
+          aria-hidden={decorative || undefined}
+          aria-label={decorative ? undefined : label}
+        />
       )}
     </span>
   );

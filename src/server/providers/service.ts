@@ -16,6 +16,7 @@ import {
   deleteAllCredentialsForProvider,
   deleteProviderKeyById,
   getDefaultProviderKey,
+  getProviderKeyById,
   listCredentialsForProvider,
   listDefaultProviderKeys,
   setDefaultProviderKey,
@@ -36,12 +37,30 @@ import {
 export interface AddProviderKeyInput {
   userId: string;
   provider: string;
-  apiKey: string;
+  /** Simple single-secret shorthand — wrapped into `{ apiKey }` if `secrets` isn't given. */
+  apiKey?: string;
+  /** The full secret bundle for providers with more than one secret field (e.g. Bedrock, Vertex). */
+  secrets?: Record<string, string>;
   model: string; // used for the validation ping
   baseUrl?: string | null;
   label?: string | null;
   config?: Record<string, unknown>;
   makeDefault?: boolean;
+}
+
+/**
+ * Encodes a credential's secret fields into the one string that gets
+ * encrypted and, later, decrypted back into `ResolveModelInput.apiKey`. A
+ * bundle that's just `{ apiKey }` passes through raw (every plain-bearer
+ * provider); anything else — Bedrock's access/secret key pair, Vertex's
+ * service-account fields — is JSON-encoded, matching what
+ * core/providers/registry.ts's `parseSecretBundle` expects for those kinds.
+ */
+function encodeSecretBundle(bundle: Record<string, string>): string {
+  const keys = Object.keys(bundle);
+  if (keys.length === 0) return "";
+  if (keys.length === 1 && keys[0] === "apiKey") return bundle["apiKey"]!;
+  return JSON.stringify(bundle);
 }
 
 /** One row per configured provider — that provider's default credential. Used everywhere outside Settings. */
@@ -73,13 +92,15 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     throw new ByokError("bad_base_url", "This provider requires a base URL.");
   }
 
+  const bundle = input.secrets ?? (input.apiKey ? { apiKey: input.apiKey } : {});
+  const encodedSecret = encodeSecretBundle(bundle);
   const headers = extractHeaders(input.config);
 
   // Validate against the live provider BEFORE persisting anything.
   await validateProviderCredentials({
     provider: input.provider,
     model: input.model,
-    apiKey: input.apiKey,
+    apiKey: encodedSecret,
     baseUrl: input.baseUrl ?? null,
     headers,
     config: input.config,
@@ -98,7 +119,7 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     userId: input.userId,
     provider: input.provider,
     label,
-    encryptedKey: encryptSecret(input.apiKey),
+    encryptedKey: encryptSecret(encodedSecret),
     baseUrl: input.baseUrl ?? null,
     config: input.config ?? {},
     makeDefault: input.makeDefault,
@@ -132,20 +153,57 @@ export function setDefaultProviderCredential(
 
 export interface UpdateProviderCredentialInput {
   label?: string;
-  apiKey?: string; // omit to keep the existing secret unchanged
+  /** Simple single-secret shorthand — omit both this and `secrets` to keep the existing secret unchanged. */
+  apiKey?: string;
+  /** The full secret bundle, for a provider with more than one secret field. */
+  secrets?: Record<string, string>;
   baseUrl?: string | null;
   config?: Record<string, unknown>;
+  /**
+   * A model id to re-validate with — since an edit can change the very
+   * fields (secret, region, resourceName, ...) that determine whether the
+   * credential actually works, an edit is re-validated live against the
+   * *effective* (changed fields merged over the existing ones) credential,
+   * same as adding one. Omitted only by callers that aren't driven by the
+   * credential form (e.g. a bare label rename) — then the edit is trusted
+   * as-is.
+   */
+  model?: string;
 }
 
-/** Edits a credential in place; re-encrypts a new secret only if one was supplied. */
+/**
+ * Edits a credential in place; re-encrypts a new secret only if one was
+ * supplied. Re-validates live against the effective (merged) credential when
+ * a `model` is given, exactly like adding one — an edit shouldn't be able to
+ * silently break a working credential.
+ */
 export async function updateProviderCredential(
   userId: string,
   credentialId: string,
   input: UpdateProviderCredentialInput,
 ): Promise<ProviderKeyRecord> {
+  const existing = await getProviderKeyById(userId, credentialId);
+  if (!existing) throw new ByokError("not_found");
+
+  const newBundle = input.secrets ?? (input.apiKey ? { apiKey: input.apiKey } : undefined);
+  const baseUrl = input.baseUrl !== undefined ? input.baseUrl : existing.baseUrl;
+  const config = input.config !== undefined ? input.config : existing.config;
+
+  if (input.model) {
+    const encodedSecret = newBundle ? encodeSecretBundle(newBundle) : decryptSecret(existing.encryptedKey);
+    await validateProviderCredentials({
+      provider: existing.provider,
+      model: input.model,
+      apiKey: encodedSecret,
+      baseUrl: baseUrl ?? null,
+      headers: extractHeaders(config),
+      config,
+    });
+  }
+
   const updated = await updateProviderKey(userId, credentialId, {
     label: input.label,
-    encryptedKey: input.apiKey ? encryptSecret(input.apiKey) : undefined,
+    encryptedKey: newBundle ? encryptSecret(encodeSecretBundle(newBundle)) : undefined,
     baseUrl: input.baseUrl,
     config: input.config,
   });

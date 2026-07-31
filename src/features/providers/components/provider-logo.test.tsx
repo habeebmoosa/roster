@@ -15,11 +15,16 @@ describe("ProviderLogo", () => {
     }
   });
 
-  it("renders an <img> pointing at /logos/{id}.svg for a known provider", () => {
+  it("renders an <img> pointing at /logos/{id}.svg for a known provider, decorative (empty alt) by default", () => {
     const { container } = render(<ProviderLogo id="openai" label="OpenAI" />);
     const img = container.querySelector("img");
     expect(img).toHaveAttribute("src", "/logos/openai.svg");
-    expect(img).toHaveAttribute("alt", "OpenAI");
+    expect(img).toHaveAttribute("alt", "");
+  });
+
+  it("uses the label as real alt text when explicitly not decorative", () => {
+    const { container } = render(<ProviderLogo id="openai" label="OpenAI" decorative={false} />);
+    expect(container.querySelector("img")).toHaveAttribute("alt", "OpenAI");
   });
 
   it("falls back to a generic icon (no <img>) for an unknown/custom provider", () => {
