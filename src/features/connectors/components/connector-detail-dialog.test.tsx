@@ -55,7 +55,9 @@ describe("ConnectorDetailDialog", () => {
 
   it("shows tools, resources, categories, and documentation link", () => {
     render(<ConnectorDetailDialog connector={NOTION} onClose={() => {}} />);
-    expect(screen.getByText("search")).toBeInTheDocument();
+    // "search" legitimately appears twice: once in the example-prompt carousel's
+    // preview panel, once in the Tools pill list.
+    expect(screen.getAllByText("search").length).toBeGreaterThan(0);
     expect(screen.getByText("page")).toBeInTheDocument();
     expect(screen.getByText("Docs")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Documentation" })).toHaveAttribute(

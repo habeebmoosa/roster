@@ -16,7 +16,7 @@ export function Topbar({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center justify-between gap-4 px-6 py-5", className)}>
+    <div className={cn("flex items-center justify-between gap-4 py-5", className)}>
       <h1 className="text-text truncate text-xl font-bold tracking-tight">{title}</h1>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>

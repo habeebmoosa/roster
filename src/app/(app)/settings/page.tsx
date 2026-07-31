@@ -26,7 +26,7 @@ export default async function SettingsPage({
   const email = session?.user?.email ?? "";
 
   return (
-    <div className="px-6 py-6">
+    <div className="py-6">
       <h1 className="text-text text-2xl font-bold tracking-tight">Settings</h1>
 
       <div className="mt-6">

@@ -48,9 +48,9 @@ describe("ConnectorsBoard", () => {
     const user = userEvent.setup();
     render(<ConnectorsBoard connectors={[connector()]} />);
 
-    expect(screen.queryByText("Example prompts")).not.toBeInTheDocument();
+    expect(screen.queryByText("Details")).not.toBeInTheDocument();
     await user.click(screen.getByTestId("connector-notion"));
-    expect(screen.getByText("Example prompts")).toBeVisible();
+    expect(screen.getByText("Details")).toBeVisible();
   });
 
   it("opens the add-custom-connector dialog from the header button", async () => {

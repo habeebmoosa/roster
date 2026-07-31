@@ -1,3 +1,25 @@
+export {
+  IconOverview,
+  IconWorkers,
+  IconChat,
+  IconConnectors,
+  IconSettings,
+  IconPlus,
+  IconChevronLeft,
+  IconChevronRight,
+  IconChevronDown,
+  IconMenu,
+  IconBook,
+  IconSparkle,
+  IconLogOut,
+  IconClose,
+  IconLink,
+  IconCopy,
+  IconExternalLink,
+  IconCheck,
+  IconFeedback,
+} from "./icons";
+export type { IconProps } from "./icons";
 export { Button } from "./button";
 export type { ButtonProps } from "./button";
 export { Input } from "./input";

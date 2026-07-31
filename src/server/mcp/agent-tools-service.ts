@@ -9,7 +9,7 @@ import { getMcpServer } from "@/server/db/repositories/mcp-server.repository";
 import { decryptConnectionCredentials, encryptConnectionCredentials } from "./vault";
 
 /** Not every server implements the resources capability — a method-not-found error here just means "no resources", not a broken connection. */
-async function listResourcesOrEmpty(client: McpClient, serverId: string) {
+export async function listResourcesOrEmpty(client: McpClient, serverId: string) {
   try {
     return await client.listResources();
   } catch (err) {

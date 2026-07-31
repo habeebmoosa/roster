@@ -18,17 +18,29 @@ function renderMenu() {
 }
 
 describe("ProfileMenu", () => {
-  it("opens to show Documentation, Upgrade plan, dark mode, and sign out", async () => {
+  it("opens to show Feedback, Documentation, Upgrade plan, dark mode, and sign out", async () => {
     const user = userEvent.setup();
     renderMenu();
 
     await user.click(screen.getByRole("button", { name: /Acme/ }));
 
+    expect(screen.getByRole("menuitem", { name: /Feedback/ })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Documentation/ })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Upgrade plan/ })).toBeInTheDocument();
     expect(screen.getByText("Dark mode")).toBeInTheDocument();
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("button", { name: /Sign out/ })).toBeInTheDocument();
+  });
+
+  it("opens the feedback dialog from the menu and lets the menu close independently", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(screen.getByRole("button", { name: /Acme/ }));
+    await user.click(screen.getByRole("menuitem", { name: /Feedback/ }));
+
+    expect(screen.getByText("Send feedback")).toBeVisible();
+    expect(screen.queryByRole("menuitem", { name: /Documentation/ })).not.toBeInTheDocument();
   });
 
   it("toggling dark mode does not close the menu", async () => {

@@ -29,7 +29,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
     : { provider: fixtures.provider, tier: fixtures.tier, model: fixtures.model };
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 py-6">
       <DetailHeader name={definition.name} role={definition.role} status={fixtures.status} />
 
       <DetailStats

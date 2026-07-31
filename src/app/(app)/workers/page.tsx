@@ -42,7 +42,7 @@ export default async function WorkersPage({
           </Link>
         }
       />
-      <div className="flex flex-col gap-4 px-6 pb-6">
+      <div className="flex flex-col gap-4 pb-6">
         <WorkersToolbar query={q ?? ""} />
         <Card className="p-4">
           <WorkersTable rows={result.rows} />

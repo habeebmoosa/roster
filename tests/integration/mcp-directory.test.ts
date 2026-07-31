@@ -83,6 +83,26 @@ describe("mcp-server repository", () => {
     expect(server!.cachedTools).toHaveLength(2);
     expect(server!.cachedResources).toEqual([{ name: "status", description: "Server status" }]);
   });
+
+  it("a re-seed from the definition file syncs vendor metadata but does not clobber a live capability snapshot", async () => {
+    await upsertMcpServerFromDefinition({
+      id: TEST_SERVER_ID,
+      name: "Test Server",
+      description: "An updated description from the definition file",
+      connectorUrl: "https://mcp.test.example/mcp",
+      authType: "static_headers",
+      categories: ["Testing"],
+      trustTier: "custom",
+      tools: [{ name: "ping", description: "Ping the test server" }],
+      resources: [],
+    });
+
+    const server = await getMcpServer(TEST_SERVER_ID);
+    expect(server!.description).toBe("An updated description from the definition file");
+    // Still the live snapshot from the previous test, not reset to the single "ping" tool above.
+    expect(server!.cachedTools).toHaveLength(2);
+    expect(server!.cachedResources).toEqual([{ name: "status", description: "Server status" }]);
+  });
 });
 
 describe("mcp-connection repository", () => {

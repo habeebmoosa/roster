@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
+  buildConnectionHeaders,
   mcpOAuth,
+  McpClient,
   validateStaticHeaders,
   type McpConnectionCredentials,
   type OAuthCredentials,
@@ -18,10 +20,51 @@ import {
   getRegisteredOAuthClient,
   listMcpServers,
   saveRegisteredOAuthClient,
+  updateMcpServerCapabilities,
+  type CachedCapability,
   type McpServerRecord,
 } from "@/server/db/repositories/mcp-server.repository";
+import { listResourcesOrEmpty } from "./agent-tools-service";
 import type { PendingOAuthConnect } from "./oauth-pending-cookie";
 import { encryptConnectionCredentials } from "./vault";
+
+function toCachedCapabilities(items: { name: string; description?: string }[]): CachedCapability[] {
+  return items.map((item) => ({ name: item.name, description: item.description ?? "" }));
+}
+
+/**
+ * Best-effort live refresh of a server's tool/resource snapshot right after a
+ * successful connect. The directory entry's `tools`/`resources` are a
+ * hand-curated, representative preview (mcp-servers/README.md) shown before
+ * anyone has connected — the real list is whatever the server itself reports
+ * via `tools/list`/`resources/list`. Never throws: any failure here (server
+ * down, auth hiccup, protocol error) just means the existing cached/curated
+ * snapshot keeps serving as the fallback the Connectors UI already renders.
+ */
+async function refreshServerCapabilities(
+  serverId: string,
+  connectorUrl: string,
+  headers: Record<string, string>,
+): Promise<void> {
+  try {
+    const client = new McpClient(connectorUrl, { headers });
+    await client.initialize();
+    const [tools, resources] = await Promise.all([
+      client.listTools(),
+      listResourcesOrEmpty(client, serverId),
+    ]);
+    await updateMcpServerCapabilities(
+      serverId,
+      toCachedCapabilities(tools),
+      toCachedCapabilities(resources),
+    );
+  } catch (err) {
+    console.error(
+      `Couldn't refresh live capabilities for "${serverId}", keeping the cached snapshot:`,
+      err,
+    );
+  }
+}
 
 export interface McpServerListItem extends McpServerRecord {
   connected: boolean;
@@ -67,6 +110,11 @@ export async function connectManually(
     mcpServerId: serverId,
     credentials: encryptConnectionCredentials(credentials),
   });
+
+  const server = await getMcpServer(serverId);
+  if (server) {
+    await refreshServerCapabilities(serverId, server.connectorUrl, buildConnectionHeaders(credentials));
+  }
 }
 
 export async function disconnectMcpServer(userId: string, serverId: string): Promise<void> {
@@ -189,6 +237,15 @@ export async function completeOAuthConnect(
     mcpServerId: pending.serverId,
     credentials: encryptConnectionCredentials(credentials),
   });
+
+  const server = await getMcpServer(pending.serverId);
+  if (server) {
+    await refreshServerCapabilities(
+      pending.serverId,
+      server.connectorUrl,
+      buildConnectionHeaders(credentials),
+    );
+  }
 }
 
 export interface AddCustomServerInput {

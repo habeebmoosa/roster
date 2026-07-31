@@ -71,7 +71,7 @@ export async function getMcpServer(id: string): Promise<McpServerRecord | null> 
 export async function upsertMcpServerFromDefinition(
   definition: McpServerDefinition,
 ): Promise<void> {
-  const data = {
+  const vendorMetadata = {
     name: definition.name,
     description: definition.description,
     iconUrl: definition.iconUrl ?? null,
@@ -80,16 +80,24 @@ export async function upsertMcpServerFromDefinition(
     authType: definition.authType,
     categories: definition.categories,
     trustTier: definition.trustTier,
-    cachedTools: definition.tools as unknown as Prisma.InputJsonValue,
-    cachedResources: definition.resources as unknown as Prisma.InputJsonValue,
     documentationUrl: definition.documentationUrl ?? null,
     supportUrl: definition.supportUrl ?? null,
     privacyPolicyUrl: definition.privacyPolicyUrl ?? null,
   };
   await prisma.mcpServer.upsert({
     where: { id: definition.id },
-    create: { id: definition.id, ...data },
-    update: data,
+    // The hand-curated tools/resources snapshot is only a pre-connect preview
+    // (mcp-servers/README.md) — set it on first insert, but never overwrite it
+    // on a re-seed, since by then a real connect may have replaced it with the
+    // server's actual live tools/list + resources/list result (see
+    // updateMcpServerCapabilities) and a re-seed must not clobber that.
+    create: {
+      id: definition.id,
+      ...vendorMetadata,
+      cachedTools: definition.tools as unknown as Prisma.InputJsonValue,
+      cachedResources: definition.resources as unknown as Prisma.InputJsonValue,
+    },
+    update: vendorMetadata,
   });
 }
 

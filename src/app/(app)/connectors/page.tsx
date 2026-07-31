@@ -7,7 +7,7 @@ export default async function ConnectorsPage() {
   const connectors = session?.user?.id ? await listMcpServersForUser(session.user.id) : [];
 
   return (
-    <div className="px-6 py-6">
+    <div className="py-6">
       <h1 className="text-text text-2xl font-bold tracking-tight">Connectors</h1>
       <p className="text-text-muted mt-1">
         MCP servers your employees can use — browse the directory or add your own.

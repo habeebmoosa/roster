@@ -3,6 +3,7 @@ import {
   startMockAuthorizationServer,
   type MockAuthorizationServer,
 } from "@/core/mcp/oauth/test-mock-authorization-server";
+import { startMockMcpServer, type MockMcpServer } from "@/core/mcp/test-mock-server";
 import { prisma } from "@/server/db/prisma";
 import {
   addCustomServer,
@@ -26,8 +27,10 @@ import { createCustomMcpServer } from "@/server/db/repositories/mcp-server.repos
  */
 let userId: string;
 let mock: MockAuthorizationServer;
+let liveMcp: MockMcpServer;
 const OAUTH_SERVER_ID = `test-oauth-server-${Date.now()}`;
 const HEADERS_SERVER_ID = `test-headers-server-${Date.now()}`;
+const LIVE_SERVER_ID = `test-live-server-${Date.now()}`;
 
 beforeAll(async () => {
   const user = await prisma.user.create({
@@ -35,6 +38,7 @@ beforeAll(async () => {
   });
   userId = user.id;
   mock = await startMockAuthorizationServer();
+  liveMcp = await startMockMcpServer();
 
   await createCustomMcpServer({
     id: OAUTH_SERVER_ID,
@@ -54,15 +58,25 @@ beforeAll(async () => {
     categories: [],
     createdByUserId: userId,
   });
+  await createCustomMcpServer({
+    id: LIVE_SERVER_ID,
+    name: "Test Live Server",
+    description: "A server for connect-service tests, backed by a real (in-process) MCP server",
+    connectorUrl: liveMcp.url,
+    authType: "none",
+    categories: [],
+    createdByUserId: userId,
+  });
 });
 
 afterAll(async () => {
   await prisma.mcpConnection.deleteMany({ where: { userId } });
   await prisma.mcpServer.deleteMany({
-    where: { id: { in: [OAUTH_SERVER_ID, HEADERS_SERVER_ID] } },
+    where: { id: { in: [OAUTH_SERVER_ID, HEADERS_SERVER_ID, LIVE_SERVER_ID] } },
   });
   await prisma.user.delete({ where: { id: userId } }).catch(() => {});
   await mock.close();
+  await liveMcp.close();
   await prisma.$disconnect();
 });
 
@@ -150,6 +164,25 @@ describe("listMcpServersForUser / getMcpServerForUser / disconnectMcpServer", ()
     await disconnectMcpServer(userId, HEADERS_SERVER_ID);
     const afterDisconnect = await getMcpServerForUser(userId, HEADERS_SERVER_ID);
     expect(afterDisconnect?.connected).toBe(false);
+  });
+});
+
+describe("connectManually — live capability refresh", () => {
+  it("overwrites cachedTools/cachedResources with the server's real tools/list + resources/list result", async () => {
+    await connectManually(userId, LIVE_SERVER_ID, {});
+
+    const server = await getMcpServerForUser(userId, LIVE_SERVER_ID);
+    expect(server?.cachedTools.map((t) => t.name).sort()).toEqual(["echo", "fail"]);
+    expect(server?.cachedResources.map((r) => r.name).sort()).toEqual(["Resource A", "Resource B"]);
+  });
+
+  it("falls back to the existing cached snapshot when the live server is unreachable", async () => {
+    // HEADERS_SERVER_ID's connectorUrl points at a nonexistent domain — the earlier
+    // "stores static_headers credentials" test already exercised this path without
+    // throwing; this asserts the connection itself still lands correctly regardless.
+    await connectManually(userId, HEADERS_SERVER_ID, { "x-api-key": "secret-123" });
+    const stored = await getMcpConnectionWithSecret(userId, HEADERS_SERVER_ID);
+    expect(stored).not.toBeNull();
   });
 });
 

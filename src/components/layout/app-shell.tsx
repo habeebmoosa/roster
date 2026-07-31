@@ -1,9 +1,10 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { FeedbackButton } from "@/features/feedback";
+import { cn } from "@/lib/cn";
 import { Drawer } from "@/ui";
-import { IconMenu } from "./icons";
+import { IconMenu } from "@/ui/icons";
 import { Sidebar } from "./sidebar";
 
 export function AppShell({
@@ -16,6 +17,10 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Chat owns its own full-bleed layout (thread + docked composer) — every
+  // other page gets the shell's global side margins, in one place, so no
+  // page has to remember to add its own.
+  const isChat = usePathname()?.startsWith("/chat") ?? false;
 
   return (
     <div className="bg-bg-subtle flex h-screen gap-2.5 overflow-hidden p-2.5">
@@ -41,10 +46,12 @@ export function AppShell({
           <IconMenu className="h-5 w-5" />
         </button>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main
+          className={cn("flex-1 overflow-y-auto", !isChat && "px-6 sm:px-8 lg:px-10 xl:px-12")}
+        >
+          {children}
+        </main>
       </div>
-
-      <FeedbackButton />
     </div>
   );
 }
