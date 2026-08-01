@@ -10,10 +10,9 @@ describe("BillingTab", () => {
     expect(screen.getByText("No payment method on file.")).toBeInTheDocument();
   });
 
-  it("renders billing history rows", () => {
+  it("shows an honest empty state for billing history, not fabricated invoices", () => {
     render(<BillingTab />);
-    expect(screen.getByText("INV-0001")).toBeInTheDocument();
-    expect(screen.getByText("INV-0002")).toBeInTheDocument();
+    expect(screen.getByText("No invoices yet")).toBeInTheDocument();
   });
 
   it("disables Upgrade plan and Add payment method (not wired up yet)", () => {

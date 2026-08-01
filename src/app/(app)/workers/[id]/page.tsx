@@ -5,7 +5,6 @@ import {
   DetailHeader,
   DetailModelTab,
   DetailStats,
-  detailFixturesForAgent,
 } from "@/features/workers";
 import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
@@ -19,17 +18,18 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
   if (!definition) notFound();
 
   const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
-  const fixtures = detailFixturesForAgent(id);
 
   return (
     <div className="flex flex-col gap-4 py-6">
-      <DetailHeader name={definition.name} role={definition.role} status={fixtures.status} />
+      {/* No pause/disable concept exists yet — every agent is honestly "Active" today. */}
+      <DetailHeader name={definition.name} role={definition.role} status="Active" />
 
+      {/* No usage-tracking pipeline exists yet — DetailStats renders "—" for each, never a fabricated number. */}
       <DetailStats
-        conversations30d={fixtures.conversations30d}
-        spend30dUsd={fixtures.spend30dUsd}
-        tokens30dLabel={fixtures.tokens30dLabel}
-        uptimePct={fixtures.uptimePct}
+        conversations30d={null}
+        spend30dUsd={null}
+        tokens30dLabel={null}
+        uptimePct={null}
       />
 
       <Tabs defaultValue="about">
@@ -46,7 +46,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
               voice={definition.voice}
               expertise={definition.expertise}
               abilities={definition.abilities}
-              recentActivity={fixtures.recentActivity}
+              recentActivity={[]}
             />
           </TabsPanel>
           <TabsPanel value="model">

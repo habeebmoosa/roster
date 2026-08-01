@@ -1,16 +1,5 @@
-import {
-  QuickActions,
-  StatTiles,
-  UsageCost,
-  WorkerPreview,
-  getGreeting,
-} from "@/features/dashboard";
-import {
-  FIXTURE_CONVERSATIONS_30D_TOTAL,
-  FIXTURE_SPEND_THIS_MONTH_USD,
-  fixtureMetricsForAgent,
-  type WorkerRow,
-} from "@/features/workers";
+import { QuickActions, StatTiles, UsageCost, WorkerPreview, getGreeting } from "@/features/dashboard";
+import { type WorkerRow } from "@/features/workers";
 import { listAgentSummaries } from "@/server/db/repositories/agent.repository";
 import { getLatestOverallSuccessRate } from "@/server/db/repositories/eval-run.repository";
 
@@ -24,13 +13,17 @@ export default async function DashboardPage() {
   const activeEmployees = agents.length;
   const totalEmployees = agents.length;
 
+  // conversations30d/lastActivity/spendUsd: no usage-tracking pipeline exists
+  // yet — honestly null, rendered as an empty state, never a fabricated number.
   const workerRows: WorkerRow[] = agents.map((agent) => ({
     id: agent.id,
     name: agent.name,
     role: agent.role,
     status: "Active",
     model: agent.model?.model ?? null,
-    ...fixtureMetricsForAgent(agent.id),
+    conversations30d: null,
+    lastActivity: null,
+    spendUsd: null,
   }));
 
   return (
@@ -42,8 +35,8 @@ export default async function DashboardPage() {
         <StatTiles
           activeEmployees={activeEmployees}
           totalEmployees={totalEmployees}
-          conversations30d={FIXTURE_CONVERSATIONS_30D_TOTAL}
-          spendThisMonthUsd={FIXTURE_SPEND_THIS_MONTH_USD}
+          conversations30d={null}
+          spendThisMonthUsd={null}
           evalSuccessRatePct={overallSuccessRate ? overallSuccessRate.rate * 100 : null}
         />
       </div>

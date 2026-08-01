@@ -42,10 +42,10 @@ export function WorkerPreview({ rows }: { rows: WorkerRow[] }) {
                 {row.model ?? "Not configured"}
               </span>
               <span className="text-text-faint hidden w-20 shrink-0 text-xs md:inline">
-                {row.lastActivity}
+                {row.lastActivity ?? "—"}
               </span>
               <span className="text-text w-16 shrink-0 text-right text-sm font-medium">
-                ${row.spendUsd.toFixed(0)}
+                {row.spendUsd != null ? `$${row.spendUsd.toFixed(0)}` : "—"}
               </span>
             </li>
           ))}

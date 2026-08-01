@@ -30,4 +30,11 @@ describe("DetailAboutTab", () => {
     expect(screen.queryByText("Expertise")).not.toBeInTheDocument();
     expect(screen.queryByText("Abilities")).not.toBeInTheDocument();
   });
+
+  it("shows an honest empty state for recent activity, not fabricated entries", () => {
+    render(
+      <DetailAboutTab identity="i" voice="v" expertise={[]} abilities={[]} recentActivity={[]} />,
+    );
+    expect(screen.getByText("No activity yet")).toBeInTheDocument();
+  });
 });

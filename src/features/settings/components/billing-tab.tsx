@@ -1,17 +1,4 @@
-import {
-  Badge,
-  Button,
-  Card,
-  CardDescription,
-  CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/ui";
-import { FIXTURE_INVOICES } from "../fixtures";
+import { Badge, Button, Card, CardDescription, CardTitle, EmptyState } from "@/ui";
 
 export function BillingTab() {
   return (
@@ -41,30 +28,7 @@ export function BillingTab() {
 
       <Card>
         <CardTitle>Billing history</CardTitle>
-        <div className="mt-4">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Invoice</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {FIXTURE_INVOICES.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-mono">{invoice.id}</TableCell>
-                  <TableCell className="text-text-muted">{invoice.date}</TableCell>
-                  <TableCell className="text-text-muted">{invoice.amount}</TableCell>
-                  <TableCell>
-                    <Badge variant="success">{invoice.status}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <EmptyState className="mt-4 border-none p-6" title="No invoices yet" />
       </Card>
     </div>
   );

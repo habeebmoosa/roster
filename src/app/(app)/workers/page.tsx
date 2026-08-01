@@ -4,7 +4,6 @@ import {
   WorkersPagination,
   WorkersTable,
   WorkersToolbar,
-  fixtureMetricsForAgent,
   filterAndPaginateWorkers,
   type WorkerRow,
 } from "@/features/workers";
@@ -19,13 +18,17 @@ export default async function WorkersPage({
   const { q, page } = await searchParams;
   const agents = await listAgentSummaries();
 
+  // conversations30d/lastActivity/spendUsd: no usage-tracking pipeline exists
+  // yet — honestly null, rendered as "—" by WorkersTable, never a fabricated number.
   const allRows: WorkerRow[] = agents.map((agent) => ({
     id: agent.id,
     name: agent.name,
     role: agent.role,
     status: "Active",
     model: agent.model?.model ?? null,
-    ...fixtureMetricsForAgent(agent.id),
+    conversations30d: null,
+    lastActivity: null,
+    spendUsd: null,
   }));
 
   const result = filterAndPaginateWorkers(allRows, {
