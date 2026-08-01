@@ -8,14 +8,17 @@ import {
   DetailStats,
   detailFixturesForAgent,
 } from "@/features/workers";
+import { auth } from "@/server/auth";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
+import { listUserProviders } from "@/server/providers/service";
 import { Tabs, TabsList, TabsPanel, TabsTrigger } from "@/ui";
 
 export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const definition = await getAgentDefinition(id);
+  const [definition, session] = await Promise.all([getAgentDefinition(id), auth()]);
   if (!definition) notFound();
 
+  const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
   const fixtures = detailFixturesForAgent(id);
 
   // The hire wizard (6.10) is the first thing that stores a real default model on the
@@ -43,7 +46,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
         <TabsList>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="model">Model</TabsTrigger>
-          <TabsTrigger value="api">API access</TabsTrigger>
+          <TabsTrigger value="api">API Access</TabsTrigger>
         </TabsList>
 
         <div className="mt-4">
@@ -58,9 +61,12 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
           </TabsPanel>
           <TabsPanel value="model">
             <DetailModelTab
-              provider={modelInfo.provider}
-              tier={modelInfo.tier}
-              model={modelInfo.model}
+              agentId={id}
+              displayProvider={modelInfo.provider}
+              displayTier={modelInfo.tier}
+              displayModel={modelInfo.model}
+              currentModel={definition.model ?? null}
+              providerKeys={providerKeys}
             />
           </TabsPanel>
           <TabsPanel value="api">

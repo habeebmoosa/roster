@@ -126,7 +126,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://aistudio.google.com/apikey",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["gemini-2.0-flash", "gemini-1.5-pro"],
+    suggestedModels: ["gemini-2.5-flash-lite", "gemini-2.5-flash"],
     embeddingModel: "gemini-embedding-001",
   },
   {
@@ -139,7 +139,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://dashboard.cohere.com/api-keys",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["command-a-03-2025", "command-r-plus"],
+    suggestedModels: ["command-a-03-2025", "command-r-plus-08-2024"],
   },
   {
     id: "perplexity",
@@ -164,7 +164,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     defaultBaseUrl: "https://api.x.ai/v1",
     baseUrlEditable: false,
     requiresBaseUrl: false,
-    suggestedModels: ["grok-2-latest"],
+    suggestedModels: ["grok-4.3"],
   },
   {
     id: "mistral",
@@ -231,7 +231,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     // Model ids on Fireworks carry the account prefix — not a stray typo.
     suggestedModels: [
       "accounts/fireworks/models/kimi-k2p6",
-      "accounts/fireworks/models/deepseek-v4p1",
+      "accounts/fireworks/models/deepseek-v4-flash",
     ],
   },
   {
@@ -249,7 +249,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://cloud.cerebras.ai/",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["llama3.1-70b", "llama-4-scout-17b-16e-instruct", "gpt-oss-120b"],
+    suggestedModels: ["gpt-oss-120b", "zai-glm-4.7", "gemma-4-31b"],
   },
   {
     id: "deepinfra",
@@ -261,7 +261,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://deepinfra.com/dash/api_keys",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["meta-llama/Llama-3.3-70B-Instruct", "deepseek-ai/DeepSeek-V3"],
+    suggestedModels: ["meta-llama/Llama-3.3-70B-Instruct-Turbo", "deepseek-ai/DeepSeek-V3.2"],
   },
   {
     id: "nvidia-nim",
@@ -274,7 +274,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     defaultBaseUrl: "https://integrate.api.nvidia.com/v1",
     baseUrlEditable: false,
     requiresBaseUrl: false,
-    suggestedModels: ["meta/llama-3.1-405b-instruct", "deepseek-ai/deepseek-r1"],
+    suggestedModels: ["google/gemma-3-4b-it", "deepseek-ai/deepseek-v4-flash"],
   },
   {
     id: "openrouter",
@@ -286,7 +286,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://openrouter.ai/settings/keys",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["anthropic/claude-sonnet-4.5", "openai/gpt-5", "deepseek/deepseek-v4"],
+    suggestedModels: ["anthropic/claude-sonnet-4.5", "openai/gpt-5", "deepseek/deepseek-v4-flash"],
   },
   {
     id: "huggingface",
@@ -304,7 +304,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://huggingface.co/settings/tokens",
     baseUrlEditable: true,
     requiresBaseUrl: false,
-    suggestedModels: ["openai/gpt-oss-120b:cheapest", "deepseek-ai/DeepSeek-V3:together"],
+    suggestedModels: ["openai/gpt-oss-120b:cheapest", "deepseek-ai/DeepSeek-V3.2:together"],
   },
   {
     id: "azure",
@@ -375,7 +375,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://console.aws.amazon.com/iam/home#/security_credentials",
     baseUrlEditable: false,
     requiresBaseUrl: false,
-    suggestedModels: ["anthropic.claude-3-5-sonnet-20241022-v2:0", "us.amazon.nova-pro-v1:0"],
+    suggestedModels: ["amazon.nova-micro-v1:0", "anthropic.claude-haiku-4-5-20251001-v1:0"],
   },
   {
     id: "google-vertex",
@@ -415,7 +415,7 @@ const CATALOG: ProviderCatalogEntry[] = [
     docsUrl: "https://console.cloud.google.com/iam-admin/serviceaccounts",
     baseUrlEditable: false,
     requiresBaseUrl: false,
-    suggestedModels: ["gemini-2.5-pro", "claude-3-5-sonnet@20240620"],
+    suggestedModels: ["gemini-2.5-pro", "claude-sonnet-5@default"],
   },
   {
     id: "ollama",

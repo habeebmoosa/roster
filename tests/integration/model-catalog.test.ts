@@ -18,6 +18,37 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/**
+ * Regression guard for the class of bug reported live: catalog.ts's
+ * `suggestedModels` are a static, hand-picked list, but they're also what
+ * `addProviderKey`/`updateProviderCredential` (server/providers/service.ts)
+ * silently validate a new credential against when the user doesn't type a
+ * model themselves — so a stale entry (a provider has since retired/renamed
+ * that model) surfaces as a confusing "That model wasn't found for this
+ * provider" on Add Provider, not as a test failure, until now. This checks
+ * every suggested model against the currently-synced (models.dev) catalog —
+ * a real drift, not a mock, since the whole point is catching retirements.
+ * Providers with no synced catalog at all (Ollama, custom, uncataloged ones)
+ * have nothing to check against and are skipped.
+ */
+describe("catalog.ts suggestedModels — stay resolvable against the live-synced catalog", () => {
+  it("every suggested model for every provider with a synced catalog still exists", async () => {
+    const stale: string[] = [];
+    for (const entry of getProviderCatalog()) {
+      const synced = await listModelsForProvider(entry.id);
+      if (synced.length === 0) continue; // nothing to check against (Ollama, custom, ...)
+      const known = new Set(synced.map((m) => m.modelId));
+      for (const suggested of entry.suggestedModels) {
+        // Hugging Face's Inference Providers routing suffix (":cheapest",
+        // ":together") isn't part of the underlying model id models.dev knows.
+        const modelId = entry.id === "huggingface" ? suggested.split(":")[0]! : suggested;
+        if (!known.has(modelId)) stale.push(`${entry.id} -> ${suggested}`);
+      }
+    }
+    expect(stale).toEqual([]);
+  });
+});
+
 function model(overrides: Partial<Parameters<typeof replaceModelsForProvider>[1][number]>) {
   return {
     modelId: "m-1",

@@ -29,7 +29,7 @@ export function DetailApiTab({ agentId }: { agentId: string }) {
 
   return (
     <Card>
-      <CardTitle>API access</CardTitle>
+      <CardTitle>API Access</CardTitle>
       <p className="text-text-muted mt-1 text-sm">
         Call this employee from your own backend or app.
       </p>
