@@ -56,4 +56,14 @@ describe("provider catalog", () => {
       expect(entry.fields.find((f) => f.key === "apiKey")).toBeUndefined();
     }
   });
+
+  it("NVIDIA NIM is the one provider opted out of auto-validation-model — its listed models are gated per account", () => {
+    for (const entry of catalog) {
+      if (entry.id === "nvidia-nim") {
+        expect(entry.autoValidateModel).toBe(false);
+      } else {
+        expect(entry.autoValidateModel).not.toBe(false);
+      }
+    }
+  });
 });

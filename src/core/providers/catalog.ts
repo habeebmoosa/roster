@@ -81,6 +81,16 @@ export interface ProviderCatalogEntry {
    * knowledge — only openai/google set this today.
    */
   embeddingModel?: string;
+  /**
+   * False only for providers where model access is gated per-account rather
+   * than by key validity alone — confirmed live for NVIDIA NIM: its public
+   * model list includes models a given API key still gets a 404 calling,
+   * because that specific model needs a separate per-model access request on
+   * NVIDIA's platform. For those, `suggestedModels[0]` isn't a safe silent
+   * validation default — a 404 there doesn't mean the key is bad, just that
+   * *this* model isn't enabled for *this* account. Defaults to true.
+   */
+  autoValidateModel?: boolean;
 }
 
 const API_KEY_FIELD: ProviderField = {
@@ -275,6 +285,11 @@ const CATALOG: ProviderCatalogEntry[] = [
     baseUrlEditable: false,
     requiresBaseUrl: false,
     suggestedModels: ["google/gemma-3-4b-it", "deepseek-ai/deepseek-v4-flash"],
+    // NVIDIA gates some listed models behind a separate per-model access
+    // request — a key can be perfectly valid and still 404 on one of these.
+    // Let the user pick/confirm a model they actually have access to instead
+    // of silently guessing wrong.
+    autoValidateModel: false,
   },
   {
     id: "openrouter",

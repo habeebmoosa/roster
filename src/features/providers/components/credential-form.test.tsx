@@ -23,6 +23,7 @@ vi.mock("@/hooks/use-model-options", () => ({
 const OPENAI = getProvider("openai")!;
 const BEDROCK = getProvider("amazon-bedrock")!;
 const CUSTOM = getProvider("custom")!;
+const NVIDIA_NIM = getProvider("nvidia-nim")!;
 
 beforeEach(() => {
   refresh.mockClear();
@@ -142,6 +143,24 @@ describe("CredentialForm — add mode, provider with no default model (custom en
     render(<CredentialForm provider={CUSTOM} onClose={vi.fn()} />);
     await userEvent.setup().type(screen.getByLabelText(/Model/), "llama-3");
     expect(screen.getByRole("button", { name: "Validate & add" })).toBeInTheDocument();
+  });
+});
+
+describe("CredentialForm — add mode, provider with per-account-gated models (NVIDIA NIM)", () => {
+  it("still shows the optional Model field even though it has suggested models — some are gated per account", async () => {
+    mockFetchOnce(200, { ok: true });
+    const user = userEvent.setup();
+    render(<CredentialForm provider={NVIDIA_NIM} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("API key"), "nvapi-test");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const body = JSON.parse((options as RequestInit).body as string);
+    expect(body.model).toBeUndefined();
   });
 });
 

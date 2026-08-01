@@ -278,4 +278,27 @@ describe("model-less validation — the catalog's suggested default stands in fo
     const row = await prisma.providerKey.findUniqueOrThrow({ where: { id: created!.id } });
     expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
   });
+
+  it("skips the live ping entirely for a provider marked autoValidateModel: false (NVIDIA NIM) when no model is given", async () => {
+    // Real bug: NVIDIA NIM's public model list includes models a given key
+    // still gets a 404 calling — a per-model access grant, not a key problem.
+    // suggestedModels[0] is therefore not a safe silent validation default
+    // for this provider (catalog.ts's `autoValidateModel: false`). Point it at
+    // our local mock defensively — proving no request reaches it at all is
+    // the point, not exercising a genuine network call to NVIDIA either way.
+    const requestsBefore = mock.requests.length;
+    await addProviderKey({
+      userId,
+      provider: "nvidia-nim",
+      apiKey: "whatever-key-this-is",
+      baseUrl: mock.url,
+      label: "nim-no-model",
+    });
+
+    expect(mock.requests.length).toBe(requestsBefore);
+    const [created] = await listCredentialsForProvider(userId, "nvidia-nim").then((cs) =>
+      cs.filter((c) => c.label === "nim-no-model"),
+    );
+    expect(created).toBeDefined();
+  });
 });

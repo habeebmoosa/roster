@@ -77,11 +77,12 @@ export function CredentialForm({
   const showBaseUrl = provider.baseUrlEditable || provider.requiresBaseUrl;
   // The model field is purely for the live validation ping, which needs a
   // model id we can't safely guess for a few providers: Azure (deployment
-  // names are account-specific), Ollama (whatever's pulled locally), and a
-  // bare custom endpoint. Every other provider has a known suggested model,
-  // so there's nothing to ask the user — connecting a key shouldn't require
-  // picking a model, that's a chat/agent-time decision.
-  const showModelField = provider.suggestedModels.length === 0;
+  // names are account-specific), Ollama (whatever's pulled locally), a bare
+  // custom endpoint, and NVIDIA NIM (some listed models are gated per-account,
+  // so a "valid" pick can still 404). Every other provider has a suggested
+  // model that's a safe silent guess, so there's nothing to ask the user —
+  // connecting a key shouldn't require picking a model, that's a chat/agent-time decision.
+  const showModelField = provider.suggestedModels.length === 0 || provider.autoValidateModel === false;
   const { options: modelOptions } = useModelOptions(
     showModelField ? provider.id : "",
     provider.id === "ollama" ? baseUrl : undefined,

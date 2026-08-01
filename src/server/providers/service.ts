@@ -5,6 +5,7 @@ import {
   isEmbeddingCapable,
   resolveModel,
   validateProviderCredentials,
+  type ProviderCatalogEntry,
   type ResolveEmbeddingModelInput,
   type ResolveModelInput,
 } from "@/core/providers";
@@ -83,6 +84,11 @@ export function listProviderCredentials(
   return listCredentialsForProvider(userId, provider);
 }
 
+/** The catalog's suggested first model — but only for providers where that's actually a safe silent guess (see `autoValidateModel`). */
+function defaultValidationModel(entry: ProviderCatalogEntry): string | undefined {
+  return entry.autoValidateModel === false ? undefined : entry.suggestedModels[0];
+}
+
 async function nextAvailableLabel(userId: string, provider: string, desired: string): Promise<string> {
   const taken = new Set((await listCredentialsForProvider(userId, provider)).map((c) => c.label));
   if (!taken.has(desired)) return desired;
@@ -105,9 +111,10 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
 
   // Validate against the live provider BEFORE persisting anything — using a
   // model the user picked, or else a safe catalog default (see AddProviderKeyInput.model).
-  // No default exists for a few providers (Azure, Ollama, custom endpoints);
-  // for those, no model means no live check, rather than guessing wrong.
-  const validationModel = input.model?.trim() || entry.suggestedModels[0];
+  // No default exists for a few providers (Azure, Ollama, custom endpoints,
+  // and NVIDIA NIM's per-model-gated access); for those, no model means no
+  // live check, rather than guessing wrong.
+  const validationModel = input.model?.trim() || defaultValidationModel(entry);
   if (validationModel) {
     await validateProviderCredentials({
       provider: input.provider,
@@ -207,7 +214,7 @@ export async function updateProviderCredential(
   // (still offered for the few providers with no safe default) also lets a
   // user re-check an *unchanged* secret on demand.
   const shouldValidate = Boolean(newBundle) || Boolean(input.model?.trim());
-  const validationModel = input.model?.trim() || entry?.suggestedModels[0];
+  const validationModel = input.model?.trim() || (entry ? defaultValidationModel(entry) : undefined);
   if (shouldValidate && validationModel) {
     const encodedSecret = newBundle ? encodeSecretBundle(newBundle) : decryptSecret(existing.encryptedKey);
     await validateProviderCredentials({
