@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAgentDefinition } from "./definition";
+import { parseAgentDefinition, preserveRuntimeModel } from "./definition";
 
 const MINIMAL = {
   id: "customer-support",
@@ -61,5 +61,42 @@ describe("parseAgentDefinition", () => {
     expect(() => parseAgentDefinition({ ...MINIMAL, model: { provider: "openai" } })).toThrow(
       /model/,
     );
+  });
+});
+
+describe("preserveRuntimeModel", () => {
+  // Regression: prisma/seed.ts and scripts/ingest-knowledge.ts re-upsert an
+  // agent's *entire* definition from its YAML file. The YAML spec never sets
+  // `model` (it's runtime-only — the worker detail page's Model tab, or the
+  // hire wizard) — so without this, every reseed silently wiped a
+  // real, already-configured default back to "unconfigured."
+  const fresh = parseAgentDefinition({
+    id: "customer-support",
+    name: "Ada",
+    role: "Support",
+    identity: "Calm and precise.",
+    voice: "Warm but concise.",
+  });
+
+  it("carries over the existing model when the fresh (YAML) definition has none", () => {
+    const existing = { ...fresh, model: { provider: "google", model: "gemini-2.5-flash-lite" } };
+    const merged = preserveRuntimeModel(fresh, existing);
+    expect(merged.model).toEqual({ provider: "google", model: "gemini-2.5-flash-lite" });
+  });
+
+  it("leaves the fresh definition's own model untouched if it explicitly sets one", () => {
+    const freshWithModel = { ...fresh, model: { provider: "openai", model: "gpt-4o-mini" } };
+    const existing = { ...fresh, model: { provider: "google", model: "gemini-2.5-flash-lite" } };
+    const merged = preserveRuntimeModel(freshWithModel, existing);
+    expect(merged.model).toEqual({ provider: "openai", model: "gpt-4o-mini" });
+  });
+
+  it("stays undefined when neither the fresh nor the existing definition has one", () => {
+    expect(preserveRuntimeModel(fresh, fresh).model).toBeUndefined();
+    expect(preserveRuntimeModel(fresh, null).model).toBeUndefined();
+  });
+
+  it("is a no-op the very first time an agent is seeded (no existing row yet)", () => {
+    expect(preserveRuntimeModel(fresh, null)).toEqual(fresh);
   });
 });

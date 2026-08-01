@@ -5,6 +5,7 @@ const VALID = {
   DATABASE_URL: "postgresql://roster:roster@localhost:5432/roster?schema=public",
   DIRECT_URL: "postgresql://roster:roster@localhost:5432/roster?schema=public",
   NODE_ENV: "test",
+  APP_URL: "http://localhost:3005",
   AUTH_SECRET: "test-secret",
   GOOGLE_CLIENT_ID: "test-client-id",
   GOOGLE_CLIENT_SECRET: "test-client-secret",
@@ -42,6 +43,16 @@ describe("parseEnv", () => {
 
   it("rejects an invalid NODE_ENV", () => {
     expect(() => parseEnv({ ...VALID, NODE_ENV: "staging" })).toThrow();
+  });
+
+  it("requires APP_URL", () => {
+    const { APP_URL: _omitted, ...rest } = VALID;
+    void _omitted;
+    expect(() => parseEnv(rest)).toThrow(/APP_URL/);
+  });
+
+  it("rejects an invalid APP_URL", () => {
+    expect(() => parseEnv({ ...VALID, APP_URL: "not-a-url" })).toThrow(/APP_URL/);
   });
 
   it("requires AUTH_SECRET", () => {

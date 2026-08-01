@@ -14,6 +14,7 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().url({ message: "must be a valid Postgres connection URL" }),
   DIRECT_URL: z.string().url({ message: "must be a valid Postgres connection URL" }).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_URL: z.string().url({ message: "must be a valid URL" }),
 
   // Auth.js — used to sign/encrypt the session JWT. Generate with `openssl rand -base64 33`.
   AUTH_SECRET: z.string().min(1, { message: "required — run `openssl rand -base64 33`" }),

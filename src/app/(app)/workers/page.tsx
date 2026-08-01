@@ -24,6 +24,7 @@ export default async function WorkersPage({
     name: agent.name,
     role: agent.role,
     status: "Active",
+    model: agent.model?.model ?? null,
     ...fixtureMetricsForAgent(agent.id),
   }));
 

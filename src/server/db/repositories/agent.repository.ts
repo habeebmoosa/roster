@@ -6,13 +6,21 @@ export interface AgentSummary {
   id: string;
   name: string;
   role: string;
+  /** The real configured default, if any (Model tab / hire wizard) — null means "falls back to the caller". */
+  model: { provider: string; model: string } | null;
 }
 
-export function listAgentSummaries(): Promise<AgentSummary[]> {
-  return prisma.agent.findMany({
-    select: { id: true, name: true, role: true },
+export async function listAgentSummaries(): Promise<AgentSummary[]> {
+  const rows = await prisma.agent.findMany({
+    select: { id: true, name: true, role: true, definition: true },
     orderBy: { name: "asc" },
   });
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    model: parseAgentDefinition(row.definition).model ?? null,
+  }));
 }
 
 /** Load and re-validate an agent's full definition from the DB. */

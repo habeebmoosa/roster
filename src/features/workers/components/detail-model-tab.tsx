@@ -11,28 +11,35 @@ import { Badge, Button, Card, CardTitle, Input, Select } from "@/ui";
 
 export interface DetailModelTabProps {
   agentId: string;
-  /** Read-only display — real (`getProvider(...).label`) when a model is configured, else a fixture placeholder. */
-  displayProvider: string;
-  displayTier: string;
-  displayModel: string;
-  /** The real, persisted default — null until someone (hire wizard or this tab) sets one. Drives the editor's initial values. */
+  /**
+   * The real, persisted default — null until someone (hire wizard or this
+   * tab) sets one. Drives both the read-only display and the editor's
+   * initial values. Deliberately has no realistic-looking placeholder for
+   * the null case — that would be indistinguishable from an actually
+   * configured default (see LLM_PROVIDER_MVP_PLAN.md follow-up notes).
+   */
   currentModel: { provider: string; model: string } | null;
   /** The signed-in user's connected providers — only these are selectable. */
   providerKeys: ProviderKeyRecord[];
 }
 
-export function DetailModelTab({
-  agentId,
-  displayProvider,
-  displayTier,
-  displayModel,
-  currentModel,
-  providerKeys,
-}: DetailModelTabProps) {
+function initialProviderFor(currentModel: DetailModelTabProps["currentModel"], providerKeys: ProviderKeyRecord[]): string {
+  return currentModel?.provider ?? providerKeys[0]?.provider ?? "";
+}
+
+// When nothing's configured yet, defaulting the model to "" would leave the
+// Select's React state out of sync with what the browser actually shows
+// selected (its first real <option>) — so a Save without ever touching the
+// dropdown would silently submit an empty model. Seed it for real instead.
+function initialModelFor(currentModel: DetailModelTabProps["currentModel"], provider: string): string {
+  return currentModel?.model ?? getProvider(provider)?.suggestedModels[0] ?? "";
+}
+
+export function DetailModelTab({ agentId, currentModel, providerKeys }: DetailModelTabProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [provider, setProvider] = useState(currentModel?.provider ?? providerKeys[0]?.provider ?? "");
-  const [model, setModel] = useState(currentModel?.model ?? "");
+  const [provider, setProvider] = useState(() => initialProviderFor(currentModel, providerKeys));
+  const [model, setModel] = useState(() => initialModelFor(currentModel, initialProviderFor(currentModel, providerKeys)));
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -48,8 +55,9 @@ export function DetailModelTab({
   const listedModels = modelOptions.length > 0 ? modelOptions.map((o) => o.modelId) : (catalogEntry?.suggestedModels ?? []);
 
   function resetToCurrent() {
-    setProvider(currentModel?.provider ?? providerKeys[0]?.provider ?? "");
-    setModel(currentModel?.model ?? "");
+    const resetProvider = initialProviderFor(currentModel, providerKeys);
+    setProvider(resetProvider);
+    setModel(initialModelFor(currentModel, resetProvider));
     setMessage("");
   }
 
@@ -97,19 +105,28 @@ export function DetailModelTab({
   }
 
   if (!editing) {
+    const providerLabel = currentModel
+      ? (getProvider(currentModel.provider)?.label ?? currentModel.provider)
+      : null;
     return (
       <Card>
         <CardTitle>Model</CardTitle>
         <div className="mt-3 flex items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-text text-sm font-semibold">{displayProvider}</p>
-              <Badge variant="neutral">{displayTier}</Badge>
+          {currentModel ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-text text-sm font-semibold">{providerLabel}</p>
+                <Badge variant="neutral">Connected</Badge>
+              </div>
+              <p className="text-text-muted mt-1 font-mono text-sm">{currentModel.model}</p>
             </div>
-            <p className="text-text-muted mt-1 font-mono text-sm">{displayModel}</p>
-          </div>
+          ) : (
+            <p className="text-text-muted text-sm">
+              No default model configured — falls back to whatever the caller specifies.
+            </p>
+          )}
           <Button variant="secondary" onClick={() => setEditing(true)}>
-            Change model
+            {currentModel ? "Change model" : "Set a model"}
           </Button>
         </div>
       </Card>

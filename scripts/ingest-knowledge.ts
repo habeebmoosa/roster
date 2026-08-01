@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { preserveRuntimeModel } from "@/core/agent";
 import { getAgentDefinition, upsertAgent } from "@/server/db/repositories/agent.repository";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { prisma } from "@/server/db/prisma";
@@ -25,8 +26,12 @@ function argValue(flag: string): string | undefined {
 async function main() {
   const agentDir = `agents/${AGENT_ID}`;
 
-  // Re-seed from YAML so ingestion always reflects the current definition on disk.
-  await upsertAgent(loadAgentDefinitionFile(`${agentDir}/agent.yaml`));
+  // Re-seed from YAML so ingestion always reflects the current definition on
+  // disk — but keep whatever default model is already configured at runtime
+  // (the YAML spec never sets one; see preserveRuntimeModel).
+  const existing = await getAgentDefinition(AGENT_ID);
+  const fresh = loadAgentDefinitionFile(`${agentDir}/agent.yaml`);
+  await upsertAgent(preserveRuntimeModel(fresh, existing));
   const definition = await getAgentDefinition(AGENT_ID);
   if (!definition) throw new Error(`Agent "${AGENT_ID}" not found after seeding.`);
 

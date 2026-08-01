@@ -32,8 +32,14 @@ export function WorkerPreview({ rows }: { rows: WorkerRow[] }) {
               <Badge variant="success" className="shrink-0">
                 {row.status}
               </Badge>
-              <span className="text-text-muted hidden w-32 shrink-0 truncate text-xs sm:inline">
-                {row.model}
+              <span
+                className={
+                  row.model
+                    ? "text-text-muted hidden w-32 shrink-0 truncate text-xs sm:inline"
+                    : "text-text-faint hidden w-32 shrink-0 truncate text-xs italic sm:inline"
+                }
+              >
+                {row.model ?? "Not configured"}
               </span>
               <span className="text-text-faint hidden w-20 shrink-0 text-xs md:inline">
                 {row.lastActivity}

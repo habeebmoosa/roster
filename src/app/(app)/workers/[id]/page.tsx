@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { getProvider } from "@/core/providers/catalog";
 import {
   DetailAboutTab,
   DetailApiTab,
@@ -8,6 +7,7 @@ import {
   DetailStats,
   detailFixturesForAgent,
 } from "@/features/workers";
+import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
 import { listUserProviders } from "@/server/providers/service";
@@ -20,16 +20,6 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
 
   const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
   const fixtures = detailFixturesForAgent(id);
-
-  // The hire wizard (6.10) is the first thing that stores a real default model on the
-  // definition — older/seeded agents don't have one, so fall back to the fixture.
-  const modelInfo = definition.model
-    ? {
-        provider: getProvider(definition.model.provider)?.label ?? definition.model.provider,
-        tier: "Connected",
-        model: definition.model.model,
-      }
-    : { provider: fixtures.provider, tier: fixtures.tier, model: fixtures.model };
 
   return (
     <div className="flex flex-col gap-4 py-6">
@@ -60,17 +50,10 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
             />
           </TabsPanel>
           <TabsPanel value="model">
-            <DetailModelTab
-              agentId={id}
-              displayProvider={modelInfo.provider}
-              displayTier={modelInfo.tier}
-              displayModel={modelInfo.model}
-              currentModel={definition.model ?? null}
-              providerKeys={providerKeys}
-            />
+            <DetailModelTab agentId={id} currentModel={definition.model ?? null} providerKeys={providerKeys} />
           </TabsPanel>
           <TabsPanel value="api">
-            <DetailApiTab agentId={id} />
+            <DetailApiTab agentId={id} appUrl={env.APP_URL} />
           </TabsPanel>
         </div>
       </Tabs>

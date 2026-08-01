@@ -35,4 +35,10 @@ describe("WorkerPreview", () => {
     expect(screen.getByText("No employees yet")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /View all/ })).not.toBeInTheDocument();
   });
+
+  it("shows an honest 'Not configured' label, not a fake model, when none is set", () => {
+    render(<WorkerPreview rows={[{ ...ROW, model: null }]} />);
+    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(screen.queryByText("gpt-4o-mini")).not.toBeInTheDocument();
+  });
 });

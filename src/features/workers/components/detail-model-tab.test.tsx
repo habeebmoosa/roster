@@ -51,35 +51,36 @@ function mockFetchOnce(status: number, body: unknown) {
 }
 
 describe("DetailModelTab — read-only view", () => {
-  it("renders the display provider, tier, and model, with a Change model action", () => {
+  it("renders the configured provider, tier, and model, with a Change model action", () => {
     render(
       <DetailModelTab
         agentId="customer-support"
-        displayProvider="Google"
-        displayTier="Free tier"
-        displayModel="gemini-2.0-flash"
-        currentModel={null}
+        currentModel={{ provider: "google", model: "gemini-2.5-flash-lite" }}
         providerKeys={[providerKey("google")]}
       />,
     );
-    expect(screen.getByText("Google")).toBeInTheDocument();
-    expect(screen.getByText("Free tier")).toBeInTheDocument();
-    expect(screen.getByText("gemini-2.0-flash")).toBeInTheDocument();
+    expect(screen.getByText("Google Gemini")).toBeInTheDocument();
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("gemini-2.5-flash-lite")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Change model" })).toBeInTheDocument();
   });
 
-  it("prompts to connect a provider instead, when none are connected", () => {
+  it("shows a real 'not configured' state, not a realistic-looking placeholder, when no model is set", () => {
+    // Regression: this tab used to fall back to deterministic fixture data
+    // (fake provider/tier/model) that was indistinguishable from a real
+    // configured default — which is exactly what made a genuine data-loss bug
+    // look like "it reverted to the old value" instead of "it's unset."
     render(
-      <DetailModelTab
-        agentId="customer-support"
-        displayProvider="OpenAI"
-        displayTier="Pay-as-you-go"
-        displayModel="gpt-4o-mini"
-        currentModel={null}
-        providerKeys={[]}
-      />,
+      <DetailModelTab agentId="customer-support" currentModel={null} providerKeys={[providerKey("google")]} />,
     );
+    expect(screen.getByText(/No default model configured/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Set a model" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change model" })).not.toBeInTheDocument();
+  });
+
+  it("prompts to connect a provider instead, when none are connected", () => {
+    render(<DetailModelTab agentId="customer-support" currentModel={null} providerKeys={[]} />);
+    expect(screen.queryByRole("button", { name: "Set a model" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Connect a provider/ })).toHaveAttribute(
       "href",
       "/settings?tab=providers",
@@ -94,9 +95,6 @@ describe("DetailModelTab — editing", () => {
     render(
       <DetailModelTab
         agentId="customer-support"
-        displayProvider="Anthropic"
-        displayTier="Connected"
-        displayModel="claude-haiku-4-5"
         currentModel={{ provider: "anthropic", model: "claude-haiku-4-5" }}
         providerKeys={[providerKey("openai"), providerKey("anthropic")]}
       />,
@@ -125,14 +123,29 @@ describe("DetailModelTab — editing", () => {
     expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
   });
 
+  it("opens straight into the editor from the 'not configured' state via Set a model", async () => {
+    mockFetchOnce(200, { ok: true, model: { provider: "openai", model: "gpt-4o-mini" } });
+    const user = userEvent.setup();
+    render(
+      <DetailModelTab agentId="customer-support" currentModel={null} providerKeys={[providerKey("openai")]} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Set a model" }));
+    expect(screen.getByLabelText("Provider")).toHaveValue("openai");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/customer-support/model",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+  });
+
   it("switching provider resets the model to that provider's first suggested model", async () => {
     const user = userEvent.setup();
     render(
       <DetailModelTab
         agentId="customer-support"
-        displayProvider="OpenAI"
-        displayTier="Connected"
-        displayModel="gpt-4o-mini"
         currentModel={{ provider: "openai", model: "gpt-4o-mini" }}
         providerKeys={[providerKey("openai"), providerKey("anthropic")]}
       />,
@@ -149,9 +162,6 @@ describe("DetailModelTab — editing", () => {
     render(
       <DetailModelTab
         agentId="customer-support"
-        displayProvider="OpenAI"
-        displayTier="Connected"
-        displayModel="gpt-4o-mini"
         currentModel={{ provider: "openai", model: "gpt-4o-mini" }}
         providerKeys={[providerKey("openai")]}
       />,
@@ -173,9 +183,6 @@ describe("DetailModelTab — editing", () => {
     render(
       <DetailModelTab
         agentId="customer-support"
-        displayProvider="OpenAI"
-        displayTier="Connected"
-        displayModel="gpt-4o-mini"
         currentModel={{ provider: "openai", model: "gpt-4o-mini" }}
         providerKeys={[providerKey("openai")]}
       />,

@@ -29,6 +29,7 @@ export default async function DashboardPage() {
     name: agent.name,
     role: agent.role,
     status: "Active",
+    model: agent.model?.model ?? null,
     ...fixtureMetricsForAgent(agent.id),
   }));
 

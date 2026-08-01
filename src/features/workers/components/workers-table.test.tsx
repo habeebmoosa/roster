@@ -40,4 +40,10 @@ describe("WorkersTable", () => {
       "/workers/customer-support",
     );
   });
+
+  it("shows an honest 'Not configured' label, not a fake model, when none is set", () => {
+    render(<WorkersTable rows={[{ ...ROW, model: null }]} />);
+    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(screen.queryByText("gemini-2.0-flash")).not.toBeInTheDocument();
+  });
 });
