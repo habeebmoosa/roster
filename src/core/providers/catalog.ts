@@ -369,6 +369,7 @@ const CATALOG: ProviderCatalogEntry[] = [
         kind: "text",
         required: true,
         placeholder: "us-east-1",
+        helpText: "Must be a region where the model is enabled — Bedrock model access is granted per-region.",
       },
     ],
     docsUrl: "https://console.aws.amazon.com/iam/home#/security_credentials",
