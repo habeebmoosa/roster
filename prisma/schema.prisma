@@ -407,3 +407,44 @@ model Feedback {
 
   @@map("feedback")
 }
+
+// ─────────────────────────────────────────────────────────────
+// ModelCatalog (10.9 Phase 5) — real model metadata (context window, pricing,
+// modalities, reasoning/tool support) synced from models.dev (see
+// core/models/models-dev.ts), a free, open, cross-provider source covering
+// every catalog provider except Ollama (whose models are whatever the user
+// has pulled locally — introspected live from their own instance instead;
+// see server/models/ollama.ts) and "custom" (an arbitrary user endpoint with
+// no discoverable catalog). Not per-user — this is shared, global metadata,
+// re-synced wholesale per provider rather than upserted row-by-row (see
+// upsertModelsForProvider in the repository).
+// ─────────────────────────────────────────────────────────────
+model ModelCatalog {
+  id                     String   @id @default(cuid())
+  provider               String // our catalog id, e.g. "openai" — see core/providers/catalog.ts
+  modelId                String // the model's own id, e.g. "gpt-5"
+  label                  String
+  description            String?
+  contextWindow          Int?
+  maxOutputTokens        Int?
+  inputModalities        String[]
+  outputModalities       String[]
+  reasoningSupport       Boolean  @default(false)
+  toolCallSupport        Boolean  @default(false)
+  structuredOutputSupport Boolean @default(false)
+  openWeights            Boolean  @default(false)
+  inputPricePerMTok      Float?
+  outputPricePerMTok     Float?
+  cacheReadPricePerMTok  Float?
+  cacheWritePricePerMTok Float?
+  knowledgeCutoff        String?
+  releaseDate            String?
+  source                 String // "models.dev" | "manual"
+  lastSyncedAt           DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([provider, modelId])
+  @@index([provider])
+  @@map("model_catalog")
+}

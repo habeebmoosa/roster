@@ -14,6 +14,12 @@ vi.mock("next/navigation", () => ({
 const toast = vi.fn();
 vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 
+// The model picker's own fetch behavior is covered by use-model-options.test.ts —
+// stub it here so it doesn't add extra calls to this file's `fetch` assertions.
+vi.mock("@/hooks/use-model-options", () => ({
+  useModelOptions: () => ({ options: [], loading: false }),
+}));
+
 const OPENAI = getProvider("openai")!;
 const BEDROCK = getProvider("amazon-bedrock")!;
 

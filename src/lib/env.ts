@@ -34,6 +34,11 @@ export const envSchema = z.object({
   // instances. Falls back to an in-memory limiter when unset.
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+  // Optional: protects the model-catalog sync cron route. Vercel Cron sends
+  // `Authorization: Bearer $CRON_SECRET` automatically when this is set (its
+  // documented convention) — unset in local dev, the route just skips the check.
+  CRON_SECRET: z.string().min(1).optional(),
 });
 
 function decodesTo32Bytes(value: string): boolean {

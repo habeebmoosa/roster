@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "@/hooks/use-toast";
+import { useModelOptions } from "@/hooks/use-model-options";
 import type { ProviderCatalogEntry } from "@/core/providers/catalog";
+import type { ModelOption } from "@/core/models/model-option";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import {
   Button,
@@ -14,6 +16,20 @@ import {
   Switch,
 } from "@/ui";
 import { ProviderLogo } from "./provider-logo";
+
+function formatTokenCount(n: number): string {
+  return n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
+}
+
+function formatModelHint(option: ModelOption): string {
+  const parts: string[] = [];
+  if (option.contextWindow) parts.push(`${formatTokenCount(option.contextWindow)} context`);
+  if (option.inputPricePerMTok != null && option.outputPricePerMTok != null) {
+    parts.push(`$${option.inputPricePerMTok} / $${option.outputPricePerMTok} per 1M tokens`);
+  }
+  if (option.reasoningSupport) parts.push("reasoning");
+  return parts.join(" · ");
+}
 
 export interface CredentialFormProps {
   provider: ProviderCatalogEntry;
@@ -59,6 +75,13 @@ export function CredentialForm({
   }
 
   const showBaseUrl = provider.baseUrlEditable || provider.requiresBaseUrl;
+  const { options: modelOptions } = useModelOptions(
+    provider.id,
+    provider.id === "ollama" ? baseUrl : undefined,
+  );
+  const modelDatalistValues =
+    modelOptions.length > 0 ? modelOptions.map((o) => o.modelId) : provider.suggestedModels;
+  const selectedModelOption = modelOptions.find((o) => o.modelId === model.trim());
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -236,10 +259,13 @@ export function CredentialForm({
               required={!isEdit}
             />
             <datalist id={`suggested-models-${provider.id}`}>
-              {provider.suggestedModels.map((m) => (
+              {modelDatalistValues.map((m) => (
                 <option key={m} value={m} />
               ))}
             </datalist>
+            {selectedModelOption ? (
+              <span className="text-text-faint text-xs">{formatModelHint(selectedModelOption)}</span>
+            ) : null}
           </label>
 
           <label className="grid gap-1 text-sm">

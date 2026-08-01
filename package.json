@@ -29,6 +29,7 @@
     "eval": "tsx scripts/eval.ts",
     "eval:gate": "tsx scripts/eval.ts --gate",
     "ingest": "tsx scripts/ingest-knowledge.ts",
+    "models:sync": "tsx scripts/sync-model-catalog.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
