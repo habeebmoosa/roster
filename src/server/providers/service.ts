@@ -41,7 +41,14 @@ export interface AddProviderKeyInput {
   apiKey?: string;
   /** The full secret bundle for providers with more than one secret field (e.g. Bedrock, Vertex). */
   secrets?: Record<string, string>;
-  model: string; // used for the validation ping
+  /**
+   * A model to validate with — purely an implementation detail of the live
+   * health-check ping, never asked of the user. Omit to use the catalog's
+   * `suggestedModels[0]`; for the few providers with no safe default (Azure's
+   * deployment name, Ollama's local-only models, a bare "custom" endpoint),
+   * omitting this skips the live ping entirely rather than guessing wrong.
+   */
+  model?: string;
   baseUrl?: string | null;
   label?: string | null;
   config?: Record<string, unknown>;
@@ -96,15 +103,21 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
   const encodedSecret = encodeSecretBundle(bundle);
   const headers = extractHeaders(input.config);
 
-  // Validate against the live provider BEFORE persisting anything.
-  await validateProviderCredentials({
-    provider: input.provider,
-    model: input.model,
-    apiKey: encodedSecret,
-    baseUrl: input.baseUrl ?? null,
-    headers,
-    config: input.config,
-  });
+  // Validate against the live provider BEFORE persisting anything — using a
+  // model the user picked, or else a safe catalog default (see AddProviderKeyInput.model).
+  // No default exists for a few providers (Azure, Ollama, custom endpoints);
+  // for those, no model means no live check, rather than guessing wrong.
+  const validationModel = input.model?.trim() || entry.suggestedModels[0];
+  if (validationModel) {
+    await validateProviderCredentials({
+      provider: input.provider,
+      model: validationModel,
+      apiKey: encodedSecret,
+      baseUrl: input.baseUrl ?? null,
+      headers,
+      config: input.config,
+    });
+  }
 
   const requestedLabel = input.label?.trim();
   if (requestedLabel) {
@@ -160,22 +173,22 @@ export interface UpdateProviderCredentialInput {
   baseUrl?: string | null;
   config?: Record<string, unknown>;
   /**
-   * A model id to re-validate with — since an edit can change the very
-   * fields (secret, region, resourceName, ...) that determine whether the
-   * credential actually works, an edit is re-validated live against the
-   * *effective* (changed fields merged over the existing ones) credential,
-   * same as adding one. Omitted only by callers that aren't driven by the
-   * credential form (e.g. a bare label rename) — then the edit is trusted
-   * as-is.
+   * A model to validate with, same purely-a-validation-detail role as
+   * {@link AddProviderKeyInput.model} — omit to use the catalog default.
+   * Re-validation itself only runs when the secret actually changed (see
+   * {@link updateProviderCredential}), not on every edit.
    */
   model?: string;
 }
 
 /**
  * Edits a credential in place; re-encrypts a new secret only if one was
- * supplied. Re-validates live against the effective (merged) credential when
- * a `model` is given, exactly like adding one — an edit shouldn't be able to
- * silently break a working credential.
+ * supplied. Re-validates live, against the effective (changed fields merged
+ * over the existing ones) credential, whenever the secret itself changed —
+ * an edit shouldn't be able to silently break a working credential — using
+ * `model` if given or else the catalog's default validation model, same
+ * fallback as adding one. A bare label/baseUrl/config tweak with no new
+ * secret isn't worth a live round trip and is trusted as-is.
  */
 export async function updateProviderCredential(
   userId: string,
@@ -185,15 +198,21 @@ export async function updateProviderCredential(
   const existing = await getProviderKeyById(userId, credentialId);
   if (!existing) throw new ByokError("not_found");
 
+  const entry = getProvider(existing.provider);
   const newBundle = input.secrets ?? (input.apiKey ? { apiKey: input.apiKey } : undefined);
   const baseUrl = input.baseUrl !== undefined ? input.baseUrl : existing.baseUrl;
   const config = input.config !== undefined ? input.config : existing.config;
 
-  if (input.model) {
+  // A changed secret always deserves a live re-check; an explicit `model`
+  // (still offered for the few providers with no safe default) also lets a
+  // user re-check an *unchanged* secret on demand.
+  const shouldValidate = Boolean(newBundle) || Boolean(input.model?.trim());
+  const validationModel = input.model?.trim() || entry?.suggestedModels[0];
+  if (shouldValidate && validationModel) {
     const encodedSecret = newBundle ? encodeSecretBundle(newBundle) : decryptSecret(existing.encryptedKey);
     await validateProviderCredentials({
       provider: existing.provider,
-      model: input.model,
+      model: validationModel,
       apiKey: encodedSecret,
       baseUrl: baseUrl ?? null,
       headers: extractHeaders(config),

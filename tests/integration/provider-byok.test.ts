@@ -236,3 +236,46 @@ describe("updateProviderCredential — edit re-validation (10.9 Phase 4)", () =>
     expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
   });
 });
+
+describe("model-less validation — the catalog's suggested default stands in for a user-picked model", () => {
+  it("addProviderKey validates against suggestedModels[0] when no model is given", async () => {
+    // "openai" has real suggestedModels (unlike "custom", used elsewhere in this
+    // file specifically because it has none) — pointed at our local mock via
+    // baseUrl, a bad key against that default model still fails cleanly.
+    await expect(
+      addProviderKey({
+        userId,
+        provider: "openai",
+        apiKey: "wrong-key",
+        baseUrl: mock.url,
+        label: "no-model-add",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    await addProviderKey({
+      userId,
+      provider: "openai",
+      apiKey: API_KEY,
+      baseUrl: mock.url,
+      label: "no-model-add",
+    });
+    const [created] = await listCredentialsForProvider(userId, "openai").then((cs) =>
+      cs.filter((c) => c.label === "no-model-add"),
+    );
+    expect(created).toBeDefined();
+  });
+
+  it("updateProviderCredential re-validates a changed secret against the default even without a model", async () => {
+    const [created] = await listCredentialsForProvider(userId, "openai").then((cs) =>
+      cs.filter((c) => c.label === "no-model-add"),
+    );
+
+    await expect(
+      updateProviderCredential(userId, created!.id, { apiKey: "wrong-key" }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    const { decryptSecret } = await import("@/server/crypto/vault");
+    const row = await prisma.providerKey.findUniqueOrThrow({ where: { id: created!.id } });
+    expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
+  });
+});

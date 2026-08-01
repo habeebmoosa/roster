@@ -22,6 +22,7 @@ vi.mock("@/hooks/use-model-options", () => ({
 
 const OPENAI = getProvider("openai")!;
 const BEDROCK = getProvider("amazon-bedrock")!;
+const CUSTOM = getProvider("custom")!;
 
 beforeEach(() => {
   refresh.mockClear();
@@ -42,13 +43,14 @@ function mockFetchOnce(status: number, body: unknown) {
 }
 
 describe("CredentialForm — add mode, simple bearer provider (OpenAI)", () => {
-  it("submits provider, apiKey, model, and label to POST /api/providers", async () => {
+  it("submits provider, apiKey, and label to POST /api/providers — no model field to fill", async () => {
     mockFetchOnce(200, { ok: true });
     const user = userEvent.setup();
     render(<CredentialForm provider={OPENAI} onClose={vi.fn()} />);
 
+    expect(screen.queryByLabelText(/Model/)).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText("API key"), "sk-test-123");
-    await user.type(screen.getByLabelText(/Model/), "gpt-4o-mini");
     await user.type(screen.getByLabelText(/Name this credential/), "Personal");
     await user.click(screen.getByRole("button", { name: "Validate & add" }));
 
@@ -63,7 +65,7 @@ describe("CredentialForm — add mode, simple bearer provider (OpenAI)", () => {
           baseUrl: undefined,
           label: "Personal",
           config: {},
-          model: "gpt-4o-mini",
+          model: undefined,
           makeDefault: false,
         }),
       }),
@@ -85,7 +87,6 @@ describe("CredentialForm — add mode, simple bearer provider (OpenAI)", () => {
     render(<CredentialForm provider={OPENAI} onClose={onClose} />);
 
     await user.type(screen.getByLabelText("API key"), "sk-bad");
-    await user.type(screen.getByLabelText(/Model/), "gpt-4o-mini");
     await user.click(screen.getByRole("button", { name: "Validate & add" }));
 
     await waitFor(() => expect(screen.getByText("The API key was rejected.")).toBeInTheDocument());
@@ -95,15 +96,16 @@ describe("CredentialForm — add mode, simple bearer provider (OpenAI)", () => {
 });
 
 describe("CredentialForm — add mode, multi-secret provider (AWS Bedrock)", () => {
-  it("renders every secret and config field and bundles them into `secrets`/`config`", async () => {
+  it("renders every secret and config field and bundles them into `secrets`/`config` — no model field either, Bedrock has a suggested default", async () => {
     mockFetchOnce(200, { ok: true });
     const user = userEvent.setup();
     render(<CredentialForm provider={BEDROCK} onClose={vi.fn()} />);
 
+    expect(screen.queryByLabelText(/Model/)).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText("Access key ID"), "AKIA123");
     await user.type(screen.getByLabelText("Secret access key"), "shh-secret");
     await user.type(screen.getByLabelText(/AWS region/), "us-east-1");
-    await user.type(screen.getByLabelText(/Model/), "anthropic.claude-3-5-sonnet-20241022-v2:0");
     await user.click(screen.getByRole("button", { name: "Validate & add" }));
 
     await waitFor(() => expect(refresh).toHaveBeenCalled());
@@ -115,6 +117,31 @@ describe("CredentialForm — add mode, multi-secret provider (AWS Bedrock)", () 
       sessionToken: "",
     });
     expect(body.config).toEqual({ region: "us-east-1" });
+  });
+});
+
+describe("CredentialForm — add mode, provider with no default model (custom endpoint)", () => {
+  it("shows an optional Model field and submits without it, labeling the action just \"Add\"", async () => {
+    mockFetchOnce(200, { ok: true });
+    const user = userEvent.setup();
+    render(<CredentialForm provider={CUSTOM} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("API key"), "sk-local");
+    await user.type(screen.getByLabelText(/Base URL/), "http://localhost:8000/v1");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const [, options] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const body = JSON.parse((options as RequestInit).body as string);
+    expect(body.model).toBeUndefined();
+  });
+
+  it("switches to \"Validate & add\" once a model is typed", async () => {
+    render(<CredentialForm provider={CUSTOM} onClose={vi.fn()} />);
+    await userEvent.setup().type(screen.getByLabelText(/Model/), "llama-3");
+    expect(screen.getByRole("button", { name: "Validate & add" })).toBeInTheDocument();
   });
 });
 

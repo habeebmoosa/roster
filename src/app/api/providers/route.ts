@@ -18,7 +18,8 @@ const bodySchema = z.object({
   // Neither is required — Ollama needs no secret at all.
   apiKey: z.string().min(1).optional(),
   secrets: z.record(z.string(), z.string()).optional(),
-  model: z.string().min(1),
+  // Purely the live-validation-ping model — optional, see AddProviderKeyInput.model.
+  model: z.string().min(1).optional(),
   baseUrl: z.string().trim().optional(),
   label: z.string().trim().optional(),
   config: z.record(z.string(), z.unknown()).optional(),

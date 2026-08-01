@@ -75,8 +75,15 @@ export function CredentialForm({
   }
 
   const showBaseUrl = provider.baseUrlEditable || provider.requiresBaseUrl;
+  // The model field is purely for the live validation ping, which needs a
+  // model id we can't safely guess for a few providers: Azure (deployment
+  // names are account-specific), Ollama (whatever's pulled locally), and a
+  // bare custom endpoint. Every other provider has a known suggested model,
+  // so there's nothing to ask the user — connecting a key shouldn't require
+  // picking a model, that's a chat/agent-time decision.
+  const showModelField = provider.suggestedModels.length === 0;
   const { options: modelOptions } = useModelOptions(
-    provider.id,
+    showModelField ? provider.id : "",
     provider.id === "ollama" ? baseUrl : undefined,
   );
   const modelDatalistValues =
@@ -135,7 +142,7 @@ export function CredentialForm({
               baseUrl: baseUrl.trim() || undefined,
               label: label.trim() || undefined,
               config,
-              model: model.trim(),
+              model: model.trim() || undefined,
               makeDefault,
             }),
           });
@@ -247,26 +254,30 @@ export function CredentialForm({
             </label>
           ) : null}
 
-          <label className="grid gap-1 text-sm">
-            <span className="text-text font-medium">
-              Model {isEdit ? <span className="text-text-faint">(optional — re-checks this still works)</span> : null}
-            </span>
-            <Input
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder={provider.suggestedModels[0] ?? "e.g. gpt-4o-mini"}
-              list={`suggested-models-${provider.id}`}
-              required={!isEdit}
-            />
-            <datalist id={`suggested-models-${provider.id}`}>
-              {modelDatalistValues.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
-            {selectedModelOption ? (
-              <span className="text-text-faint text-xs">{formatModelHint(selectedModelOption)}</span>
-            ) : null}
-          </label>
+          {showModelField ? (
+            <label className="grid gap-1 text-sm">
+              <span className="text-text font-medium">
+                Model{" "}
+                <span className="text-text-faint">
+                  (optional — {isEdit ? "re-checks this still works" : "verifies this works right now"})
+                </span>
+              </span>
+              <Input
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. gpt-4o-mini"
+                list={`suggested-models-${provider.id}`}
+              />
+              <datalist id={`suggested-models-${provider.id}`}>
+                {modelDatalistValues.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+              {selectedModelOption ? (
+                <span className="text-text-faint text-xs">{formatModelHint(selectedModelOption)}</span>
+              ) : null}
+            </label>
+          ) : null}
 
           <label className="grid gap-1 text-sm">
             <span className="text-text font-medium">
@@ -288,7 +299,15 @@ export function CredentialForm({
 
           <div className="mt-2 flex items-center gap-3">
             <Button type="submit" disabled={status === "saving"}>
-              {status === "saving" ? "Validating…" : isEdit ? "Save changes" : "Validate & add"}
+              {isEdit
+                ? status === "saving"
+                  ? "Saving…"
+                  : "Save changes"
+                : status === "saving"
+                  ? "Validating…"
+                  : showModelField && !model.trim()
+                    ? "Add"
+                    : "Validate & add"}
             </Button>
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
