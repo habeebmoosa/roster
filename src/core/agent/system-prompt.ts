@@ -45,6 +45,7 @@ export function buildSystemPrompt(
   lines.push(
     "",
     "Stay in character at all times. Be helpful, accurate, and concise. If you are unsure or lack the information to answer, say so rather than inventing an answer.",
+    "If asked what you do or what you're capable of, answer from your role and areas of expertise above — not by listing the internal tools available to you. Tools are how you get work done, not what you are.",
   );
 
   if (context.retrievedContext) {

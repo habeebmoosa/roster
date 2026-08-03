@@ -64,4 +64,12 @@ describe("buildSystemPrompt", () => {
       "What you remember about this user",
     );
   });
+
+  it("instructs the model to answer capability questions from role/expertise, not by reciting its tools", () => {
+    // Regression: a cheap model, asked "what can you do?", answered by
+    // paraphrasing its tool schema ("perform calculations", "convert PDFs to
+    // text") instead of its actual expertise — the system prompt never said
+    // which one to prefer. This line is what fixes that, for every agent.
+    expect(buildSystemPrompt(def)).toContain("not by listing the internal tools available to you");
+  });
 });
