@@ -1,6 +1,5 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import { parse as parseMarkdown } from "marked";
 import TurndownService from "turndown";
@@ -15,6 +14,13 @@ export const convertPdfToText = tool({
     base64Content: base64ContentSchema,
   }),
   execute: async ({ base64Content }) => {
+    // Imported lazily, on actual use only: pdf-parse pulls in pdfjs-dist +
+    // @napi-rs/canvas (a native binary) for its screenshot/image features we
+    // never use — merely importing it at module load time references
+    // `DOMMatrix`, which doesn't exist in Node/Vercel's serverless runtime,
+    // and crashed every request that so much as loaded the tool registry
+    // (e.g. /chat), not just ones that actually convert a PDF.
+    const { PDFParse } = await import("pdf-parse");
     const buffer = Buffer.from(base64Content, "base64");
     const parser = new PDFParse({ data: buffer });
     try {

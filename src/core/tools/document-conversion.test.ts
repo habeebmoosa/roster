@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import {
@@ -84,6 +86,20 @@ describe("convertPdfToText", () => {
     const result = await callTool(convertPdfToText, { base64Content: pdf.toString("base64") });
     expect(result.text).toContain("Hello, Roster!");
     expect(result.pageCount).toBe(1);
+  });
+
+  it("never imports pdf-parse at module load time, only inside execute()", () => {
+    // Regression: a static top-level `import { PDFParse } from "pdf-parse"`
+    // pulled in pdfjs-dist + the native @napi-rs/canvas binary as a side
+    // effect of merely loading this module — which core/tools/registry.ts
+    // does for every chat turn regardless of which tools an agent actually
+    // uses. In Vercel's serverless runtime that crashed with `ReferenceError:
+    // DOMMatrix is not defined` on requests that never touched a PDF at all
+    // (e.g. /chat rendering the composer). The import must stay inside
+    // execute(), so it only runs for a request that actually converts a PDF.
+    const source = readFileSync(fileURLToPath(new URL("./document-conversion.ts", import.meta.url)), "utf8");
+    expect(source).not.toMatch(/^import .*from ["']pdf-parse["'];?$/m);
+    expect(source).toContain('await import("pdf-parse")');
   });
 });
 
