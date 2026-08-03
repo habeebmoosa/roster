@@ -1,6 +1,6 @@
 # Agent ↔ Connector Assignment — Implementation Plan
 
-> Status: approved, ready to build. Phase 1 starts next.
+> Status: ✅ all 4 phases complete and shipped.
 
 ## 1. Goal
 
@@ -131,22 +131,22 @@ route needed for either surface).
 
 ## 5. Phased build plan
 
-### Phase 1 — API layer (no UI yet, independently testable)
+### Phase 1 — API layer (no UI yet, independently testable) ✅
 - `listAgentConnectors` in `connect-service.ts`.
 - `POST`/`DELETE` routes under `src/app/api/agents/[id]/connectors/[serverId]/`.
 - New direct test file for `agent-mcp-server.repository.ts` (doesn't exist
   today) + route tests for both verbs.
 
-### Phase 2 — Worker detail page: "Connectors" tab
+### Phase 2 — Worker detail page: "Connectors" tab ✅
 - Proves the API layer end-to-end on the simpler of the two surfaces first,
   and immediately benefits all 5 existing employees, not just newly-hired
   ones.
 
-### Phase 3 — Hire wizard: "Connectors" step
+### Phase 3 — Hire wizard: "Connectors" step ✅
 - New step, wizard state, and the post-creation enable-call sequence in
   `submit()`.
 
-### Phase 4 — Polish
+### Phase 4 — Polish ✅
 - Trust-tier disclaimer text (community/custom) reused from
   `connector-detail-dialog.tsx` in both pickers.
 - Real-browser visual/manual pass on both surfaces.

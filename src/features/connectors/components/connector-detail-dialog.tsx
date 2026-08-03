@@ -15,27 +15,8 @@ import {
   Input,
   Modal,
 } from "@/ui";
-import type { BadgeVariant } from "@/ui";
 import type { Connector, ConnectorCapability } from "../types";
-
-const TRUST_COPY: Record<string, { label: string; variant: BadgeVariant; disclaimer: string }> = {
-  verified: {
-    label: "Verified",
-    variant: "success",
-    disclaimer: "This connector is maintained by a known vendor and reviewed by Roster.",
-  },
-  community: {
-    label: "Community",
-    variant: "accent",
-    disclaimer:
-      "This connector is publicly documented by its vendor but hasn't been independently verified by Roster. Review its permissions before connecting.",
-  },
-  custom: {
-    label: "Custom",
-    variant: "neutral",
-    disclaimer: "You added this server yourself. Roster has no relationship with its operator.",
-  },
-};
+import { trustTierCopy } from "../trust";
 
 const AUTH_LABEL: Record<string, string> = {
   oauth_dcr: "OAuth 2.1",
@@ -143,7 +124,7 @@ export function ConnectorDetailDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const trust = TRUST_COPY[connector.trustTier] ?? TRUST_COPY.custom!;
+  const trust = trustTierCopy(connector.trustTier);
   const [busy, setBusy] = useState(false);
   const [headerRows, setHeaderRows] = useState([{ name: "", header: "" }]);
   const carouselRef = useRef<HTMLDivElement>(null);

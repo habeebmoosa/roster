@@ -1,13 +1,7 @@
 import Link from "next/link";
+import { trustTierCopy } from "@/features/connectors/trust";
 import type { McpServerListItem } from "@/server/mcp/connect-service";
 import { Badge, CardDescription, CardTitle, EmptyState, Switch } from "@/ui";
-import type { BadgeVariant } from "@/ui";
-
-const TRUST_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
-  verified: { label: "Verified", variant: "success" },
-  community: { label: "Community", variant: "accent" },
-  custom: { label: "Custom", variant: "neutral" },
-};
 
 // Only the user's already-connected servers are selectable — enabling one that
 // isn't connected would do nothing at runtime (resolveMcpToolsForAgent
@@ -42,7 +36,7 @@ export function StepConnectors({
       ) : (
         <ul className="divide-border mt-4 divide-y">
           {connectors.map((connector) => {
-            const trust = TRUST_BADGE[connector.trustTier] ?? TRUST_BADGE.custom!;
+            const trust = trustTierCopy(connector.trustTier);
             return (
               <li key={connector.id} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
@@ -51,6 +45,9 @@ export function StepConnectors({
                     <Badge variant={trust.variant}>{trust.label}</Badge>
                   </div>
                   <p className="text-text-muted mt-0.5 line-clamp-2 text-sm">{connector.description}</p>
+                  {connector.trustTier !== "verified" ? (
+                    <p className="text-text-faint mt-1 text-xs">{trust.disclaimer}</p>
+                  ) : null}
                 </div>
                 <Switch
                   checked={selected.includes(connector.id)}

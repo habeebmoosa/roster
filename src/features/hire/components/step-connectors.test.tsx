@@ -54,6 +54,25 @@ describe("StepConnectors", () => {
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
+  it("shows a trust disclaimer for community/custom servers, but not for verified ones", () => {
+    render(
+      <StepConnectors
+        connectors={[
+          connector({ id: "linear", name: "Linear", trustTier: "verified" }),
+          connector({ id: "acme-crm", name: "Acme CRM", trustTier: "custom" }),
+        ]}
+        selected={[]}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("You added this server yourself. Roster has no relationship with its operator."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("This connector is maintained by a known vendor and reviewed by Roster."),
+    ).not.toBeInTheDocument();
+  });
+
   it("reflects selected connectors as checked switches", () => {
     render(
       <StepConnectors

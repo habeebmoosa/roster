@@ -3,16 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { trustTierCopy } from "@/features/connectors/trust";
 import { toast } from "@/hooks/use-toast";
 import type { AgentConnectorOption } from "@/server/mcp/connect-service";
 import { Badge, Card, CardDescription, CardTitle, EmptyState, Switch } from "@/ui";
-import type { BadgeVariant } from "@/ui";
-
-const TRUST_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
-  verified: { label: "Verified", variant: "success" },
-  community: { label: "Community", variant: "accent" },
-  custom: { label: "Custom", variant: "neutral" },
-};
 
 export interface DetailConnectorsTabProps {
   agentId: string;
@@ -72,7 +66,7 @@ export function DetailConnectorsTab({ agentId, connectors }: DetailConnectorsTab
 
       <ul className="divide-border mt-4 divide-y">
         {connectors.map((connector) => {
-          const trust = TRUST_BADGE[connector.trustTier] ?? TRUST_BADGE.custom!;
+          const trust = trustTierCopy(connector.trustTier);
           return (
             <li key={connector.id} className="flex items-center justify-between gap-4 py-3">
               <div className="min-w-0">
@@ -81,6 +75,9 @@ export function DetailConnectorsTab({ agentId, connectors }: DetailConnectorsTab
                   <Badge variant={trust.variant}>{trust.label}</Badge>
                 </div>
                 <p className="text-text-muted mt-0.5 line-clamp-2 text-sm">{connector.description}</p>
+                {connector.trustTier !== "verified" ? (
+                  <p className="text-text-faint mt-1 text-xs">{trust.disclaimer}</p>
+                ) : null}
               </div>
               <Switch
                 checked={connector.enabled}

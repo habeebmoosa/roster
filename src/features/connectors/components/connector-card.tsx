@@ -1,15 +1,9 @@
 import { Badge, Card } from "@/ui";
-import type { BadgeVariant } from "@/ui";
 import type { Connector } from "../types";
-
-const TRUST_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
-  verified: { label: "Verified", variant: "success" },
-  community: { label: "Community", variant: "accent" },
-  custom: { label: "Custom", variant: "neutral" },
-};
+import { trustTierCopy } from "../trust";
 
 export function ConnectorCard({ connector, onOpen }: { connector: Connector; onOpen: () => void }) {
-  const trust = TRUST_BADGE[connector.trustTier] ?? TRUST_BADGE.custom!;
+  const trust = trustTierCopy(connector.trustTier);
 
   return (
     <Card
