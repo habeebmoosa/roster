@@ -9,6 +9,7 @@ import {
 } from "@/core/mcp";
 import { slugify } from "@/lib/slugify";
 import { decryptSecret, encryptSecret } from "@/server/crypto/vault";
+import { listEnabledMcpServerIds } from "@/server/db/repositories/agent-mcp-server.repository";
 import {
   deleteMcpConnection,
   listMcpConnections,
@@ -90,6 +91,33 @@ export async function getMcpServerForUser(
   const connections = await listMcpConnections(userId);
   const match = connections.find((c) => c.mcpServerId === serverId);
   return { ...server, connected: Boolean(match), connectionStatus: match?.status ?? null };
+}
+
+export interface AgentConnectorOption extends McpServerListItem {
+  /** Whether this agent has this server turned on (AgentMcpServer) — only meaningful alongside `connected: true`; an unconnected server can't usefully be enabled. */
+  enabled: boolean;
+}
+
+/**
+ * The user's connected MCP servers, each annotated with whether they're
+ * enabled for this specific agent — the single source both the hire wizard's
+ * Connectors step and the worker detail page's Connectors tab read from.
+ * Servers the user hasn't connected are omitted entirely: enabling one would
+ * do nothing at runtime anyway (resolveMcpToolsForAgent requires an active
+ * connection too), so there's nothing useful to toggle for it here.
+ */
+export async function listAgentConnectors(
+  userId: string,
+  agentId: string,
+): Promise<AgentConnectorOption[]> {
+  const [servers, enabledIds] = await Promise.all([
+    listMcpServersForUser(userId),
+    listEnabledMcpServerIds(userId, agentId),
+  ]);
+  const enabledSet = new Set(enabledIds);
+  return servers
+    .filter((server) => server.connected)
+    .map((server) => ({ ...server, enabled: enabledSet.has(server.id) }));
 }
 
 /** Connects a "static_headers" server with the given headers, or a "none" server with an empty map — the two non-OAuth auth modes. */

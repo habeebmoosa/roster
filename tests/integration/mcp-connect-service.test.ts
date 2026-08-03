@@ -11,10 +11,12 @@ import {
   connectManually,
   disconnectMcpServer,
   getMcpServerForUser,
+  listAgentConnectors,
   listMcpServersForUser,
   startOAuthConnect,
 } from "@/server/mcp/connect-service";
 import { decryptConnectionCredentials } from "@/server/mcp/vault";
+import { enableMcpServerForAgent } from "@/server/db/repositories/agent-mcp-server.repository";
 import { getMcpConnectionWithSecret } from "@/server/db/repositories/mcp-connection.repository";
 import { createCustomMcpServer } from "@/server/db/repositories/mcp-server.repository";
 
@@ -70,6 +72,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.agentMcpServer.deleteMany({ where: { userId } });
   await prisma.mcpConnection.deleteMany({ where: { userId } });
   await prisma.mcpServer.deleteMany({
     where: { id: { in: [OAUTH_SERVER_ID, HEADERS_SERVER_ID, LIVE_SERVER_ID] } },
@@ -215,5 +218,32 @@ describe("addCustomServer", () => {
     expect(second.id).not.toBe(first.id);
     expect(second.id.startsWith("collision-server-")).toBe(true);
     await prisma.mcpServer.deleteMany({ where: { id: { in: [first.id, second.id] } } });
+  });
+});
+
+describe("listAgentConnectors", () => {
+  const AGENT_ID = "customer-support"; // real, seeded — only this test's own AgentMcpServer rows are touched
+
+  it("omits servers the user hasn't connected, even if enabled for the agent — enabling a disconnected server is meaningless at runtime", async () => {
+    await enableMcpServerForAgent(userId, AGENT_ID, OAUTH_SERVER_ID); // never connected in this describe block
+    const connectors = await listAgentConnectors(userId, AGENT_ID);
+    expect(connectors.find((c) => c.id === OAUTH_SERVER_ID)).toBeUndefined();
+  });
+
+  it("lists a connected server as not enabled when it hasn't been turned on for this agent", async () => {
+    await connectManually(userId, HEADERS_SERVER_ID, { "x-api-key": "secret" });
+    const connectors = await listAgentConnectors(userId, AGENT_ID);
+    const headersServer = connectors.find((c) => c.id === HEADERS_SERVER_ID);
+    expect(headersServer).toMatchObject({ connected: true, enabled: false });
+  });
+
+  it("marks a connected, enabled server as enabled", async () => {
+    await connectManually(userId, HEADERS_SERVER_ID, { "x-api-key": "secret" });
+    await enableMcpServerForAgent(userId, AGENT_ID, HEADERS_SERVER_ID);
+    const connectors = await listAgentConnectors(userId, AGENT_ID);
+    expect(connectors.find((c) => c.id === HEADERS_SERVER_ID)).toMatchObject({
+      connected: true,
+      enabled: true,
+    });
   });
 });
