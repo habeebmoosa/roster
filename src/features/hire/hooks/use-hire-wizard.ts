@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 import { slugify } from "@/lib/slugify";
 import { ROLE_TEMPLATES } from "../fixtures";
 import type { HireFormState } from "../types";
 
-const STEP_COUNT = 6;
+const STEP_COUNT = 7;
 const DRAFT_KEY = "roster:hire-wizard-draft";
 
 const EMPTY_FORM: HireFormState = {
@@ -16,6 +17,7 @@ const EMPTY_FORM: HireFormState = {
   voice: "",
   expertise: [],
   abilities: [],
+  connectorIds: [],
   provider: "",
   model: "",
 };
@@ -80,6 +82,15 @@ export function useHireWizard(defaultProvider: string) {
     }));
   }, []);
 
+  const toggleConnector = useCallback((serverId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      connectorIds: prev.connectorIds.includes(serverId)
+        ? prev.connectorIds.filter((c) => c !== serverId)
+        : [...prev.connectorIds, serverId],
+    }));
+  }, []);
+
   const canContinue = (() => {
     switch (step) {
       case 1:
@@ -91,7 +102,7 @@ export function useHireWizard(defaultProvider: string) {
           form.identity.trim() !== "" &&
           form.voice.trim() !== ""
         );
-      case 5:
+      case 6:
         return form.provider !== "" && form.model.trim() !== "";
       default:
         return true;
@@ -138,9 +149,30 @@ export function useHireWizard(defaultProvider: string) {
         setSubmitting(false);
         return { ok: false };
       }
+      const agentId = data.id as string;
+
+      // Best-effort: a connector failing to enable must not undo a
+      // successfully-created employee. The user can always retry from the
+      // employee's Connectors tab afterward.
+      if (form.connectorIds.length > 0) {
+        const results = await Promise.allSettled(
+          form.connectorIds.map((serverId) =>
+            fetch(`/api/agents/${agentId}/connectors/${serverId}`, { method: "POST" }),
+          ),
+        );
+        const anyFailed = results.some((r) => r.status === "rejected" || !r.value.ok);
+        if (anyFailed) {
+          toast({
+            title: "Employee created, but some connectors couldn't be enabled.",
+            description: "Add them from the employee's Connectors tab.",
+            variant: "danger",
+          });
+        }
+      }
+
       if (typeof window !== "undefined") window.sessionStorage.removeItem(DRAFT_KEY);
       setSubmitting(false);
-      return { ok: true, id: data.id as string };
+      return { ok: true, id: agentId };
     } catch {
       setSubmitError("Network error. Try again.");
       setSubmitting(false);
@@ -158,6 +190,7 @@ export function useHireWizard(defaultProvider: string) {
     patch,
     applyTemplate,
     toggleAbility,
+    toggleConnector,
     back,
     next,
     saveAndExit,

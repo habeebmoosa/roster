@@ -1,10 +1,16 @@
 import { HireWizard } from "@/features/hire";
 import { auth } from "@/server/auth";
+import { listMcpServersForUser } from "@/server/mcp/connect-service";
 import { listUserProviders } from "@/server/providers/service";
 
 export default async function HirePage() {
   const session = await auth();
-  const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
+  const userId = session?.user?.id;
+  const [providerKeys, mcpServers] = await Promise.all([
+    userId ? listUserProviders(userId) : Promise.resolve([]),
+    userId ? listMcpServersForUser(userId) : Promise.resolve([]),
+  ]);
+  const connectors = mcpServers.filter((server) => server.connected);
 
   return (
     <div className="py-6">
@@ -14,7 +20,7 @@ export default async function HirePage() {
       </p>
 
       <div className="mt-6">
-        <HireWizard providerKeys={providerKeys} />
+        <HireWizard providerKeys={providerKeys} connectors={connectors} />
       </div>
     </div>
   );

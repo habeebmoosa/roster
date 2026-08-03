@@ -3,9 +3,13 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useHireWizard } from "./use-hire-wizard";
 
+const toast = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
+
 describe("useHireWizard", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    toast.mockClear();
   });
 
   afterEach(() => {
@@ -80,12 +84,20 @@ describe("useHireWizard", () => {
     expect(result.current.form.abilities).toEqual([]);
   });
 
-  it("step 5 requires a provider and model before continuing", () => {
+  it("toggleConnector adds and removes a connector id", () => {
+    const { result } = renderHook(() => useHireWizard("openai"));
+    act(() => result.current.toggleConnector("linear"));
+    expect(result.current.form.connectorIds).toEqual(["linear"]);
+    act(() => result.current.toggleConnector("linear"));
+    expect(result.current.form.connectorIds).toEqual([]);
+  });
+
+  it("step 6 requires a provider and model before continuing", () => {
     const { result } = renderHook(() => useHireWizard(""));
-    // Force step to 5 by stepping through with valid data along the way.
+    // Force step to 6 by stepping through with valid data along the way.
     act(() => result.current.applyTemplate("customer-support"));
-    for (let i = 0; i < 4; i++) act(() => result.current.next());
-    expect(result.current.step).toBe(5);
+    for (let i = 0; i < 5; i++) act(() => result.current.next());
+    expect(result.current.step).toBe(6);
     expect(result.current.canContinue).toBe(false);
 
     act(() => result.current.patch({ provider: "openai", model: "gpt-4o-mini" }));
@@ -133,6 +145,68 @@ describe("useHireWizard", () => {
 
     expect(outcome).toEqual({ ok: true, id: "bo-ops" });
     expect(window.sessionStorage.getItem("roster:hire-wizard-draft")).toBeNull();
+  });
+
+  it("submit() enables each selected connector for the newly created employee", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "bo-ops" }), { status: 201 }))
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useHireWizard("openai"));
+    act(() =>
+      result.current.patch({
+        name: "Bo Ops",
+        role: "Ops",
+        identity: "Sharp.",
+        voice: "Direct.",
+        connectorIds: ["linear", "notion"],
+        provider: "openai",
+        model: "gpt-4o-mini",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/bo-ops/connectors/linear",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/bo-ops/connectors/notion",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("submit() still succeeds and warns via toast when a connector fails to enable", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "bo-ops" }), { status: 201 }))
+      .mockResolvedValue(new Response(JSON.stringify({ error: {} }), { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useHireWizard("openai"));
+    act(() =>
+      result.current.patch({
+        name: "Bo Ops",
+        role: "Ops",
+        identity: "Sharp.",
+        voice: "Direct.",
+        connectorIds: ["linear"],
+        provider: "openai",
+        model: "gpt-4o-mini",
+      }),
+    );
+
+    let outcome: { ok: true; id: string } | { ok: false } = { ok: false };
+    await act(async () => {
+      outcome = await result.current.submit();
+    });
+
+    expect(outcome).toEqual({ ok: true, id: "bo-ops" });
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "danger" }));
   });
 
   it("submit() surfaces a server error and leaves submitting false", async () => {

@@ -12,6 +12,7 @@ const FORM: HireFormState = {
   voice: "Brisk.",
   expertise: ["Scheduling"],
   abilities: ["draft_reply"],
+  connectorIds: ["linear"],
   provider: "openai",
   model: "gpt-4o-mini",
 };
@@ -23,19 +24,20 @@ describe("StepReview", () => {
     expect(screen.getByText("/workers/bo-ops")).toBeInTheDocument();
     expect(screen.getByText("Scheduling")).toBeInTheDocument();
     expect(screen.getByText("draft_reply")).toBeInTheDocument();
+    expect(screen.getByText("linear")).toBeInTheDocument();
     expect(screen.getByText("openai / gpt-4o-mini")).toBeInTheDocument();
   });
 
-  it("shows placeholders when expertise/abilities are empty", () => {
+  it("shows placeholders when expertise/abilities/connectors are empty", () => {
     render(
       <StepReview
-        form={{ ...FORM, expertise: [], abilities: [] }}
+        form={{ ...FORM, expertise: [], abilities: [], connectorIds: [] }}
         generatedId="bo-ops"
         submitError=""
       />,
     );
     expect(screen.getByText("None listed")).toBeInTheDocument();
-    expect(screen.getByText("None selected")).toBeInTheDocument();
+    expect(screen.getAllByText("None selected")).toHaveLength(2);
   });
 
   it("surfaces a submit error", () => {
