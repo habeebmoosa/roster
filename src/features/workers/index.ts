@@ -15,4 +15,5 @@ export { DetailHeader } from "./components/detail-header";
 export { DetailStats } from "./components/detail-stats";
 export { DetailAboutTab } from "./components/detail-about-tab";
 export { DetailModelTab } from "./components/detail-model-tab";
+export { DetailConnectorsTab } from "./components/detail-connectors-tab";
 export { DetailApiTab } from "./components/detail-api-tab";

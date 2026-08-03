@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import {
   DetailAboutTab,
   DetailApiTab,
+  DetailConnectorsTab,
   DetailHeader,
   DetailModelTab,
   DetailStats,
@@ -9,6 +10,7 @@ import {
 import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
+import { listAgentConnectors } from "@/server/mcp/connect-service";
 import { listUserProviders } from "@/server/providers/service";
 import { Tabs, TabsList, TabsPanel, TabsTrigger } from "@/ui";
 
@@ -17,7 +19,11 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
   const [definition, session] = await Promise.all([getAgentDefinition(id), auth()]);
   if (!definition) notFound();
 
-  const providerKeys = session?.user?.id ? await listUserProviders(session.user.id) : [];
+  const userId = session?.user?.id;
+  const [providerKeys, connectors] = await Promise.all([
+    userId ? listUserProviders(userId) : Promise.resolve([]),
+    userId ? listAgentConnectors(userId, id) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 py-6">
@@ -36,6 +42,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
         <TabsList>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="model">Model</TabsTrigger>
+          <TabsTrigger value="connectors">Connectors</TabsTrigger>
           <TabsTrigger value="api">API Access</TabsTrigger>
         </TabsList>
 
@@ -51,6 +58,9 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
           </TabsPanel>
           <TabsPanel value="model">
             <DetailModelTab agentId={id} currentModel={definition.model ?? null} providerKeys={providerKeys} />
+          </TabsPanel>
+          <TabsPanel value="connectors">
+            <DetailConnectorsTab agentId={id} connectors={connectors} />
           </TabsPanel>
           <TabsPanel value="api">
             <DetailApiTab agentId={id} appUrl={env.APP_URL} />
