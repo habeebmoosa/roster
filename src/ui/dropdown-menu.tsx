@@ -109,7 +109,7 @@ export function DropdownMenuContent({
  * still looks identical rather than duplicating the class string.
  */
 export const dropdownMenuItemClasses =
-  "text-text hover:bg-bg-subtle flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors";
+  "text-text hover:bg-bg-subtle flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:text-text-faint disabled:hover:bg-transparent";
 
 export function DropdownMenuItem({
   children,
