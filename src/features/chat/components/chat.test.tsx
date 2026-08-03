@@ -2,11 +2,30 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import type { AgentOption, ConversationSummary } from "../types";
 import { Chat } from "./chat";
 
 const toastMock = vi.fn();
 vi.mock("@/hooks/use-toast", () => ({ toast: (...args: unknown[]) => toastMock(...args) }));
+
+// This tab's own fetch assertions are about /api/chat and /api/conversations —
+// stub the model picker's background fetch so it doesn't pollute those.
+vi.mock("@/hooks/use-model-options", () => ({
+  useModelOptions: () => ({ options: [], loading: false }),
+}));
+
+const PROVIDER_KEYS: ProviderKeyRecord[] = [
+  {
+    id: "key-google",
+    provider: "google",
+    label: "Default",
+    isDefault: true,
+    baseUrl: null,
+    config: {},
+    createdAt: new Date("2026-01-01"),
+  },
+];
 
 const AGENTS: AgentOption[] = [
   { id: "customer-support", name: "Ada — Customer Support", role: "Support Specialist" },
@@ -40,7 +59,7 @@ describe("Chat", () => {
   });
 
   it("shows the empty-state prompt for the first employee by default", () => {
-    render(<Chat agents={AGENTS} configured={["google"]} conversations={[]} />);
+    render(<Chat agents={AGENTS} providerKeys={PROVIDER_KEYS} conversations={[]} />);
     expect(screen.getByText("Ask Ada — Customer Support anything")).toBeInTheDocument();
   });
 
@@ -48,7 +67,7 @@ describe("Chat", () => {
     render(
       <Chat
         agents={AGENTS}
-        configured={["google"]}
+        providerKeys={PROVIDER_KEYS}
         conversations={[]}
         initialAgentId="content-writer"
       />,
@@ -60,7 +79,7 @@ describe("Chat", () => {
     render(
       <Chat
         agents={AGENTS}
-        configured={["google"]}
+        providerKeys={PROVIDER_KEYS}
         conversations={[]}
         initialAgentId="does-not-exist"
       />,
@@ -71,9 +90,9 @@ describe("Chat", () => {
   it("switching employee via the switcher resets the thread", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(streamResponse("Hi!")));
-    render(<Chat agents={AGENTS} configured={["google"]} conversations={[]} />);
+    render(<Chat agents={AGENTS} providerKeys={PROVIDER_KEYS} conversations={[]} />);
 
-    await user.type(screen.getByPlaceholderText("Message the employee…"), "Hello");
+    await user.type(screen.getByPlaceholderText("Describe a task or ask a question"), "Hello");
     await user.click(screen.getByTestId("send"));
     expect(await screen.findByText("Hello")).toBeInTheDocument();
 
@@ -87,9 +106,9 @@ describe("Chat", () => {
   it("New chat clears the thread", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(streamResponse("Hi!")));
-    render(<Chat agents={AGENTS} configured={["google"]} conversations={[]} />);
+    render(<Chat agents={AGENTS} providerKeys={PROVIDER_KEYS} conversations={[]} />);
 
-    await user.type(screen.getByPlaceholderText("Message the employee…"), "Hello");
+    await user.type(screen.getByPlaceholderText("Describe a task or ask a question"), "Hello");
     await user.click(screen.getByTestId("send"));
     expect(await screen.findByText("Hello")).toBeInTheDocument();
 
@@ -125,7 +144,7 @@ describe("Chat", () => {
         ),
       ),
     );
-    render(<Chat agents={AGENTS} configured={["google"]} conversations={CONVERSATIONS} />);
+    render(<Chat agents={AGENTS} providerKeys={PROVIDER_KEYS} conversations={CONVERSATIONS} />);
 
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByText("Blog post draft"));
@@ -152,7 +171,7 @@ describe("Chat", () => {
           new Response(JSON.stringify({ error: { message: "Not found" } }), { status: 404 }),
         ),
     );
-    render(<Chat agents={AGENTS} configured={["google"]} conversations={CONVERSATIONS} />);
+    render(<Chat agents={AGENTS} providerKeys={PROVIDER_KEYS} conversations={CONVERSATIONS} />);
 
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByText("Blog post draft"));

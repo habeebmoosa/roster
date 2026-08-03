@@ -13,10 +13,17 @@ export const maxDuration = 30;
 
 const bodySchema = z.object({
   provider: z.string().min(1),
-  apiKey: z.string().min(1),
-  model: z.string().min(1),
+  // Simple single-secret shorthand (existing callers, e.g. the hire wizard) or the
+  // full bundle for a provider with more than one secret field (Bedrock, Vertex).
+  // Neither is required — Ollama needs no secret at all.
+  apiKey: z.string().min(1).optional(),
+  secrets: z.record(z.string(), z.string()).optional(),
+  // Purely the live-validation-ping model — optional, see AddProviderKeyInput.model.
+  model: z.string().min(1).optional(),
   baseUrl: z.string().trim().optional(),
   label: z.string().trim().optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
+  makeDefault: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {

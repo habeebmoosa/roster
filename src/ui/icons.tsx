@@ -1,4 +1,5 @@
 import {
+  ArrowUp,
   BookOpen,
   Check,
   ChevronDown,
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   Copy,
   ExternalLink,
+  History,
   LayoutGrid,
   Link2,
   LogOut,
@@ -16,6 +18,7 @@ import {
   Plus,
   Settings,
   Sparkles,
+  SquarePen,
   Users,
   X,
   type LucideProps,
@@ -51,5 +54,8 @@ export const IconCopy = withDefaultStroke(Copy);
 export const IconExternalLink = withDefaultStroke(ExternalLink);
 export const IconCheck = withDefaultStroke(Check);
 export const IconFeedback = withDefaultStroke(Megaphone);
+export const IconSend = withDefaultStroke(ArrowUp);
+export const IconHistory = withDefaultStroke(History);
+export const IconNewChat = withDefaultStroke(SquarePen);
 
 export type { LucideProps as IconProps };

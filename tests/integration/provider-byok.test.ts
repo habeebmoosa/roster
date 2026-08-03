@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { streamCompletion } from "@/core/providers";
 import { listAnalyticsEventsForUser } from "@/server/db/repositories/analytics-event.repository";
+import { listCredentialsForProvider } from "@/server/db/repositories/provider-key.repository";
 import { prisma } from "@/server/db/prisma";
 import {
   addProviderKey,
   getResolveInputForUser,
   listUserProviders,
+  updateProviderCredential,
 } from "@/server/providers/service";
 import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-server";
 
@@ -92,5 +94,211 @@ describe("BYOK provider service (mock provider)", () => {
     for await (const chunk of result.textStream) text += chunk;
 
     expect(text).toBe("Hello world");
+  });
+
+  it("adding a second credential for the same provider auto-labels it rather than overwriting the first", async () => {
+    // "custom" already has one credential ("Default") from the earlier test in this suite.
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+    });
+
+    const credentials = await listCredentialsForProvider(userId, "custom");
+    expect(credentials.map((c) => c.label).sort()).toEqual(["Default", "Default 2"]);
+    // The original stays the default; the newly added one does not silently take over.
+    expect(credentials.find((c) => c.label === "Default")?.isDefault).toBe(true);
+    expect(credentials.find((c) => c.label === "Default 2")?.isDefault).toBe(false);
+  });
+
+  it("rejects an explicit label that collides with an existing credential for the same provider", async () => {
+    await expect(
+      addProviderKey({
+        userId,
+        provider: "custom",
+        apiKey: API_KEY,
+        model: "mock-model",
+        baseUrl: mock.url,
+        label: "Default",
+      }),
+    ).rejects.toMatchObject({ code: "duplicate_label" });
+  });
+
+  it("a new makeDefault credential becomes the one getResolveInputForUser resolves to", async () => {
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+      label: "Newest",
+      makeDefault: true,
+    });
+
+    const credentials = await listCredentialsForProvider(userId, "custom");
+    expect(credentials.find((c) => c.label === "Newest")?.isDefault).toBe(true);
+    expect(credentials.filter((c) => c.isDefault)).toHaveLength(1);
+  });
+});
+
+describe("BYOK with a native (non-openai-compatible-kind) provider package", () => {
+  // Fireworks' first-party @ai-sdk/fireworks package is built on the same
+  // @ai-sdk/openai-compatible request path as the "custom" kind under the
+  // hood (confirmed via its re-exported OpenAICompatibleErrorData type) — so
+  // this mock server can stand in for it too, proving the new "fireworks"
+  // registry kind (10.9 Phase 2) round-trips end to end, not just that
+  // resolveModel() returns an object.
+  it("adds, validates, and streams through the native fireworks provider kind", async () => {
+    await addProviderKey({
+      userId,
+      provider: "fireworks",
+      apiKey: API_KEY,
+      model: "accounts/fireworks/models/test-model",
+      baseUrl: mock.url,
+    });
+
+    const input = await getResolveInputForUser(
+      userId,
+      "fireworks",
+      "accounts/fireworks/models/test-model",
+    );
+    const result = streamCompletion(input, "hello");
+
+    let text = "";
+    for await (const chunk of result.textStream) text += chunk;
+
+    expect(text).toBe("Hello world");
+  });
+});
+
+describe("multi-secret credential bundling (10.9 Phase 4)", () => {
+  // The mock server just checks the literal Authorization header value, so
+  // giving it the exact JSON string encodeSecretBundle() should produce lets
+  // this prove the real encode → validate → encrypt → decrypt → decode round
+  // trip end to end, without needing to fake AWS SigV4/Vertex JWT signing.
+  const BUNDLE = { accessKeyId: "AKIA123", secretAccessKey: "shh-secret" };
+  const ENCODED_BUNDLE = JSON.stringify(BUNDLE);
+
+  it("JSON-encodes a multi-key secrets bundle and authenticates the live ping with it", async () => {
+    const bundleMock = await startMockOpenAIServer({ apiKey: ENCODED_BUNDLE });
+    try {
+      await addProviderKey({
+        userId,
+        provider: "custom",
+        secrets: BUNDLE,
+        model: "mock-model",
+        baseUrl: bundleMock.url,
+        label: "Bundle test",
+      });
+
+      const stored = await prisma.providerKey.findFirst({
+        where: { userId, provider: "custom", label: "Bundle test" },
+      });
+      const { decryptSecret } = await import("@/server/crypto/vault");
+      expect(decryptSecret(stored!.encryptedKey)).toBe(ENCODED_BUNDLE);
+    } finally {
+      await bundleMock.close();
+    }
+  });
+});
+
+describe("updateProviderCredential — edit re-validation (10.9 Phase 4)", () => {
+  it("re-validates against the effective (merged) credential when a model is given", async () => {
+    await addProviderKey({
+      userId,
+      provider: "custom",
+      apiKey: API_KEY,
+      model: "mock-model",
+      baseUrl: mock.url,
+      label: "Edit target",
+    });
+    const [created] = await listCredentialsForProvider(userId, "custom").then((cs) =>
+      cs.filter((c) => c.label === "Edit target"),
+    );
+
+    // Renaming without a model: no live re-check, so a bad base URL is accepted.
+    const renamed = await updateProviderCredential(userId, created!.id, { label: "Renamed" });
+    expect(renamed.label).toBe("Renamed");
+
+    // Supplying a model re-validates — a wrong secret against the real mock server fails cleanly.
+    await expect(
+      updateProviderCredential(userId, created!.id, {
+        apiKey: "wrong-key",
+        model: "mock-model",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    // This specific credential is untouched by the failed edit attempt (still the old, valid key).
+    const { decryptSecret } = await import("@/server/crypto/vault");
+    const row = await prisma.providerKey.findUniqueOrThrow({ where: { id: created!.id } });
+    expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
+  });
+});
+
+describe("model-less validation — the catalog's suggested default stands in for a user-picked model", () => {
+  it("addProviderKey validates against suggestedModels[0] when no model is given", async () => {
+    // "openai" has real suggestedModels (unlike "custom", used elsewhere in this
+    // file specifically because it has none) — pointed at our local mock via
+    // baseUrl, a bad key against that default model still fails cleanly.
+    await expect(
+      addProviderKey({
+        userId,
+        provider: "openai",
+        apiKey: "wrong-key",
+        baseUrl: mock.url,
+        label: "no-model-add",
+      }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    await addProviderKey({
+      userId,
+      provider: "openai",
+      apiKey: API_KEY,
+      baseUrl: mock.url,
+      label: "no-model-add",
+    });
+    const [created] = await listCredentialsForProvider(userId, "openai").then((cs) =>
+      cs.filter((c) => c.label === "no-model-add"),
+    );
+    expect(created).toBeDefined();
+  });
+
+  it("updateProviderCredential re-validates a changed secret against the default even without a model", async () => {
+    const [created] = await listCredentialsForProvider(userId, "openai").then((cs) =>
+      cs.filter((c) => c.label === "no-model-add"),
+    );
+
+    await expect(
+      updateProviderCredential(userId, created!.id, { apiKey: "wrong-key" }),
+    ).rejects.toMatchObject({ code: "invalid_key" });
+
+    const { decryptSecret } = await import("@/server/crypto/vault");
+    const row = await prisma.providerKey.findUniqueOrThrow({ where: { id: created!.id } });
+    expect(decryptSecret(row.encryptedKey)).toBe(API_KEY);
+  });
+
+  it("skips the live ping entirely for a provider marked autoValidateModel: false (NVIDIA NIM) when no model is given", async () => {
+    // Real bug: NVIDIA NIM's public model list includes models a given key
+    // still gets a 404 calling — a per-model access grant, not a key problem.
+    // suggestedModels[0] is therefore not a safe silent validation default
+    // for this provider (catalog.ts's `autoValidateModel: false`). Point it at
+    // our local mock defensively — proving no request reaches it at all is
+    // the point, not exercising a genuine network call to NVIDIA either way.
+    const requestsBefore = mock.requests.length;
+    await addProviderKey({
+      userId,
+      provider: "nvidia-nim",
+      apiKey: "whatever-key-this-is",
+      baseUrl: mock.url,
+      label: "nim-no-model",
+    });
+
+    expect(mock.requests.length).toBe(requestsBefore);
+    const [created] = await listCredentialsForProvider(userId, "nvidia-nim").then((cs) =>
+      cs.filter((c) => c.label === "nim-no-model"),
+    );
+    expect(created).toBeDefined();
   });
 });

@@ -21,6 +21,19 @@ describe("UsageCost", () => {
 
   it("shows an empty state with no entries", () => {
     render(<UsageCost entries={[]} />);
-    expect(screen.getByText("Nothing to show yet")).toBeInTheDocument();
+    expect(screen.getByText("No usage data yet")).toBeInTheDocument();
+  });
+
+  it("shows the same empty state when entries exist but none have real spend data yet", () => {
+    render(
+      <UsageCost
+        entries={[
+          { id: "ada", name: "Ada", spendUsd: null },
+          { id: "milo", name: "Milo", spendUsd: null },
+        ]}
+      />,
+    );
+    expect(screen.getByText("No usage data yet")).toBeInTheDocument();
+    expect(screen.queryByText("Ada")).not.toBeInTheDocument();
   });
 });

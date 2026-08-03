@@ -35,6 +35,12 @@ describe("vault", () => {
     expect(() => decrypt("not-a-valid-payload", key)).toThrow();
   });
 
+  it("round-trips an empty secret (e.g. Ollama's no-API-key credential)", () => {
+    const payload = encrypt("", key);
+    expect(payload.startsWith("v1.")).toBe(true);
+    expect(decrypt(payload, key)).toBe("");
+  });
+
   it("masks a secret without revealing it", () => {
     expect(maskSecret("sk-abcd1234")).toBe("••••1234");
   });

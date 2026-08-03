@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
-import { upsertAgent } from "@/server/db/repositories/agent.repository";
+import type { Prisma } from "@/generated/prisma";
+import { getAgentDefinition, upsertAgent } from "@/server/db/repositories/agent.repository";
 import { createApiKey, revokeApiKey } from "@/server/db/repositories/api-key.repository";
 import { prisma } from "@/server/db/prisma";
 import { getRateLimiter } from "@/server/ratelimit";
@@ -115,12 +116,32 @@ describe("POST /v1/agents/{id}/chat", () => {
   });
 
   it("400s when neither the caller nor the agent specifies a model", async () => {
-    // customer-support's seeded YAML has no default `model`.
-    const res = await callRoute(
-      { messages: [{ role: "user", content: "hi" }] },
-      `Bearer ${rawKey}`,
-    );
-    expect(res.status).toBe(400);
+    // customer-support is real, shared dev data — a real user may well have
+    // configured a default model on it via the Model tab (upsertAgent()
+    // deliberately preserves that across any reseed, so this suite's own
+    // `beforeAll` re-seed above doesn't clear it either). Force the
+    // model-less case for just this one assertion, via a raw update that
+    // bypasses that protection on purpose, then restore the real value
+    // immediately — never leave shared data in the test-only state.
+    const before = await getAgentDefinition(AGENT_ID);
+    const { model: _model, ...withoutModel } = before!;
+    void _model;
+    await prisma.agent.update({
+      where: { id: AGENT_ID },
+      data: { definition: withoutModel as unknown as Prisma.InputJsonValue },
+    });
+    try {
+      const res = await callRoute(
+        { messages: [{ role: "user", content: "hi" }] },
+        `Bearer ${rawKey}`,
+      );
+      expect(res.status).toBe(400);
+    } finally {
+      await prisma.agent.update({
+        where: { id: AGENT_ID },
+        data: { definition: before as unknown as Prisma.InputJsonValue },
+      });
+    }
   });
 
   it("streams a reply for a valid key with an explicit provider/model", async () => {

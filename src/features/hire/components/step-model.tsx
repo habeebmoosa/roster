@@ -3,8 +3,13 @@
 // Pure data only — safe to import into a client bundle (no AI SDK / server code).
 import { getProvider, getProviderCatalog } from "@/core/providers/catalog";
 import { AddProviderForm } from "@/features/providers";
+import { useModelOptions } from "@/hooks/use-model-options";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { CardDescription, CardTitle, Input, Select } from "@/ui";
+
+function formatTokenCount(n: number): string {
+  return n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
+}
 
 export function StepModel({
   providerKeys,
@@ -17,6 +22,12 @@ export function StepModel({
   model: string;
   onChange: (fields: { provider?: string; model?: string }) => void;
 }) {
+  const connectedBaseUrl = providerKeys.find((k) => k.provider === provider)?.baseUrl ?? undefined;
+  const { options: modelOptions } = useModelOptions(
+    provider,
+    provider === "ollama" ? connectedBaseUrl : undefined,
+  );
+
   if (providerKeys.length === 0) {
     return (
       <div>
@@ -32,7 +43,9 @@ export function StepModel({
   }
 
   const catalogEntry = getProvider(provider);
-  const suggestedModels = catalogEntry?.suggestedModels ?? [];
+  const suggestedModels =
+    modelOptions.length > 0 ? modelOptions.map((o) => o.modelId) : (catalogEntry?.suggestedModels ?? []);
+  const selectedModelOption = modelOptions.find((o) => o.modelId === model.trim());
 
   return (
     <div>
@@ -77,6 +90,15 @@ export function StepModel({
               <option key={m} value={m} />
             ))}
           </datalist>
+          {selectedModelOption?.contextWindow ? (
+            <span className="text-text-faint text-xs">
+              {formatTokenCount(selectedModelOption.contextWindow)} context
+              {selectedModelOption.inputPricePerMTok != null &&
+              selectedModelOption.outputPricePerMTok != null
+                ? ` · $${selectedModelOption.inputPricePerMTok} / $${selectedModelOption.outputPricePerMTok} per 1M tokens`
+                : ""}
+            </span>
+          ) : null}
         </label>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/server/db/prisma";
 
 /**
@@ -78,12 +77,18 @@ export async function findNearestKnowledge(
 ): Promise<KnowledgeCandidate[]> {
   const vector = toVectorLiteral(embedding);
   const grantedPermissions = options.grantedPermissions ?? [];
+  // A fixed-shape query beats a conditionally-included SQL fragment
+  // (Prisma.sql/Prisma.empty embedded in a larger tagged template has been an
+  // unreliable pattern for parameter renumbering across Prisma versions) —
+  // this always has the same placeholders; only the bound `kindFilter` value
+  // changes between "no filter" (null) and a real kind.
+  const kindFilter = options.kind ?? null;
   const rows = await prisma.$queryRaw<KnowledgeCandidate[]>`
     SELECT id, "sourceUri", kind, content, permissions, 1 - (embedding <=> ${vector}::vector) AS score
     FROM agent_knowledge
     WHERE "agentId" = ${agentId}
       AND permissions <@ ${grantedPermissions}::text[]
-      ${options.kind ? Prisma.sql`AND kind = ${options.kind}` : Prisma.empty}
+      AND (${kindFilter}::text IS NULL OR kind = ${kindFilter})
     ORDER BY embedding <=> ${vector}::vector
     LIMIT ${options.limit}
   `;
@@ -97,6 +102,7 @@ export async function findKnowledgeByFullText(
   options: KnowledgeSearchOptions,
 ): Promise<KnowledgeCandidate[]> {
   const grantedPermissions = options.grantedPermissions ?? [];
+  const kindFilter = options.kind ?? null;
   const rows = await prisma.$queryRaw<KnowledgeCandidate[]>`
     SELECT id, "sourceUri", kind, content, permissions,
       ts_rank(to_tsvector('english', content), plainto_tsquery('english', ${query})) AS score
@@ -104,7 +110,7 @@ export async function findKnowledgeByFullText(
     WHERE "agentId" = ${agentId}
       AND permissions <@ ${grantedPermissions}::text[]
       AND to_tsvector('english', content) @@ plainto_tsquery('english', ${query})
-      ${options.kind ? Prisma.sql`AND kind = ${options.kind}` : Prisma.empty}
+      AND (${kindFilter}::text IS NULL OR kind = ${kindFilter})
     ORDER BY score DESC
     LIMIT ${options.limit}
   `;

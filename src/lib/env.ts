@@ -14,6 +14,7 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().url({ message: "must be a valid Postgres connection URL" }),
   DIRECT_URL: z.string().url({ message: "must be a valid Postgres connection URL" }).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_URL: z.string().url({ message: "must be a valid URL" }),
 
   // Auth.js — used to sign/encrypt the session JWT. Generate with `openssl rand -base64 33`.
   AUTH_SECRET: z.string().min(1, { message: "required — run `openssl rand -base64 33`" }),
@@ -34,6 +35,11 @@ export const envSchema = z.object({
   // instances. Falls back to an in-memory limiter when unset.
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+  // Optional: protects the model-catalog sync cron route. Vercel Cron sends
+  // `Authorization: Bearer $CRON_SECRET` automatically when this is set (its
+  // documented convention) — unset in local dev, the route just skips the check.
+  CRON_SECRET: z.string().min(1).optional(),
 });
 
 function decodesTo32Bytes(value: string): boolean {

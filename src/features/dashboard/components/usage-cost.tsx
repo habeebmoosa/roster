@@ -2,17 +2,20 @@ import { Card, CardTitle, EmptyState } from "@/ui";
 import type { UsageEntry } from "../types";
 
 export function UsageCost({ entries }: { entries: UsageEntry[] }) {
-  const maxSpend = Math.max(1, ...entries.map((e) => e.spendUsd));
+  // No real usage-tracking pipeline exists yet, so every entry's spendUsd is
+  // null today — show the honest empty state rather than a chart of zeros.
+  const withSpend = entries.filter((e): e is UsageEntry & { spendUsd: number } => e.spendUsd != null);
+  const maxSpend = Math.max(1, ...withSpend.map((e) => e.spendUsd));
 
   return (
     <Card>
       <CardTitle>Usage &amp; cost</CardTitle>
 
-      {entries.length === 0 ? (
-        <EmptyState className="mt-4 border-none p-6" title="Nothing to show yet" />
+      {withSpend.length === 0 ? (
+        <EmptyState className="mt-4 border-none p-6" title="No usage data yet" />
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
-          {entries.map((entry) => (
+          {withSpend.map((entry) => (
             <li key={entry.id} className="flex items-center gap-3">
               <span className="text-text w-32 shrink-0 truncate text-sm">{entry.name}</span>
               <span className="bg-bg-subtle h-2 flex-1 overflow-hidden rounded-full">

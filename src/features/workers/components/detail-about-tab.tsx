@@ -1,4 +1,4 @@
-import { Badge, Card, CardTitle } from "@/ui";
+import { Badge, Card, CardTitle, EmptyState } from "@/ui";
 import type { ActivityEntry } from "../detail-types";
 
 export function DetailAboutTab({
@@ -52,14 +52,18 @@ export function DetailAboutTab({
 
       <Card>
         <CardTitle>Recent activity</CardTitle>
-        <ul className="divide-border mt-3 divide-y">
-          {recentActivity.map((entry, i) => (
-            <li key={i} className="flex items-center justify-between py-2.5 text-sm">
-              <span className="text-text">{entry.text}</span>
-              <span className="text-text-faint shrink-0">{entry.time}</span>
-            </li>
-          ))}
-        </ul>
+        {recentActivity.length === 0 ? (
+          <EmptyState className="mt-3 border-none p-6" title="No activity yet" />
+        ) : (
+          <ul className="divide-border mt-3 divide-y">
+            {recentActivity.map((entry, i) => (
+              <li key={i} className="flex items-center justify-between py-2.5 text-sm">
+                <span className="text-text">{entry.text}</span>
+                <span className="text-text-faint shrink-0">{entry.time}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );

@@ -23,13 +23,13 @@ function pillClasses(active: boolean) {
   );
 }
 
-export function DetailApiTab({ agentId }: { agentId: string }) {
+export function DetailApiTab({ agentId, appUrl }: { agentId: string; appUrl: string }) {
   const [authMode, setAuthMode] = useState<AuthMode>("api-key");
   const [language, setLanguage] = useState<ApiLanguage>("curl");
 
   return (
     <Card>
-      <CardTitle>API access</CardTitle>
+      <CardTitle>API Access</CardTitle>
       <p className="text-text-muted mt-1 text-sm">
         Call this employee from your own backend or app.
       </p>
@@ -66,7 +66,7 @@ export function DetailApiTab({ agentId }: { agentId: string }) {
       <div className="mt-4">
         <p className="text-text-faint text-xs font-medium tracking-wide uppercase">Endpoint</p>
         <p className="bg-bg-subtle text-text mt-2 overflow-x-auto rounded-md p-3 font-mono text-xs">
-          <span className="text-accent">POST</span> {apiEndpointFor(agentId)}
+          <span className="text-accent">POST</span> {apiEndpointFor(appUrl, agentId)}
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export function DetailApiTab({ agentId }: { agentId: string }) {
           ))}
         </div>
         <pre className="bg-bg-subtle text-text mt-2 overflow-x-auto rounded-md p-3 text-xs">
-          <code>{apiCodeSnippet(agentId, authMode, language)}</code>
+          <code>{apiCodeSnippet(appUrl, agentId, authMode, language)}</code>
         </pre>
       </div>
     </Card>

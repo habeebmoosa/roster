@@ -25,7 +25,9 @@ function argValue(flag: string): string | undefined {
 async function main() {
   const agentDir = `agents/${AGENT_ID}`;
 
-  // Re-seed from YAML so ingestion always reflects the current definition on disk.
+  // Re-seed from YAML so ingestion always reflects the current definition on
+  // disk — upsertAgent() itself preserves any runtime-configured `model`
+  // (the YAML spec never sets one), so this doesn't clobber it.
   await upsertAgent(loadAgentDefinitionFile(`${agentDir}/agent.yaml`));
   const definition = await getAgentDefinition(AGENT_ID);
   if (!definition) throw new Error(`Agent "${AGENT_ID}" not found after seeding.`);

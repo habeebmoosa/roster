@@ -12,7 +12,8 @@ vi.mock("next/navigation", () => ({
 const OPENAI_KEY: ProviderKeyRecord = {
   id: "key-1",
   provider: "openai",
-  label: null,
+  label: "Default",
+  isDefault: true,
   baseUrl: null,
   config: {},
   createdAt: new Date("2026-01-01"),

@@ -51,3 +51,19 @@ export function parseAgentDefinition(raw: unknown): AgentDefinition {
   }
   return result.data;
 }
+
+/**
+ * Reseeding an agent from its YAML file (prisma/seed.ts, scripts/ingest-knowledge.ts)
+ * should refresh identity/prompt/tools without clobbering `model` — the one
+ * field that's only ever set at runtime (the worker detail page's Model tab,
+ * or the hire wizard), never authored in the YAML spec itself. Without this,
+ * every reseed silently wipes back to "no default model configured." If the
+ * YAML *does* specify a model (an author's deliberate default), that wins.
+ */
+export function preserveRuntimeModel(
+  fresh: AgentDefinition,
+  existing: AgentDefinition | null,
+): AgentDefinition {
+  if (fresh.model || !existing?.model) return fresh;
+  return { ...fresh, model: existing.model };
+}

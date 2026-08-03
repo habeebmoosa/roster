@@ -1,4 +1,3 @@
-export type { InvoiceFixture } from "./types";
 export { SettingsTabs, isSettingsTabValue } from "./components/settings-tabs";
 export { WorkspaceTab } from "./components/workspace-tab";
 export { ProfileTab } from "./components/profile-tab";

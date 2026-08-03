@@ -1,21 +1,26 @@
 export type AuthMode = "api-key" | "none";
 export type ApiLanguage = "curl" | "javascript" | "python";
 
-const ENDPOINT_BASE = "https://api.rosterai.com/v1/agents";
-
 /**
- * Real agent id, aspirational public domain — the real route it documents
- * (`POST /api/v1/agents/{id}/chat`, Phase 12) accepts exactly this shape:
- * `{messages, provider?, model?, apiKey?, baseUrl?}`, auth via
- * `Authorization: Bearer <platform key>`.
+ * The real route this documents (`POST /api/v1/agents/{id}/chat`, Phase 12)
+ * accepts exactly this shape: `{messages, provider?, model?, apiKey?, baseUrl?}`,
+ * auth via `Authorization: Bearer <platform key>`. `appUrl` (env.APP_URL) is
+ * read server-side (`@/lib/env` is server-only) and passed in by the caller —
+ * this module must stay import-free of it so it's safe in the "use client"
+ * DetailApiTab that renders it.
  */
-export function apiEndpointFor(agentId: string): string {
-  return `${ENDPOINT_BASE}/${agentId}/chat`;
+export function apiEndpointFor(appUrl: string, agentId: string): string {
+  return `${appUrl}/api/v1/agents/${agentId}/chat`;
 }
 
 /** Pure so the exact rendered text is unit-testable without mounting the tab. */
-export function apiCodeSnippet(agentId: string, authMode: AuthMode, language: ApiLanguage): string {
-  const endpoint = apiEndpointFor(agentId);
+export function apiCodeSnippet(
+  appUrl: string,
+  agentId: string,
+  authMode: AuthMode,
+  language: ApiLanguage,
+): string {
+  const endpoint = apiEndpointFor(appUrl, agentId);
   const withAuth = authMode === "api-key";
 
   switch (language) {

@@ -1,4 +1,9 @@
-export { agentDefinitionSchema, parseAgentDefinition, type AgentDefinition } from "./definition";
+export {
+  agentDefinitionSchema,
+  parseAgentDefinition,
+  preserveRuntimeModel,
+  type AgentDefinition,
+} from "./definition";
 export {
   buildSystemPrompt,
   type EpisodicMemoryEntry,

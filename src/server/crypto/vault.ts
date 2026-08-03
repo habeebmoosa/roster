@@ -36,14 +36,17 @@ export function encrypt(plaintext: string, key: Buffer): string {
 }
 
 export function decrypt(payload: string, key: Buffer): string {
-  const [version, ivB64, tagB64, ctB64] = payload.split(".");
-  if (version !== VERSION || !ivB64 || !tagB64 || !ctB64) {
+  const parts = payload.split(".");
+  if (parts.length !== 4 || parts[0] !== VERSION || !parts[1] || !parts[2]) {
     throw new Error("Malformed encrypted payload");
   }
-  const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(ivB64, "base64"));
-  decipher.setAuthTag(Buffer.from(tagB64, "base64"));
+  // ctB64 legitimately empty when the original plaintext was "" (e.g. Ollama's
+  // no-API-key credential) — only iv/tag must be non-empty.
+  const [, ivB64, tagB64, ctB64] = parts;
+  const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(ivB64!, "base64"));
+  decipher.setAuthTag(Buffer.from(tagB64!, "base64"));
   const plaintext = Buffer.concat([
-    decipher.update(Buffer.from(ctB64, "base64")),
+    decipher.update(Buffer.from(ctB64 ?? "", "base64")),
     decipher.final(),
   ]);
   return plaintext.toString("utf8");

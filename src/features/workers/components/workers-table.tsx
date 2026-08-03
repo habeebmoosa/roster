@@ -51,11 +51,13 @@ export function WorkersTable({ rows }: { rows: WorkerRow[] }) {
             <TableCell>
               <Badge variant="success">{row.status}</Badge>
             </TableCell>
-            <TableCell className="text-text-muted">{row.model}</TableCell>
-            <TableCell className="text-text-muted">{row.conversations30d}</TableCell>
-            <TableCell className="text-text-faint">{row.lastActivity}</TableCell>
+            <TableCell className={row.model ? "text-text-muted" : "text-text-faint italic"}>
+              {row.model ?? "Not configured"}
+            </TableCell>
+            <TableCell className="text-text-muted">{row.conversations30d ?? "—"}</TableCell>
+            <TableCell className="text-text-faint">{row.lastActivity ?? "—"}</TableCell>
             <TableCell className="text-text text-right font-medium">
-              ${row.spendUsd.toFixed(0)}
+              {row.spendUsd != null ? `$${row.spendUsd.toFixed(0)}` : "—"}
             </TableCell>
           </TableRow>
         ))}

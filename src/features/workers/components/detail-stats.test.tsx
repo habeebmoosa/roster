@@ -13,4 +13,11 @@ describe("DetailStats", () => {
     expect(screen.getByText("1.2M")).toBeInTheDocument();
     expect(screen.getByText("99.9%")).toBeInTheDocument();
   });
+
+  it("renders an honest '—' for every stat, not a fabricated number, when none is tracked yet", () => {
+    render(
+      <DetailStats conversations30d={null} spend30dUsd={null} tokens30dLabel={null} uptimePct={null} />,
+    );
+    expect(screen.getAllByText("—")).toHaveLength(4);
+  });
 });

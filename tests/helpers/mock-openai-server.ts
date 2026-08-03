@@ -11,21 +11,28 @@ export interface MockServer {
 /**
  * Minimal OpenAI-compatible endpoint for offline tests. Implements
  * /chat/completions for non-streaming (validation ping) and streaming (SSE)
- * requests, and /embeddings (returns a deterministic vector per input, sized
- * to the requested `dimensions`), returns 401 for a wrong API key, and
- * records request bodies.
+ * requests, /embeddings (returns a deterministic vector per input, sized to
+ * the requested `dimensions`), and /responses (the newer OpenAI Responses API
+ * shape some AI SDK packages — e.g. @ai-sdk/huggingface — use instead of
+ * classic chat-completions; non-streaming only, which is all the 1-token
+ * validation ping needs). Returns 401 for a wrong API key and records request
+ * bodies. Pass no `apiKey` (or `undefined`) to skip the auth check entirely —
+ * models a real Ollama instance, which ignores whatever bearer value (if
+ * any) it's sent; matching its exact "no credential" request shape isn't the
+ * point, just that nothing here rejects it.
  */
-export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<MockServer> {
+export async function startMockOpenAIServer(opts: { apiKey?: string } = {}): Promise<MockServer> {
   const requests: Array<Record<string, unknown>> = [];
 
   const server = createServer((req, res) => {
-    if (!req.url?.endsWith("/chat/completions") && !req.url?.endsWith("/embeddings")) {
+    const isResponses = req.url?.endsWith("/responses");
+    if (!req.url?.endsWith("/chat/completions") && !req.url?.endsWith("/embeddings") && !isResponses) {
       res.writeHead(404);
       res.end("not found");
       return;
     }
 
-    if (req.headers["authorization"] !== `Bearer ${opts.apiKey}`) {
+    if (opts.apiKey !== undefined && req.headers["authorization"] !== `Bearer ${opts.apiKey}`) {
       res.writeHead(401, { "content-type": "application/json" });
       res.end(
         JSON.stringify({ error: { message: "invalid api key", type: "invalid_request_error" } }),
@@ -65,8 +72,50 @@ export async function startMockOpenAIServer(opts: { apiKey: string }): Promise<M
         return;
       }
 
+      if (isResponses && !json.stream) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "resp-mock",
+            object: "response",
+            created_at: 0,
+            status: "completed",
+            model,
+            tools: [],
+            temperature: 1,
+            top_p: 1,
+            output: [
+              {
+                type: "message",
+                id: "msg-mock",
+                role: "assistant",
+                status: "completed",
+                content: [{ type: "output_text", text: "OK", annotations: [] }],
+              },
+            ],
+            usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+          }),
+        );
+        return;
+      }
+
       if (json.stream) {
         res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+        if (isResponses) {
+          // Minimal Responses-API SSE shape — just enough for a streamText()
+          // consumer to see "Hello world" arrive, not a byte-exact replica.
+          const event = (type: string, data: object) =>
+            `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
+          res.write(event("response.output_text.delta", { delta: "Hello" }));
+          res.write(event("response.output_text.delta", { delta: " world" }));
+          res.write(
+            event("response.completed", {
+              response: { id: "resp-mock", status: "completed", output: [] },
+            }),
+          );
+          res.end();
+          return;
+        }
         const frame = (delta: object, finish: string | null = null) =>
           `data: ${JSON.stringify({
             id: "chatcmpl-mock",

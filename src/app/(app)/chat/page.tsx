@@ -19,7 +19,6 @@ export default async function ChatPage({
     userId ? listUserProviders(userId) : Promise.resolve([]),
     userId ? listConversations(userId) : Promise.resolve([]),
   ]);
-  const configured = keys.map((key) => key.provider);
   const agentNameById = new Map(agents.map((agent) => [agent.id, agent.name]));
   const conversations: ConversationSummary[] = rawConversations.map((conversation) => ({
     id: conversation.id,
@@ -29,7 +28,7 @@ export default async function ChatPage({
     date: formatConversationDate(conversation.updatedAt),
   }));
 
-  if (configured.length === 0) {
+  if (keys.length === 0) {
     return (
       <div className="p-6">
         <Card>
@@ -60,7 +59,7 @@ export default async function ChatPage({
     <div className="h-full">
       <Chat
         agents={agents}
-        configured={configured}
+        providerKeys={keys}
         conversations={conversations}
         initialAgentId={agentId}
       />

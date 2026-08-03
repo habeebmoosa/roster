@@ -18,6 +18,9 @@ export {
   IconExternalLink,
   IconCheck,
   IconFeedback,
+  IconSend,
+  IconHistory,
+  IconNewChat,
 } from "./icons";
 export type { IconProps } from "./icons";
 export { Button } from "./button";
@@ -56,3 +59,4 @@ export type { ModalProps } from "./modal";
 export { Drawer } from "./drawer";
 export type { DrawerProps } from "./drawer";
 export { Toaster } from "./toast";
+export { Markdown } from "./markdown";

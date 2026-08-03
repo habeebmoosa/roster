@@ -7,8 +7,9 @@ import {
   WorkspaceTab,
 } from "@/features/settings";
 import { auth } from "@/server/auth";
+import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { listApiKeys } from "@/server/db/repositories/api-key.repository";
-import { listUserProviders } from "@/server/providers/service";
+import { listProviderCredentials, listUserProviders } from "@/server/providers/service";
 
 export default async function SettingsPage({
   searchParams,
@@ -17,10 +18,20 @@ export default async function SettingsPage({
 }) {
   const { tab } = await searchParams;
   const session = await auth();
-  const [keys, apiKeys] = await Promise.all([
+  const [defaultKeys, apiKeys] = await Promise.all([
     session?.user?.id ? listUserProviders(session.user.id) : Promise.resolve([]),
     session?.user?.id ? listApiKeys(session.user.id) : Promise.resolve([]),
   ]);
+
+  const credentialsByProvider: Record<string, ProviderKeyRecord[]> = {};
+  if (session?.user?.id) {
+    const userId = session.user.id;
+    await Promise.all(
+      defaultKeys.map(async (key) => {
+        credentialsByProvider[key.provider] = await listProviderCredentials(userId, key.provider);
+      }),
+    );
+  }
 
   const name = session?.user?.name ?? "Account";
   const email = session?.user?.email ?? "";
@@ -34,7 +45,7 @@ export default async function SettingsPage({
           initialTab={tab ?? "workspace"}
           workspace={<WorkspaceTab initialName={name} />}
           profile={<ProfileTab name={name} email={email} />}
-          providers={<ProvidersTab keys={keys} />}
+          providers={<ProvidersTab credentialsByProvider={credentialsByProvider} />}
           apiKeys={<ApiKeysTab keys={apiKeys} />}
           billing={<BillingTab />}
         />

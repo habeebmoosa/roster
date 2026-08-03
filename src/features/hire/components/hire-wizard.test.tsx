@@ -11,10 +11,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }));
 
+// The model picker's own fetch behavior is covered by use-model-options.test.ts —
+// stub it here so it doesn't add extra calls to this file's `fetch` assertions.
+vi.mock("@/hooks/use-model-options", () => ({
+  useModelOptions: () => ({ options: [], loading: false }),
+}));
+
 const OPENAI_KEY: ProviderKeyRecord = {
   id: "key-1",
   provider: "openai",
-  label: null,
+  label: "Default",
+  isDefault: true,
   baseUrl: null,
   config: {},
   createdAt: new Date("2026-01-01"),

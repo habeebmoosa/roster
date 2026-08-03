@@ -5,6 +5,7 @@ import {
   isEmbeddingCapable,
   resolveModel,
   validateProviderCredentials,
+  type ProviderCatalogEntry,
   type ResolveEmbeddingModelInput,
   type ResolveModelInput,
 } from "@/core/providers";
@@ -12,10 +13,15 @@ import { ANALYTICS_EVENTS } from "@/server/analytics/events";
 import { logEvent } from "@/server/analytics/log-event";
 import { decryptSecret, encryptSecret } from "@/server/crypto/vault";
 import {
-  deleteProviderKey,
-  getProviderKeyWithSecret,
-  listProviderKeys,
-  upsertProviderKey,
+  createProviderKey,
+  deleteAllCredentialsForProvider,
+  deleteProviderKeyById,
+  getDefaultProviderKey,
+  getProviderKeyById,
+  listCredentialsForProvider,
+  listDefaultProviderKeys,
+  setDefaultProviderKey,
+  updateProviderKey,
   type ProviderKeyRecord,
 } from "@/server/db/repositories/provider-key.repository";
 
@@ -23,19 +29,73 @@ import {
  * Server-side orchestration for BYOK: validate → encrypt → persist, and
  * request-time decrypt → resolve. The only place the plaintext key is handled,
  * and it is never logged or returned to the client.
+ *
+ * A provider can have several stored credentials (e.g. a personal key and a
+ * work key) — everything outside Settings resolves through the provider's
+ * current *default* credential, so runAgent()/chat/REST/eval never need to
+ * know a provider might have more than one.
  */
 export interface AddProviderKeyInput {
   userId: string;
   provider: string;
-  apiKey: string;
-  model: string; // used for the validation ping
+  /** Simple single-secret shorthand — wrapped into `{ apiKey }` if `secrets` isn't given. */
+  apiKey?: string;
+  /** The full secret bundle for providers with more than one secret field (e.g. Bedrock, Vertex). */
+  secrets?: Record<string, string>;
+  /**
+   * A model to validate with — purely an implementation detail of the live
+   * health-check ping, never asked of the user. Omit to use the catalog's
+   * `suggestedModels[0]`; for the few providers with no safe default (Azure's
+   * deployment name, Ollama's local-only models, a bare "custom" endpoint),
+   * omitting this skips the live ping entirely rather than guessing wrong.
+   */
+  model?: string;
   baseUrl?: string | null;
   label?: string | null;
   config?: Record<string, unknown>;
+  makeDefault?: boolean;
 }
 
+/**
+ * Encodes a credential's secret fields into the one string that gets
+ * encrypted and, later, decrypted back into `ResolveModelInput.apiKey`. A
+ * bundle that's just `{ apiKey }` passes through raw (every plain-bearer
+ * provider); anything else — Bedrock's access/secret key pair, Vertex's
+ * service-account fields — is JSON-encoded, matching what
+ * core/providers/registry.ts's `parseSecretBundle` expects for those kinds.
+ */
+function encodeSecretBundle(bundle: Record<string, string>): string {
+  const keys = Object.keys(bundle);
+  if (keys.length === 0) return "";
+  if (keys.length === 1 && keys[0] === "apiKey") return bundle["apiKey"]!;
+  return JSON.stringify(bundle);
+}
+
+/** One row per configured provider — that provider's default credential. Used everywhere outside Settings. */
 export function listUserProviders(userId: string): Promise<ProviderKeyRecord[]> {
-  return listProviderKeys(userId);
+  return listDefaultProviderKeys(userId);
+}
+
+/** Every credential configured for one provider — for the Settings "manage credentials" dialog. */
+export function listProviderCredentials(
+  userId: string,
+  provider: string,
+): Promise<ProviderKeyRecord[]> {
+  return listCredentialsForProvider(userId, provider);
+}
+
+/** The catalog's suggested first model — but only for providers where that's actually a safe silent guess (see `autoValidateModel`). */
+function defaultValidationModel(entry: ProviderCatalogEntry): string | undefined {
+  return entry.autoValidateModel === false ? undefined : entry.suggestedModels[0];
+}
+
+async function nextAvailableLabel(userId: string, provider: string, desired: string): Promise<string> {
+  const taken = new Set((await listCredentialsForProvider(userId, provider)).map((c) => c.label));
+  if (!taken.has(desired)) return desired;
+  for (let n = 2; ; n++) {
+    const candidate = `${desired} ${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
 }
 
 export async function addProviderKey(input: AddProviderKeyInput): Promise<void> {
@@ -45,24 +105,44 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
     throw new ByokError("bad_base_url", "This provider requires a base URL.");
   }
 
+  const bundle = input.secrets ?? (input.apiKey ? { apiKey: input.apiKey } : {});
+  const encodedSecret = encodeSecretBundle(bundle);
   const headers = extractHeaders(input.config);
 
-  // Validate against the live provider BEFORE persisting anything.
-  await validateProviderCredentials({
-    provider: input.provider,
-    model: input.model,
-    apiKey: input.apiKey,
-    baseUrl: input.baseUrl ?? null,
-    headers,
-  });
+  // Validate against the live provider BEFORE persisting anything — using a
+  // model the user picked, or else a safe catalog default (see AddProviderKeyInput.model).
+  // No default exists for a few providers (Azure, Ollama, custom endpoints,
+  // and NVIDIA NIM's per-model-gated access); for those, no model means no
+  // live check, rather than guessing wrong.
+  const validationModel = input.model?.trim() || defaultValidationModel(entry);
+  if (validationModel) {
+    await validateProviderCredentials({
+      provider: input.provider,
+      model: validationModel,
+      apiKey: encodedSecret,
+      baseUrl: input.baseUrl ?? null,
+      headers,
+      config: input.config,
+    });
+  }
 
-  await upsertProviderKey({
+  const requestedLabel = input.label?.trim();
+  if (requestedLabel) {
+    const taken = (await listCredentialsForProvider(input.userId, input.provider)).some(
+      (c) => c.label === requestedLabel,
+    );
+    if (taken) throw new ByokError("duplicate_label");
+  }
+  const label = requestedLabel || (await nextAvailableLabel(input.userId, input.provider, "Default"));
+
+  await createProviderKey({
     userId: input.userId,
     provider: input.provider,
-    label: input.label ?? null,
-    encryptedKey: encryptSecret(input.apiKey),
+    label,
+    encryptedKey: encryptSecret(encodedSecret),
     baseUrl: input.baseUrl ?? null,
     config: input.config ?? {},
+    makeDefault: input.makeDefault,
   });
 
   await logEvent({
@@ -72,17 +152,98 @@ export async function addProviderKey(input: AddProviderKeyInput): Promise<void> 
   });
 }
 
+/** Deletes every credential configured for a provider — today's "remove provider" action. */
 export function removeProviderKey(userId: string, provider: string): Promise<void> {
-  return deleteProviderKey(userId, provider);
+  return deleteAllCredentialsForProvider(userId, provider);
 }
 
-/** Build a ready-to-use model input for a user's stored provider (decrypts here). */
+/** Deletes one specific credential (promotes a new default if it was the default — see the repository). */
+export function removeProviderCredential(userId: string, credentialId: string): Promise<void> {
+  return deleteProviderKeyById(userId, credentialId);
+}
+
+/** Marks one credential as its provider's default. */
+export function setDefaultProviderCredential(
+  userId: string,
+  provider: string,
+  credentialId: string,
+): Promise<void> {
+  return setDefaultProviderKey(userId, provider, credentialId);
+}
+
+export interface UpdateProviderCredentialInput {
+  label?: string;
+  /** Simple single-secret shorthand — omit both this and `secrets` to keep the existing secret unchanged. */
+  apiKey?: string;
+  /** The full secret bundle, for a provider with more than one secret field. */
+  secrets?: Record<string, string>;
+  baseUrl?: string | null;
+  config?: Record<string, unknown>;
+  /**
+   * A model to validate with, same purely-a-validation-detail role as
+   * {@link AddProviderKeyInput.model} — omit to use the catalog default.
+   * Re-validation itself only runs when the secret actually changed (see
+   * {@link updateProviderCredential}), not on every edit.
+   */
+  model?: string;
+}
+
+/**
+ * Edits a credential in place; re-encrypts a new secret only if one was
+ * supplied. Re-validates live, against the effective (changed fields merged
+ * over the existing ones) credential, whenever the secret itself changed —
+ * an edit shouldn't be able to silently break a working credential — using
+ * `model` if given or else the catalog's default validation model, same
+ * fallback as adding one. A bare label/baseUrl/config tweak with no new
+ * secret isn't worth a live round trip and is trusted as-is.
+ */
+export async function updateProviderCredential(
+  userId: string,
+  credentialId: string,
+  input: UpdateProviderCredentialInput,
+): Promise<ProviderKeyRecord> {
+  const existing = await getProviderKeyById(userId, credentialId);
+  if (!existing) throw new ByokError("not_found");
+
+  const entry = getProvider(existing.provider);
+  const newBundle = input.secrets ?? (input.apiKey ? { apiKey: input.apiKey } : undefined);
+  const baseUrl = input.baseUrl !== undefined ? input.baseUrl : existing.baseUrl;
+  const config = input.config !== undefined ? input.config : existing.config;
+
+  // A changed secret always deserves a live re-check; an explicit `model`
+  // (still offered for the few providers with no safe default) also lets a
+  // user re-check an *unchanged* secret on demand.
+  const shouldValidate = Boolean(newBundle) || Boolean(input.model?.trim());
+  const validationModel = input.model?.trim() || (entry ? defaultValidationModel(entry) : undefined);
+  if (shouldValidate && validationModel) {
+    const encodedSecret = newBundle ? encodeSecretBundle(newBundle) : decryptSecret(existing.encryptedKey);
+    await validateProviderCredentials({
+      provider: existing.provider,
+      model: validationModel,
+      apiKey: encodedSecret,
+      baseUrl: baseUrl ?? null,
+      headers: extractHeaders(config),
+      config,
+    });
+  }
+
+  const updated = await updateProviderKey(userId, credentialId, {
+    label: input.label,
+    encryptedKey: newBundle ? encryptSecret(encodeSecretBundle(newBundle)) : undefined,
+    baseUrl: input.baseUrl,
+    config: input.config,
+  });
+  if (!updated) throw new ByokError("not_found");
+  return updated;
+}
+
+/** Build a ready-to-use model input for a user's stored provider (decrypts here). Resolves to the provider's current default credential. */
 export async function getResolveInputForUser(
   userId: string,
   provider: string,
   model: string,
 ): Promise<ResolveModelInput> {
-  const record = await getProviderKeyWithSecret(userId, provider);
+  const record = await getDefaultProviderKey(userId, provider);
   if (!record) {
     throw new ByokError("unknown_provider", "No key is configured for this provider.");
   }
@@ -92,6 +253,7 @@ export async function getResolveInputForUser(
     apiKey: decryptSecret(record.encryptedKey),
     baseUrl: record.baseUrl,
     headers: extractHeaders(record.config),
+    config: record.config,
   };
 }
 
@@ -117,7 +279,7 @@ const EMBEDDING_PROVIDER_PREFERENCE = ["openai", "google"];
 export async function getEmbeddingResolveInputForUser(
   userId: string,
 ): Promise<ResolveEmbeddingModelInput & { provider: string }> {
-  const keys = await listProviderKeys(userId);
+  const keys = await listDefaultProviderKeys(userId);
   const capable = keys.filter((k) => isEmbeddingCapable(k.provider));
   const candidate =
     EMBEDDING_PROVIDER_PREFERENCE.map((provider) =>
@@ -131,7 +293,7 @@ export async function getEmbeddingResolveInputForUser(
     );
   }
 
-  const record = await getProviderKeyWithSecret(userId, candidate.provider);
+  const record = await getDefaultProviderKey(userId, candidate.provider);
   if (!record) {
     throw new ByokError("embeddings_unsupported", "No key is configured for this provider.");
   }
