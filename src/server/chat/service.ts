@@ -1,5 +1,5 @@
-import { createUIMessageStream, type UIMessageChunk } from "ai";
-import type { AgentMessage } from "@/core/agent";
+import { createUIMessageStream, toUIMessageStream, type UIMessageChunk } from "ai";
+import type { AgentMessage, MessagePart } from "@/core/agent";
 import { ByokError, mapProviderError } from "@/core/providers";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
@@ -12,6 +12,7 @@ import {
   getConversationWithMessages,
   listConversations,
 } from "@/server/db/repositories/conversation.repository";
+import { MessagePartsAccumulator } from "./message-parts-accumulator";
 
 export class ConversationNotFoundError extends Error {
   constructor(conversationId: string) {
@@ -100,6 +101,11 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
       const stepEvents: WorkflowStepEvent[] = [];
       let assistantText = "";
       let textStarted = false;
+      let parts: MessagePart[] = [];
+
+      function mapError(err: unknown): string {
+        return (err instanceof ByokError ? err : mapProviderError(err)).userMessage;
+      }
 
       try {
         const result = await streamAgentChat({
@@ -114,19 +120,49 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
           },
         });
 
-        for await (const chunk of result.textStream) {
-          if (!textStarted) {
-            writer.write({ type: "text-start", id: ASSISTANT_TEXT_PART_ID });
-            textStarted = true;
+        if (result.fullStream) {
+          // The bypass (single-step) path — real token-by-token streaming,
+          // with reasoning + tool-call visibility. toUIMessageStream() never
+          // rethrows a mid-stream provider error; it converts it into an
+          // in-band `error` chunk via `onError` below, so this loop always
+          // completes normally.
+          const accumulator = new MessagePartsAccumulator();
+          const reader = toUIMessageStream({
+            stream: result.fullStream,
+            sendReasoning: true,
+            sendStart: false,
+            sendFinish: false,
+            onError: mapError,
+          }).getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            writer.write(value);
+            accumulator.apply(value);
           }
-          assistantText += chunk;
-          writer.write({ type: "text-delta", id: ASSISTANT_TEXT_PART_ID, delta: chunk });
+          parts = accumulator.parts;
+          assistantText = parts
+            .filter((p): p is Extract<MessagePart, { type: "text" }> => p.type === "text")
+            .map((p) => p.text)
+            .join("");
+        } else {
+          // The multi-step workflow path — already-validated final text,
+          // never streamed live (Phase 8). Wrapped as a single text part so
+          // the client's rendering model stays uniform either way.
+          for await (const chunk of result.textStream) {
+            if (!textStarted) {
+              writer.write({ type: "text-start", id: ASSISTANT_TEXT_PART_ID });
+              textStarted = true;
+            }
+            assistantText += chunk;
+            writer.write({ type: "text-delta", id: ASSISTANT_TEXT_PART_ID, delta: chunk });
+          }
+          if (textStarted) writer.write({ type: "text-end", id: ASSISTANT_TEXT_PART_ID });
+          if (assistantText) parts = [{ type: "text", text: assistantText }];
         }
-        if (textStarted) writer.write({ type: "text-end", id: ASSISTANT_TEXT_PART_ID });
       } catch (err) {
         if (textStarted) writer.write({ type: "text-end", id: ASSISTANT_TEXT_PART_ID });
-        const message = (err instanceof ByokError ? err : mapProviderError(err)).userMessage;
-        writer.write({ type: "error", errorText: message });
+        writer.write({ type: "error", errorText: mapError(err) });
       }
 
       if (assistantText) {
@@ -135,6 +171,7 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
           role: "assistant",
           content: assistantText,
           stepEvents: stepEvents.length > 0 ? stepEvents : undefined,
+          parts: parts.length > 0 ? parts : undefined,
         }).catch((err: unknown) => {
           console.error(
             `Failed to persist assistant message for conversation ${finalConversationId}:`,

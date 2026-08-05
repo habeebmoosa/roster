@@ -98,6 +98,10 @@ describe("sendChatMessage", () => {
       content: "I want a refund for order 123",
     });
     expect(conversation!.messages[1]).toMatchObject({ role: "assistant", content: "Hello world" });
+    // The bypass path's real streamText() call now flows through
+    // toUIMessageStream() + MessagePartsAccumulator (11.x follow-up) — a
+    // plain text-only reply persists as a single text part.
+    expect(conversation!.messages[1]!.parts).toEqual([{ type: "text", text: "Hello world" }]);
   });
 
   it("truncates a long first message into a shorter title", async () => {

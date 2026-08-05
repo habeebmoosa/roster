@@ -1,7 +1,11 @@
-import { stepCountIs, streamText, type LanguageModel, type TextStreamPart, type ToolSet } from "ai";
-
-/** Matches `streamText`'s own `providerOptions` param type — derived rather than importing `@ai-sdk/provider-utils` directly, since that package is only a transitive dependency of `ai`. */
-type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]["providerOptions"]>;
+import {
+  stepCountIs,
+  streamText,
+  type AsyncIterableStream,
+  type LanguageModel,
+  type TextStreamPart,
+  type ToolSet,
+} from "ai";
 import {
   decomposeTask,
   isSingleStepPlan,
@@ -12,6 +16,9 @@ import {
 } from "@/core/workflow";
 import type { AgentDefinition } from "./definition";
 import { buildSystemPrompt, type EpisodicMemoryEntry } from "./system-prompt";
+
+/** Matches `streamText`'s own `providerOptions` param type — derived rather than importing `@ai-sdk/provider-utils` directly, since that package is only a transitive dependency of `ai`. */
+type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]["providerOptions"]>;
 
 /** A single turn of working memory (the current session's conversation). */
 export interface AgentMessage {
@@ -31,7 +38,7 @@ export interface RunAgentResult {
   /** Source uris retrieved across the multi-step workflow path, if it ran (undefined on the bypass path — the caller already has its own upfront retrieval result there). */
   retrievedSourceUris?: string[];
   /** Only set on the bypass path — the raw AI SDK stream (text/reasoning/tool-call/tool-result parts), for the chat UI's live reasoning + tool-call visibility. The multi-step workflow path never streams live, so it has nothing to expose here. */
-  fullStream?: AsyncIterable<TextStreamPart<ToolSet>>;
+  fullStream?: AsyncIterableStream<TextStreamPart<ToolSet>>;
 }
 
 export interface RunAgentInput {
