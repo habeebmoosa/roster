@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProviderCatalog } from "@/core/providers/catalog";
 import {
+  getModelPricing,
   listModelsForProvider,
   replaceModelsForProvider,
   type ModelCatalogRecord,
@@ -109,6 +110,22 @@ describe("replaceModelsForProvider", () => {
     await replaceModelsForProvider(TEST_PROVIDER, [model({ modelId: "will-vanish" })]);
     await replaceModelsForProvider(TEST_PROVIDER, []);
     expect(await listModelsForProvider(TEST_PROVIDER)).toEqual([]);
+  });
+});
+
+describe("getModelPricing", () => {
+  it("returns a catalogued model's per-token pricing", async () => {
+    await replaceModelsForProvider(TEST_PROVIDER, [
+      model({ modelId: "priced-model", inputPricePerMTok: 3, outputPricePerMTok: 15 }),
+    ]);
+    expect(await getModelPricing(TEST_PROVIDER, "priced-model")).toEqual({
+      inputPricePerMTok: 3,
+      outputPricePerMTok: 15,
+    });
+  });
+
+  it("returns null for a model that isn't in the catalog at all", async () => {
+    expect(await getModelPricing(TEST_PROVIDER, "does-not-exist")).toBeNull();
   });
 });
 

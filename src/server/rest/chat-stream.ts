@@ -1,5 +1,6 @@
 import { ByokError, mapProviderError } from "@/core/providers";
 import { streamAgentChat, type StreamAgentChatInput } from "@/server/agents/service";
+import { logUsageEvent } from "@/server/analytics/usage";
 
 /**
  * SSE framing for the REST API — deliberately not the AI SDK's UI Message
@@ -20,8 +21,9 @@ function sseFrame(payload: unknown): Uint8Array {
 export function streamRestChat(input: StreamAgentChatInput): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      let result: Awaited<ReturnType<typeof streamAgentChat>> | undefined;
       try {
-        const result = await streamAgentChat(input);
+        result = await streamAgentChat(input);
         for await (const chunk of result.textStream) {
           controller.enqueue(sseFrame({ type: "delta", content: chunk }));
         }
@@ -35,6 +37,27 @@ export function streamRestChat(input: StreamAgentChatInput): ReadableStream<Uint
           }),
         );
       }
+
+      // Best-effort — the REST API never creates a Conversation, so this is
+      // the only place its usage gets captured at all. A logging failure
+      // must never surface to the caller as a chat error.
+      if (result) {
+        try {
+          const usage = await result.usage;
+          await logUsageEvent({
+            userId: input.userId,
+            agentId: input.agentId,
+            source: "rest",
+            provider: input.provider,
+            model: input.model,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+          });
+        } catch (err) {
+          console.error(`Failed to capture REST usage for agent "${input.agentId}":`, err);
+        }
+      }
+
       controller.close();
     },
   });

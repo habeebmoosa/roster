@@ -29,6 +29,23 @@ export function listModelsForProvider(provider: string): Promise<ModelCatalogRec
   return prisma.modelCatalog.findMany({ where: { provider }, orderBy: { modelId: "asc" } });
 }
 
+export interface ModelPricing {
+  inputPricePerMTok: number | null;
+  outputPricePerMTok: number | null;
+}
+
+/** A model's per-token pricing, for computing real usage cost — null if the model isn't in the catalog at all (a custom/self-hosted or uncatalogued model has no market price to look up). */
+export async function getModelPricing(
+  provider: string,
+  modelId: string,
+): Promise<ModelPricing | null> {
+  const row = await prisma.modelCatalog.findUnique({
+    where: { provider_modelId: { provider, modelId } },
+    select: { inputPricePerMTok: true, outputPricePerMTok: true },
+  });
+  return row;
+}
+
 /**
  * Wholesale-replaces a provider's models.dev-sourced rows with a fresh set —
  * a sync re-fetches that provider's *current* catalog, it doesn't patch

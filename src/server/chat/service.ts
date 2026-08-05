@@ -5,6 +5,7 @@ import type { WorkflowStepEvent } from "@/core/workflow";
 import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
 import { ANALYTICS_EVENTS } from "@/server/analytics/events";
 import { logEvent } from "@/server/analytics/log-event";
+import { logUsageEvent } from "@/server/analytics/usage";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
 import {
   appendMessage,
@@ -101,13 +102,14 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
       let assistantText = "";
       let textStarted = false;
       let parts: MessagePart[] = [];
+      let result: Awaited<ReturnType<typeof streamAgentChat>> | undefined;
 
       function mapError(err: unknown): string {
         return (err instanceof ByokError ? err : mapProviderError(err)).userMessage;
       }
 
       try {
-        const result = await streamAgentChat({
+        result = await streamAgentChat({
           userId: input.userId,
           agentId: finalAgentId,
           provider: input.provider,
@@ -177,6 +179,27 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
             err,
           );
         });
+      }
+
+      // Best-effort — real cost was incurred whether or not the turn
+      // produced any text (e.g. a tool call followed by a provider error),
+      // and a usage-tracking failure must never surface as a chat error.
+      if (result) {
+        try {
+          const usage = await result.usage;
+          await logUsageEvent({
+            userId: input.userId,
+            agentId: finalAgentId,
+            conversationId: finalConversationId,
+            source: "chat",
+            provider: input.provider,
+            model: input.model,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+          });
+        } catch (err) {
+          console.error(`Failed to capture usage for conversation ${finalConversationId}:`, err);
+        }
       }
 
       writer.write({ type: "finish" });

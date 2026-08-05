@@ -358,6 +358,30 @@ model Message {
   @@map("messages")
 }
 
+// One row per completed chat turn's real token usage (chat streaming UX
+// follow-up) — a dedicated table, not columns on Message, because the REST
+// API (server/rest/chat-stream.ts) never creates a Conversation/Message at
+// all, so a Message-scoped column couldn't capture usage from that surface.
+// No FK relations (same posture as AnalyticsEvent) — this is best-effort
+// telemetry, not authoritative conversation state.
+model UsageEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  agentId        String
+  conversationId String? // null for REST-sourced usage — no Conversation exists on that path
+  source         String // "chat" | "rest"
+  provider       String
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  costUsd        Float? // null when the model has no known pricing in ModelCatalog — never guessed
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, agentId, createdAt])
+  @@map("usage_events")
+}
+
 // ─────────────────────────────────────────────────────────────
 // ApiKey (Phase 12) — a hashed platform API key for programmatic access to
 // POST /v1/agents/{id}/chat. Unlike ProviderKey (AES-256-GCM, decrypted at

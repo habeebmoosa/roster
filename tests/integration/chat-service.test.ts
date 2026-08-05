@@ -10,6 +10,7 @@ import {
   createConversation,
   getConversationWithMessages,
 } from "@/server/db/repositories/conversation.repository";
+import { listUsageEventsForUser } from "@/server/db/repositories/usage-event.repository";
 import { addProviderKey } from "@/server/providers/service";
 import { ConversationNotFoundError, sendChatMessage } from "@/server/chat/service";
 import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-server";
@@ -46,6 +47,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.conversation.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+  await prisma.usageEvent.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
   await prisma.providerKey.deleteMany({ where: { userId } });
   await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
   await mock.close();
@@ -102,6 +104,19 @@ describe("sendChatMessage", () => {
     // toUIMessageStream() + MessagePartsAccumulator (11.x follow-up) — a
     // plain text-only reply persists as a single text part.
     expect(conversation!.messages[1]!.parts).toEqual([{ type: "text", text: "Hello world" }]);
+
+    // Real usage is captured for every turn (chat streaming UX follow-up) —
+    // "custom"/"mock-model" isn't in ModelCatalog, so cost is honestly null.
+    const usageEvents = await listUsageEventsForUser(userId);
+    expect(usageEvents).toHaveLength(1);
+    expect(usageEvents[0]).toMatchObject({
+      agentId: "customer-support",
+      conversationId: result.conversationId,
+      source: "chat",
+      provider: "custom",
+      model: "mock-model",
+      costUsd: null,
+    });
   });
 
   it("truncates a long first message into a shorter title", async () => {
