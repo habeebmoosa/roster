@@ -1,6 +1,6 @@
 # Real Usage Metrics — Overview & Workers
 
-> Status: draft, awaiting review.
+> Status: ✅ all 4 phases complete and shipped.
 
 ## 1. Goal
 
@@ -123,22 +123,22 @@ page's `spend30dUsd`/`tokens30dLabel`.
 
 ## 5. Phased build plan
 
-### Phase 1 — Conversations · 30d + Last activity (query-only)
+### Phase 1 — Conversations · 30d + Last activity (query-only) ✅
 - Repository functions; wire into dashboard, Workers list, worker detail.
 - Immediately turns several "—"s into real numbers, zero schema risk.
 
-### Phase 2 — Usage capture pipeline
+### Phase 2 — Usage capture pipeline ✅
 - `UsageEvent` table + migration (checked for the pgvector-index false-positive
   before applying, as always).
 - `getModelPricing()` (`ModelCatalog` lookup) + `logUsageEvent()`.
 - Wire into `server/chat/service.ts` and `server/rest/chat-stream.ts`.
 
-### Phase 3 — Spend/tokens aggregation + UI wiring
+### Phase 3 — Spend/tokens aggregation + UI wiring ✅
 - `getSpendSince()`/`getTokensSince()`.
 - Wire into dashboard ("Spend this month", "Usage & cost" bars), Workers
   list (Spend column), worker detail (`spend30dUsd`, `tokens30dLabel`).
 
-### Phase 4 — Polish
+### Phase 4 — Polish ✅
 - Full gate (typecheck/lint/unit/integration).
 - Real-browser check: send a few chat turns across different providers/models
   (including one with no `ModelCatalog` entry, to confirm the null-cost path),
