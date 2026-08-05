@@ -29,7 +29,7 @@ function jsonRpcError(id: unknown, code: number, message: string) {
   return { jsonrpc: "2.0", id, error: { code, message } };
 }
 
-function handleRequest(body: Record<string, unknown>): unknown {
+function handleRequest(body: Record<string, unknown>, capabilities: Record<string, unknown>): unknown {
   const { id, method, params } = body as {
     id?: unknown;
     method: string;
@@ -41,7 +41,7 @@ function handleRequest(body: Record<string, unknown>): unknown {
       return jsonRpcSuccess(id, {
         protocolVersion: "2025-06-18",
         serverInfo: { name: "mock-mcp-server", version: "1.0.0" },
-        capabilities: { tools: {}, resources: {} },
+        capabilities,
       });
 
     case "tools/list": {
@@ -90,11 +90,12 @@ function handleRequest(body: Record<string, unknown>): unknown {
 }
 
 export async function startMockMcpServer(
-  opts: { responseMode?: "json" | "sse" } = {},
+  opts: { responseMode?: "json" | "sse"; capabilities?: Record<string, unknown> } = {},
 ): Promise<MockMcpServer> {
   const requests: Array<Record<string, unknown>> = [];
   const sessionIdsSeen: Array<string | undefined> = [];
   const responseMode = opts.responseMode ?? "json";
+  const capabilities = opts.capabilities ?? { tools: {}, resources: {} };
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     let raw = "";
@@ -113,7 +114,7 @@ export async function startMockMcpServer(
         return;
       }
 
-      const message = handleRequest(body);
+      const message = handleRequest(body, capabilities);
 
       if (responseMode === "sse") {
         res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });

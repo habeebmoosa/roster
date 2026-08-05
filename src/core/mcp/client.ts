@@ -30,6 +30,13 @@ interface PaginatedResult {
 export class McpClient {
   private readonly transport: McpTransport;
   private initialized = false;
+  // Populated from initialize()'s response — a server that never declares
+  // "resources" (or "tools") has no listing endpoint to call at all. Some
+  // servers don't implement an undeclared method cleanly (hang instead of a
+  // quick "method not found"), so skipping the call outright avoids paying
+  // the transport's full timeout on every single turn for a capability the
+  // server was never going to serve.
+  private capabilities: Record<string, unknown> = {};
 
   constructor(serverUrl: string, options?: McpTransportOptions) {
     this.transport = new McpTransport(serverUrl, options);
@@ -43,11 +50,13 @@ export class McpClient {
     });
     await this.transport.notify("notifications/initialized");
     this.initialized = true;
+    this.capabilities = result.capabilities ?? {};
     return result;
   }
 
   async listTools(): Promise<McpTool[]> {
     this.assertInitialized();
+    if (!("tools" in this.capabilities)) return [];
     return this.paginate<McpTool>("tools/list", "tools");
   }
 
@@ -58,6 +67,7 @@ export class McpClient {
 
   async listResources(): Promise<McpResource[]> {
     this.assertInitialized();
+    if (!("resources" in this.capabilities)) return [];
     return this.paginate<McpResource>("resources/list", "resources");
   }
 
