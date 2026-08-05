@@ -3,18 +3,25 @@ import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { upsertAgent } from "@/server/db/repositories/agent.repository";
 import {
   appendMessage,
+  countConversationsSince,
+  countConversationsSinceByAgent,
   createConversation,
   getConversationWithMessages,
+  getLastActivityByAgent,
   listConversations,
 } from "@/server/db/repositories/conversation.repository";
 import { prisma } from "@/server/db/prisma";
 
 const AGENT_ID = "customer-support";
+const OTHER_AGENT_ID = "content-writer";
 let userId: string;
 let otherUserId: string;
 
 beforeAll(async () => {
-  await upsertAgent(loadAgentDefinitionFile(`agents/${AGENT_ID}/agent.yaml`));
+  await Promise.all([
+    upsertAgent(loadAgentDefinitionFile(`agents/${AGENT_ID}/agent.yaml`)),
+    upsertAgent(loadAgentDefinitionFile(`agents/${OTHER_AGENT_ID}/agent.yaml`)),
+  ]);
   const [user, otherUser] = await Promise.all([
     prisma.user.create({ data: { email: `conversation-${Date.now()}@test.local` } }),
     prisma.user.create({ data: { email: `conversation-other-${Date.now()}@test.local` } }),
@@ -141,5 +148,68 @@ describe("conversation repository", () => {
   it("does not list another user's conversations", async () => {
     const listed = await listConversations(userId);
     expect(listed.every((c) => c.title !== "Someone else's chat")).toBe(true);
+  });
+});
+
+describe("conversation counts and last activity (dashboard/workers metrics)", () => {
+  // A dedicated user — these assertions need precise counts, so they can't
+  // share the incrementally-built-up userId from the describe block above.
+  let metricsUserId: string;
+  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  beforeAll(async () => {
+    const user = await prisma.user.create({
+      data: { email: `conversation-metrics-${Date.now()}@test.local` },
+    });
+    metricsUserId = user.id;
+  });
+
+  afterAll(async () => {
+    await prisma.conversation.deleteMany({ where: { userId: metricsUserId } });
+    await prisma.user.delete({ where: { id: metricsUserId } });
+  });
+
+  it("is empty for a user with no conversations", async () => {
+    expect(await countConversationsSince(metricsUserId, AGENT_ID, since30d)).toBe(0);
+    expect(await countConversationsSinceByAgent(metricsUserId, since30d)).toEqual(new Map());
+    expect(await getLastActivityByAgent(metricsUserId)).toEqual(new Map());
+  });
+
+  it("counts conversations within the window, per agent, and reports the most recent activity", async () => {
+    const first = await createConversation(metricsUserId, AGENT_ID, "First");
+    await createConversation(metricsUserId, AGENT_ID, "Second");
+    const other = await createConversation(metricsUserId, OTHER_AGENT_ID, "Third");
+
+    expect(await countConversationsSince(metricsUserId, AGENT_ID, since30d)).toBe(2);
+    expect(await countConversationsSince(metricsUserId, OTHER_AGENT_ID, since30d)).toBe(1);
+
+    const byAgent = await countConversationsSinceByAgent(metricsUserId, since30d);
+    expect(byAgent.get(AGENT_ID)).toBe(2);
+    expect(byAgent.get(OTHER_AGENT_ID)).toBe(1);
+
+    // Bump `first`'s activity after `other` was created, so it becomes the most recent for AGENT_ID.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await appendMessage({ conversationId: first.id, role: "user", content: "hi again" });
+
+    const lastActivity = await getLastActivityByAgent(metricsUserId);
+    const agentActivity = lastActivity.get(AGENT_ID)!;
+    const otherActivity = lastActivity.get(OTHER_AGENT_ID)!;
+    expect(agentActivity.getTime()).toBeGreaterThan(other.createdAt.getTime());
+    expect(otherActivity.getTime()).toBe(other.createdAt.getTime());
+  });
+
+  it("excludes a conversation older than the window from the count, but not from last-activity", async () => {
+    const old = await createConversation(metricsUserId, AGENT_ID, "Old one");
+    const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    await prisma.conversation.update({
+      where: { id: old.id },
+      data: { createdAt: fortyDaysAgo, updatedAt: fortyDaysAgo },
+    });
+
+    const countBefore = await countConversationsSince(metricsUserId, AGENT_ID, since30d);
+    await createConversation(metricsUserId, AGENT_ID, "Recent, to compare against");
+    const countAfter = await countConversationsSince(metricsUserId, AGENT_ID, since30d);
+
+    expect(countAfter).toBe(countBefore + 1); // the 40-day-old one never counted
   });
 });

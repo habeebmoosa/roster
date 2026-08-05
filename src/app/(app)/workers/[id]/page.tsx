@@ -10,9 +10,12 @@ import {
 import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
+import { countConversationsSince } from "@/server/db/repositories/conversation.repository";
 import { listAgentConnectors } from "@/server/mcp/connect-service";
 import { listUserProviders } from "@/server/providers/service";
 import { Tabs, TabsList, TabsPanel, TabsTrigger } from "@/ui";
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,9 +23,12 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
   if (!definition) notFound();
 
   const userId = session?.user?.id;
-  const [providerKeys, connectors] = await Promise.all([
+  const [providerKeys, connectors, conversations30d] = await Promise.all([
     userId ? listUserProviders(userId) : Promise.resolve([]),
     userId ? listAgentConnectors(userId, id) : Promise.resolve([]),
+    userId
+      ? countConversationsSince(userId, id, new Date(Date.now() - THIRTY_DAYS_MS))
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -30,9 +36,10 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
       {/* No pause/disable concept exists yet — every agent is honestly "Active" today. */}
       <DetailHeader name={definition.name} role={definition.role} status="Active" />
 
-      {/* No usage-tracking pipeline exists yet — DetailStats renders "—" for each, never a fabricated number. */}
+      {/* spend30dUsd/tokens30dLabel/uptimePct: no usage-tracking pipeline or
+          uptime concept exists yet — honestly "—", never a fabricated number. */}
       <DetailStats
-        conversations30d={null}
+        conversations30d={conversations30d}
         spend30dUsd={null}
         tokens30dLabel={null}
         uptimePct={null}

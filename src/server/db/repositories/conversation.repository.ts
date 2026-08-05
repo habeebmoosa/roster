@@ -49,6 +49,42 @@ export function listConversations(userId: string): Promise<ConversationSummary[]
   });
 }
 
+/** Conversations started since a given date, for one agent — the worker detail page's "Conversations" stat. */
+export function countConversationsSince(
+  userId: string,
+  agentId: string,
+  since: Date,
+): Promise<number> {
+  return prisma.conversation.count({ where: { userId, agentId, createdAt: { gte: since } } });
+}
+
+/** Conversations started since a given date, per agent, for a user — one query for every row of a workers list/dashboard preview. Agents with none in the window are simply absent from the map. */
+export async function countConversationsSinceByAgent(
+  userId: string,
+  since: Date,
+): Promise<Map<string, number>> {
+  const rows = await prisma.conversation.groupBy({
+    by: ["agentId"],
+    where: { userId, createdAt: { gte: since } },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.agentId, r._count._all]));
+}
+
+/** Most recent conversation activity (updatedAt) per agent, for a user. Agents with no conversations at all are absent from the map. */
+export async function getLastActivityByAgent(userId: string): Promise<Map<string, Date>> {
+  const rows = await prisma.conversation.groupBy({
+    by: ["agentId"],
+    where: { userId },
+    _max: { updatedAt: true },
+  });
+  const entries: [string, Date][] = [];
+  for (const row of rows) {
+    if (row._max.updatedAt) entries.push([row.agentId, row._max.updatedAt]);
+  }
+  return new Map(entries);
+}
+
 /** A single conversation with its full message history, in order — null if it doesn't exist or belongs to a different user. */
 export async function getConversationWithMessages(
   userId: string,
