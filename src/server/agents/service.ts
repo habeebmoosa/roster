@@ -1,6 +1,6 @@
 import type { LanguageModel, Tool } from "ai";
 import { type AgentDefinition, type AgentMessage, runAgent } from "@/core/agent";
-import { resolveModel } from "@/core/providers";
+import { resolveModel, resolveReasoningOptions } from "@/core/providers";
 import { resolveBuiltInTools } from "@/core/tools";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { getAgentDefinition, listAgentSummaries } from "@/server/db/repositories/agent.repository";
@@ -121,5 +121,6 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
     episodicMemory,
     tools,
     onStepEvent: input.onStepEvent,
+    providerOptions: resolveReasoningOptions(input.provider, input.model),
   });
 }

@@ -1,3 +1,4 @@
+import type { MessagePart } from "@/core/agent";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/server/db/prisma";
@@ -16,6 +17,8 @@ export interface MessageRecord {
   content: string;
   /** Only ever present on an assistant turn that took the multi-step workflow path (Phase 8) — most turns have none. */
   stepEvents: WorkflowStepEvent[] | null;
+  /** Ordered text/reasoning/tool-call blocks for reload rendering — null on messages that predate this column (11.x follow-up) or on user turns; the client falls back to rendering `content` as a single text part. */
+  parts: MessagePart[] | null;
   createdAt: Date;
 }
 
@@ -28,10 +31,14 @@ export interface AppendMessageInput {
   role: string;
   content: string;
   stepEvents?: WorkflowStepEvent[] | null;
+  parts?: MessagePart[] | null;
 }
 
 const asStepEvents = (value: Prisma.JsonValue | null): WorkflowStepEvent[] | null =>
   Array.isArray(value) ? (value as unknown as WorkflowStepEvent[]) : null;
+
+const asMessageParts = (value: Prisma.JsonValue | null): MessagePart[] | null =>
+  Array.isArray(value) ? (value as unknown as MessagePart[]) : null;
 
 /** Every conversation for a user, across every agent — the History drawer's data, newest-first. */
 export function listConversations(userId: string): Promise<ConversationSummary[]> {
@@ -55,7 +62,11 @@ export async function getConversationWithMessages(
   const { messages, ...conversation } = row;
   return {
     ...conversation,
-    messages: messages.map((m) => ({ ...m, stepEvents: asStepEvents(m.stepEvents) })),
+    messages: messages.map((m) => ({
+      ...m,
+      stepEvents: asStepEvents(m.stepEvents),
+      parts: asMessageParts(m.parts),
+    })),
   };
 }
 
@@ -79,6 +90,7 @@ export async function appendMessage(input: AppendMessageInput): Promise<MessageR
         role: input.role,
         content: input.content,
         stepEvents: (input.stepEvents ?? undefined) as Prisma.InputJsonValue | undefined,
+        parts: (input.parts ?? undefined) as Prisma.InputJsonValue | undefined,
       },
     }),
     prisma.conversation.update({
@@ -86,5 +98,9 @@ export async function appendMessage(input: AppendMessageInput): Promise<MessageR
       data: { updatedAt: new Date() },
     }),
   ]);
-  return { ...message!, stepEvents: asStepEvents(message!.stepEvents) };
+  return {
+    ...message!,
+    stepEvents: asStepEvents(message!.stepEvents),
+    parts: asMessageParts(message!.parts),
+  };
 }

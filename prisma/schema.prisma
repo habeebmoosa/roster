@@ -345,6 +345,11 @@ model Message {
   role           String // "user" | "assistant"
   content        String
   stepEvents     Json?
+  // Ordered text/reasoning/tool-call blocks for reload rendering — additive to
+  // `content` (still the plain final text, unchanged by this column). Null on
+  // every message that predates this column and on user turns; the client
+  // falls back to rendering `content` as a single text part.
+  parts          Json?
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

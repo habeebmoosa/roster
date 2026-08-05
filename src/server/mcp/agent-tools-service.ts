@@ -61,7 +61,7 @@ export async function resolveMcpToolsForAgent(
             client.listTools(),
             listResourcesOrEmpty(client, serverId),
           ]);
-          return { serverId, client, tools, resources };
+          return { serverId, serverName: server.name, client, tools, resources };
         } catch (err) {
           console.error(`MCP server "${serverId}" unavailable for this turn, skipping:`, err);
           return null;

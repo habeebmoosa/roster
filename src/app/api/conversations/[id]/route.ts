@@ -28,6 +28,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         role: m.role,
         content: m.content,
         stepEvents: m.stepEvents ?? undefined,
+        parts: m.parts ?? undefined,
       })),
     },
   });

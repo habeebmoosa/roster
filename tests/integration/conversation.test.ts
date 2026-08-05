@@ -70,9 +70,50 @@ describe("conversation repository", () => {
     expect(full!.messages).toHaveLength(2);
     expect(full!.messages[0]).toMatchObject({ role: "user", content: "Where's my order?" });
     expect(full!.messages[0]!.stepEvents).toBeNull();
+    expect(full!.messages[0]!.parts).toBeNull();
     expect(full!.messages[1]).toMatchObject({ role: "assistant", content: "It's on the way." });
     expect(full!.messages[1]!.stepEvents).toEqual([
       { type: "step-start", index: 1, goal: "Look up the order" },
+    ]);
+  });
+
+  it("persists an assistant turn's ordered parts (text/reasoning/tool-call), reloadable as-is", async () => {
+    const conversation = await createConversation(userId, AGENT_ID, "Ticket lookup");
+
+    await appendMessage({
+      conversationId: conversation.id,
+      role: "assistant",
+      content: "Your ticket is resolved.",
+      parts: [
+        { type: "reasoning", text: "Let me check the ticket status.", done: true, startedAt: 0, endedAt: 10 },
+        {
+          type: "tool-call",
+          toolCallId: "call_1",
+          toolName: "mcp_linear_search",
+          source: "mcp",
+          connectorName: "Linear",
+          input: { query: "ticket 123" },
+          output: { status: "resolved" },
+          state: "output-available",
+        },
+        { type: "text", text: "Your ticket is resolved." },
+      ],
+    });
+
+    const full = await getConversationWithMessages(userId, conversation.id);
+    expect(full!.messages[0]!.parts).toEqual([
+      { type: "reasoning", text: "Let me check the ticket status.", done: true, startedAt: 0, endedAt: 10 },
+      {
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "mcp_linear_search",
+        source: "mcp",
+        connectorName: "Linear",
+        input: { query: "ticket 123" },
+        output: { status: "resolved" },
+        state: "output-available",
+      },
+      { type: "text", text: "Your ticket is resolved." },
     ]);
   });
 
