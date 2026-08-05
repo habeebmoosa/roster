@@ -45,6 +45,7 @@ export { EmptyState } from "./empty-state";
 export { ErrorBanner } from "./error-banner";
 export type { ErrorBannerProps } from "./error-banner";
 export { Skeleton } from "./skeleton";
+export { TypingIndicator } from "./typing-indicator";
 export { Tooltip } from "./tooltip";
 export {
   DropdownMenu,

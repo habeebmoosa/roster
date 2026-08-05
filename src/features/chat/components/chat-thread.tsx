@@ -1,7 +1,43 @@
-import { Avatar, ErrorBanner, Markdown } from "@/ui";
+import type { ReactNode } from "react";
+import type { MessagePart } from "@/core/agent";
+import { Avatar, ErrorBanner, Markdown, TypingIndicator } from "@/ui";
 import { deriveStepRows } from "../step-rows";
 import type { AgentOption, ChatMessage } from "../types";
+import { ReasoningBlock } from "./reasoning-block";
 import { StepEventsList } from "./step-events-list";
+import { ToolCallChip } from "./tool-call-chip";
+
+/** An empty text part renders nothing — used to decide whether the typing indicator should still show instead. */
+function isRenderable(part: MessagePart): boolean {
+  return part.type !== "text" || part.text.length > 0;
+}
+
+function AssistantBody({
+  message,
+  isStreamingPlaceholder,
+}: {
+  message: ChatMessage;
+  isStreamingPlaceholder: boolean;
+}): ReactNode {
+  const renderableParts = (message.parts ?? []).filter(isRenderable);
+
+  if (renderableParts.length > 0) {
+    return (
+      <>
+        {renderableParts.map((part, i) => {
+          if (part.type === "reasoning") return <ReasoningBlock key={i} part={part} />;
+          if (part.type === "tool-call") return <ToolCallChip key={i} part={part} />;
+          return <Markdown key={i}>{part.text}</Markdown>;
+        })}
+      </>
+    );
+  }
+
+  // Messages that predate the parts model (11.x follow-up) only ever have `content`.
+  if (message.content) return <Markdown>{message.content}</Markdown>;
+  if (isStreamingPlaceholder) return <TypingIndicator />;
+  return null;
+}
 
 export function ChatThread({
   messages,
@@ -46,11 +82,7 @@ export function ChatThread({
         return (
           <div key={i} className="flex flex-col gap-1.5">
             {stepRows.length > 0 ? <StepEventsList rows={stepRows} /> : null}
-            {message.content ? (
-              <Markdown>{message.content}</Markdown>
-            ) : isStreamingPlaceholder ? (
-              <p className="text-text text-sm">…</p>
-            ) : null}
+            <AssistantBody message={message} isStreamingPlaceholder={isStreamingPlaceholder} />
             {message.error ? (
               <ErrorBanner size="xs" className="mt-1.5">
                 ⚠️ {message.error}
