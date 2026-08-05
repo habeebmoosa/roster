@@ -6,12 +6,14 @@ import {
   DetailHeader,
   DetailModelTab,
   DetailStats,
+  formatTokenCount,
 } from "@/features/workers";
 import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
 import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
 import { countConversationsSince } from "@/server/db/repositories/conversation.repository";
 import { listAgentConnectors } from "@/server/mcp/connect-service";
+import { sumCostSince, sumTokensSince } from "@/server/db/repositories/usage-event.repository";
 import { listUserProviders } from "@/server/providers/service";
 import { Tabs, TabsList, TabsPanel, TabsTrigger } from "@/ui";
 
@@ -23,12 +25,13 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
   if (!definition) notFound();
 
   const userId = session?.user?.id;
-  const [providerKeys, connectors, conversations30d] = await Promise.all([
+  const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
+  const [providerKeys, connectors, conversations30d, spend30dUsd, tokens30d] = await Promise.all([
     userId ? listUserProviders(userId) : Promise.resolve([]),
     userId ? listAgentConnectors(userId, id) : Promise.resolve([]),
-    userId
-      ? countConversationsSince(userId, id, new Date(Date.now() - THIRTY_DAYS_MS))
-      : Promise.resolve(null),
+    userId ? countConversationsSince(userId, id, since30d) : Promise.resolve(null),
+    userId ? sumCostSince(userId, since30d, id) : Promise.resolve(null),
+    userId ? sumTokensSince(userId, id, since30d) : Promise.resolve(null),
   ]);
 
   return (
@@ -36,12 +39,11 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
       {/* No pause/disable concept exists yet — every agent is honestly "Active" today. */}
       <DetailHeader name={definition.name} role={definition.role} status="Active" />
 
-      {/* spend30dUsd/tokens30dLabel/uptimePct: no usage-tracking pipeline or
-          uptime concept exists yet — honestly "—", never a fabricated number. */}
+      {/* uptimePct: no uptime concept exists yet — honestly "—", never a fabricated number. */}
       <DetailStats
         conversations30d={conversations30d}
-        spend30dUsd={null}
-        tokens30dLabel={null}
+        spend30dUsd={spend30dUsd}
+        tokens30dLabel={tokens30d ? formatTokenCount(tokens30d.input + tokens30d.output) : null}
         uptimePct={null}
       />
 

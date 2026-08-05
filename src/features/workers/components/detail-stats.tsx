@@ -1,6 +1,6 @@
 import { StatTile } from "@/ui";
 
-/** No usage-tracking pipeline exists yet — every value is honestly "—" until it does, never a fabricated number. */
+/** Conversations/Spend/Tokens are real (Conversation + UsageEvent), null only when there's genuinely nothing to show. Uptime has no defined concept yet for a stateless, per-request agent — honestly "—", never a fabricated number. */
 export function DetailStats({
   conversations30d,
   spend30dUsd,

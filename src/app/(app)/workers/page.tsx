@@ -14,6 +14,7 @@ import {
   countConversationsSinceByAgent,
   getLastActivityByAgent,
 } from "@/server/db/repositories/conversation.repository";
+import { sumCostSinceByAgent } from "@/server/db/repositories/usage-event.repository";
 import { Button, Card } from "@/ui";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -28,14 +29,13 @@ export default async function WorkersPage({
   const userId = session?.user?.id;
   const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
 
-  const [agents, conversationsByAgent, lastActivityByAgent] = await Promise.all([
+  const [agents, conversationsByAgent, lastActivityByAgent, spendByAgent] = await Promise.all([
     listAgentSummaries(),
     userId ? countConversationsSinceByAgent(userId, since30d) : Promise.resolve(new Map<string, number>()),
     userId ? getLastActivityByAgent(userId) : Promise.resolve(new Map<string, Date>()),
+    userId ? sumCostSinceByAgent(userId, since30d) : Promise.resolve(new Map<string, number>()),
   ]);
 
-  // spendUsd: no usage/cost-tracking pipeline exists yet — honestly null,
-  // rendered as "—" by WorkersTable, never a fabricated number.
   const allRows: WorkerRow[] = agents.map((agent) => ({
     id: agent.id,
     name: agent.name,
@@ -46,7 +46,10 @@ export default async function WorkersPage({
     lastActivity: lastActivityByAgent.has(agent.id)
       ? formatLastActivity(lastActivityByAgent.get(agent.id)!)
       : null,
-    spendUsd: null,
+    // Only agents with at least one *priced* usage event in the window get a
+    // real number — an agent that's only ever used an uncatalogued model
+    // stays honestly null, same "never fabricate" posture as everywhere else.
+    spendUsd: spendByAgent.get(agent.id) ?? null,
   }));
 
   const result = filterAndPaginateWorkers(allRows, {

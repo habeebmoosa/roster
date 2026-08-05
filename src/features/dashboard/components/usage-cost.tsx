@@ -2,8 +2,9 @@ import { Card, CardTitle, EmptyState } from "@/ui";
 import type { UsageEntry } from "../types";
 
 export function UsageCost({ entries }: { entries: UsageEntry[] }) {
-  // No real usage-tracking pipeline exists yet, so every entry's spendUsd is
-  // null today — show the honest empty state rather than a chart of zeros.
+  // An entry's spendUsd is null when it has no priced usage this month (no
+  // usage at all, or only an uncatalogued model) — omit it rather than
+  // showing a misleading $0 bar.
   const withSpend = entries.filter((e): e is UsageEntry & { spendUsd: number } => e.spendUsd != null);
   const maxSpend = Math.max(1, ...withSpend.map((e) => e.spendUsd));
 
