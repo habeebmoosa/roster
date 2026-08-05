@@ -1,6 +1,6 @@
 # Chat Streaming UX — Thinking, Tool Visibility, Loading Animation
 
-> Status: draft, awaiting review.
+> Status: ✅ all 5 phases complete and shipped.
 
 ## 1. Goal
 
@@ -218,7 +218,7 @@ same reducer shape `deriveStepRows` already uses for step events).
 
 ## 5. Phased build plan
 
-### Phase 1 — Backend foundations (no visible UI change)
+### Phase 1 — Backend foundations (no visible UI change) ✅
 - `core/providers/reasoning.ts` + tests.
 - MCP tool metadata (`agent-tools.ts`, `agent-tools-service.ts`).
 - `run-agent.ts`: `providerOptions` passthrough + `fullStream` exposure.
@@ -226,18 +226,18 @@ same reducer shape `deriveStepRows` already uses for step events).
 - Prisma migration for `Message.parts` (SQL inspected before apply) +
   repository/route plumbing (written, not yet read by the client).
 
-### Phase 2 — Streaming plumbing
+### Phase 2 — Streaming plumbing ✅
 - `server/chat/service.ts`: unified `fullStream` loop via `toUIMessageStream()`,
   real reasoning/tool-call/tool-result chunks on the wire, `parts` persisted.
 
-### Phase 3 — Client state model
+### Phase 3 — Client state model ✅
 - `types.ts` (`MessagePart` union), `use-chat-stream.ts` parser rewrite,
   `/api/conversations/[id]` → `ChatMessage.parts` on history reload.
 
-### Phase 4 — UI
+### Phase 4 — UI ✅
 - `TypingIndicator`, `ReasoningBlock`, `ToolCallChip`, `ChatThread` rewrite.
 
-### Phase 5 — Polish
+### Phase 5 — Polish ✅
 - Full gate (typecheck/lint/unit/integration).
 - Real-browser check: a reasoning-capable model + an MCP-tool-enabled agent.
 - Fix any stale doc claims this surfaces.
