@@ -1,6 +1,6 @@
 import type { UIMessageChunk } from "ai";
-import type { MessagePart } from "@/core/agent";
 import type { McpToolMetadata } from "@/core/mcp";
+import type { MessagePart } from "./message-part";
 
 type TextPart = Extract<MessagePart, { type: "text" }>;
 type ReasoningPart = Extract<MessagePart, { type: "reasoning" }>;

@@ -65,7 +65,11 @@ describe("useChatStream", () => {
 
     expect(result.current.messages).toEqual([
       { role: "user", content: "Hi there" },
-      { role: "assistant", content: "Hello world" },
+      {
+        role: "assistant",
+        content: "Hello world",
+        parts: [{ type: "text", text: "Hello world" }],
+      },
     ]);
     expect(result.current.running).toBe(false);
     expect(result.current.error).toBe("");
@@ -163,6 +167,80 @@ describe("useChatStream", () => {
       { type: "step-start", index: 1, goal: "Look something up" },
       { type: "step-complete", index: 1, passed: true, attempts: 1 },
     ]);
+  });
+
+  it("builds an ordered reasoning + text parts[] as the model thinks then replies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sseResponse([
+          { type: "start" },
+          { type: "reasoning-start", id: "r1" },
+          { type: "reasoning-delta", id: "r1", delta: "Let me check." },
+          { type: "reasoning-end", id: "r1" },
+          { type: "text-start", id: "t1" },
+          { type: "text-delta", id: "t1", delta: "Resolved." },
+          { type: "text-end", id: "t1" },
+          { type: "finish" },
+        ]),
+      ),
+    );
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    await act(async () => {
+      await result.current.send("Hi");
+    });
+
+    const assistant = result.current.messages[1]!;
+    expect(assistant.parts?.map((p) => p.type)).toEqual(["reasoning", "text"]);
+    expect(assistant.parts?.[0]).toMatchObject({ text: "Let me check.", done: true });
+    expect(assistant.parts?.[1]).toEqual({ type: "text", text: "Resolved." });
+  });
+
+  it("builds a tool-call part carrying its connector attribution from toolMetadata", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sseResponse([
+          { type: "start" },
+          {
+            type: "tool-input-start",
+            toolCallId: "call_1",
+            toolName: "mcp_linear_search",
+            toolMetadata: { source: "mcp", serverId: "linear", serverName: "Linear" },
+          },
+          {
+            type: "tool-input-available",
+            toolCallId: "call_1",
+            toolName: "mcp_linear_search",
+            input: { query: "ticket 123" },
+          },
+          { type: "tool-output-available", toolCallId: "call_1", output: { status: "resolved" } },
+          { type: "text-start", id: "t1" },
+          { type: "text-delta", id: "t1", delta: "Your ticket is resolved." },
+          { type: "text-end", id: "t1" },
+          { type: "finish" },
+        ]),
+      ),
+    );
+    const { result } = renderHook(() => useChatStream({ agentId: "a", provider: "p", model: "m" }));
+
+    await act(async () => {
+      await result.current.send("What's the status of ticket 123?");
+    });
+
+    const assistant = result.current.messages[1]!;
+    expect(assistant.parts?.[0]).toEqual({
+      type: "tool-call",
+      toolCallId: "call_1",
+      toolName: "mcp_linear_search",
+      source: "mcp",
+      connectorName: "Linear",
+      input: { query: "ticket 123" },
+      output: { status: "resolved" },
+      state: "output-available",
+    });
+    expect(assistant.parts?.[1]).toEqual({ type: "text", text: "Your ticket is resolved." });
   });
 
   it("survives a long stream — many small deltas concatenate without truncation or reordering", async () => {

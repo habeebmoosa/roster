@@ -1,5 +1,5 @@
 import { createUIMessageStream, toUIMessageStream, type UIMessageChunk } from "ai";
-import type { AgentMessage, MessagePart } from "@/core/agent";
+import { MessagePartsAccumulator, type AgentMessage, type MessagePart } from "@/core/agent";
 import { ByokError, mapProviderError } from "@/core/providers";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
@@ -12,7 +12,6 @@ import {
   getConversationWithMessages,
   listConversations,
 } from "@/server/db/repositories/conversation.repository";
-import { MessagePartsAccumulator } from "./message-parts-accumulator";
 
 export class ConversationNotFoundError extends Error {
   constructor(conversationId: string) {
