@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { MessagePart } from "@/core/agent";
 import { cn } from "@/lib/cn";
-import { IconChevronDown } from "@/ui";
+import { IconChevronDown, Markdown } from "@/ui";
 
 type ReasoningPart = Extract<MessagePart, { type: "reasoning" }>;
 
@@ -38,8 +38,14 @@ export function ReasoningBlock({ part }: { part: ReasoningPart }) {
         />
       </button>
       {expanded ? (
-        <div className="border-border text-text-muted border-t px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap">
-          {part.text || "…"}
+        <div className="border-border text-text-muted border-t px-3 py-2">
+          {part.text ? (
+            <Markdown size="xs" className="text-text-muted">
+              {part.text}
+            </Markdown>
+          ) : (
+            <p className="text-xs leading-relaxed">…</p>
+          )}
         </div>
       ) : null}
     </div>

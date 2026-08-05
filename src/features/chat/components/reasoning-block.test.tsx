@@ -41,4 +41,16 @@ describe("ReasoningBlock", () => {
     await user.click(screen.getByRole("button"));
     expect(screen.queryByText("Working it out...")).not.toBeInTheDocument();
   });
+
+  it("renders the thought as real markdown, not literal asterisks/backticks", () => {
+    render(
+      <ReasoningBlock
+        part={part({ text: "**Identifying Tools**\n\nChecking `search` first.", done: false })}
+      />,
+    );
+    const bold = screen.getByText("Identifying Tools");
+    expect(bold.tagName).toBe("STRONG");
+    expect(screen.getByText("search").tagName).toBe("CODE");
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  });
 });

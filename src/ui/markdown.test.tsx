@@ -33,4 +33,13 @@ describe("Markdown", () => {
     render(<Markdown>{"<script>alert(1)</script>"}</Markdown>);
     expect(document.querySelector("script")).not.toBeInTheDocument();
   });
+
+  it("defaults to the sm size, and switches to xs via the size prop", () => {
+    const { container, rerender } = render(<Markdown>{"Hello"}</Markdown>);
+    expect(container.firstElementChild).toHaveClass("text-sm");
+
+    rerender(<Markdown size="xs">{"Hello"}</Markdown>);
+    expect(container.firstElementChild).toHaveClass("text-xs");
+    expect(container.firstElementChild).not.toHaveClass("text-sm");
+  });
 });

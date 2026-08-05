@@ -7,8 +7,12 @@ import { isJsonRpcErrorResponse, type JsonRpcRequest, type JsonRpcResponse } fro
  * observed in the wild taking over 60s before erroring, blocking the
  * connect flow the whole time. Bounding every request keeps a single bad
  * server from making "Connect" (or a chat turn's tool refresh) feel frozen.
+ * 30s (not shorter) leaves room for a custom server's own cold start —
+ * observed in the wild on a scale-to-zero dev deployment, where the first
+ * request after a period of idleness can take several times longer than a
+ * warm one before the server responds at all.
  */
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 export interface McpTransportOptions {
   /** Extra headers sent on every request — e.g. an Authorization bearer token (wired in 10.3/10.4). */
