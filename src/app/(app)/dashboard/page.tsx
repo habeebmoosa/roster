@@ -30,8 +30,7 @@ export default async function DashboardPage() {
       userId ? sumCostSinceByAgent(userId, thisMonth) : Promise.resolve(new Map<string, number>()),
     ]);
 
-  // No pause/disable concept yet, so every seeded agent counts as "active".
-  const activeEmployees = agents.length;
+  const activeEmployees = agents.filter((a) => a.status === "active").length;
   const totalEmployees = agents.length;
   const conversations30d = [...conversationsByAgent.values()].reduce((sum, n) => sum + n, 0);
   // null (never $0) when nothing priced landed this month — a user whose
@@ -43,7 +42,7 @@ export default async function DashboardPage() {
     id: agent.id,
     name: agent.name,
     role: agent.role,
-    status: "Active",
+    status: agent.status,
     model: agent.model?.model ?? null,
     conversations30d: conversationsByAgent.get(agent.id) ?? 0,
     lastActivity: lastActivityByAgent.has(agent.id)

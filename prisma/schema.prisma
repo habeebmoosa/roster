@@ -123,6 +123,9 @@ model Agent {
   name       String
   role       String
   definition Json
+  // Runtime operational state, not part of the portable definition spec —
+  // an agent's YAML file has no business declaring whether it's paused.
+  status     String   @default("active") // "active" | "paused"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

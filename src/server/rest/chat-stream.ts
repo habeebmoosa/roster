@@ -1,5 +1,5 @@
 import { ByokError, mapProviderError } from "@/core/providers";
-import { streamAgentChat, type StreamAgentChatInput } from "@/server/agents/service";
+import { AgentPausedError, streamAgentChat, type StreamAgentChatInput } from "@/server/agents/service";
 import { logUsageEvent } from "@/server/analytics/usage";
 
 /**
@@ -29,13 +29,22 @@ export function streamRestChat(input: StreamAgentChatInput): ReadableStream<Uint
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       } catch (err) {
-        const byokError = err instanceof ByokError ? err : mapProviderError(err);
-        controller.enqueue(
-          sseFrame({
-            type: "error",
-            error: { code: byokError.code, message: byokError.userMessage },
-          }),
-        );
+        if (err instanceof AgentPausedError) {
+          controller.enqueue(
+            sseFrame({
+              type: "error",
+              error: { code: "agent_paused", message: "This employee is paused." },
+            }),
+          );
+        } else {
+          const byokError = err instanceof ByokError ? err : mapProviderError(err);
+          controller.enqueue(
+            sseFrame({
+              type: "error",
+              error: { code: byokError.code, message: byokError.userMessage },
+            }),
+          );
+        }
       }
 
       // Best-effort — the REST API never creates a Conversation, so this is

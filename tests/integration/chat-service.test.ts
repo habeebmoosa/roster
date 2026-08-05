@@ -5,7 +5,7 @@ import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { AgentNotFoundError } from "@/server/agents/service";
 import { listAnalyticsEventsForUser } from "@/server/db/repositories/analytics-event.repository";
 import { prisma } from "@/server/db/prisma";
-import { upsertAgent } from "@/server/db/repositories/agent.repository";
+import { updateAgentStatus, upsertAgent } from "@/server/db/repositories/agent.repository";
 import {
   createConversation,
   getConversationWithMessages,
@@ -338,6 +338,30 @@ describe("sendChatMessage", () => {
       await prisma.analyticsEvent.deleteMany({ where: { userId: freshUser.id } });
       await prisma.providerKey.deleteMany({ where: { userId: freshUser.id } });
       await prisma.user.delete({ where: { id: freshUser.id } });
+    }
+  });
+
+  it("surfaces a paused agent as a structured in-stream error, persisting the user's turn regardless", async () => {
+    try {
+      await updateAgentStatus("customer-support", "paused");
+
+      const result = await sendChatMessage({
+        userId,
+        agentId: "customer-support",
+        provider: "custom",
+        model: "mock-model",
+        content: "Is anyone there?",
+      });
+      const drained = await drain(result.stream);
+
+      expect(drained.errorText).toBe("This employee is paused. Resume it to continue.");
+      expect(drained.text).toBe("");
+
+      const conversation = await getConversationWithMessages(userId, result.conversationId);
+      expect(conversation!.messages).toHaveLength(1);
+      expect(conversation!.messages[0]).toMatchObject({ role: "user", content: "Is anyone there?" });
+    } finally {
+      await updateAgentStatus("customer-support", "active");
     }
   });
 });

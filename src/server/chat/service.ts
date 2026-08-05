@@ -2,7 +2,7 @@ import { createUIMessageStream, toUIMessageStream, type UIMessageChunk } from "a
 import { MessagePartsAccumulator, type AgentMessage, type MessagePart } from "@/core/agent";
 import { ByokError, mapProviderError } from "@/core/providers";
 import type { WorkflowStepEvent } from "@/core/workflow";
-import { AgentNotFoundError, streamAgentChat } from "@/server/agents/service";
+import { AgentNotFoundError, AgentPausedError, streamAgentChat } from "@/server/agents/service";
 import { ANALYTICS_EVENTS } from "@/server/analytics/events";
 import { logEvent } from "@/server/analytics/log-event";
 import { logUsageEvent } from "@/server/analytics/usage";
@@ -105,6 +105,7 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Send
       let result: Awaited<ReturnType<typeof streamAgentChat>> | undefined;
 
       function mapError(err: unknown): string {
+        if (err instanceof AgentPausedError) return "This employee is paused. Resume it to continue.";
         return (err instanceof ByokError ? err : mapProviderError(err)).userMessage;
       }
 

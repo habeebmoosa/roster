@@ -40,7 +40,7 @@ export default async function WorkersPage({
     id: agent.id,
     name: agent.name,
     role: agent.role,
-    status: "Active",
+    status: agent.status,
     model: agent.model?.model ?? null,
     conversations30d: conversationsByAgent.get(agent.id) ?? 0,
     lastActivity: lastActivityByAgent.has(agent.id)

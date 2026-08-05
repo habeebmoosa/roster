@@ -7,7 +7,7 @@ function worker(id: string, name: string, role: string): WorkerRow {
     id,
     name,
     role,
-    status: "Active",
+    status: "active",
     model: "gpt-4o-mini",
     conversations30d: 0,
     lastActivity: "1h ago",

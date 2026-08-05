@@ -2,6 +2,7 @@ export type { WorkerRow } from "./types";
 export { filterAndPaginateWorkers, type WorkerListQuery, type WorkerListResult } from "./list";
 export { formatLastActivity } from "./format-date";
 export { formatTokenCount } from "./format-tokens";
+export { agentStatusBadge } from "./status-badge";
 export { WorkersTable } from "./components/workers-table";
 export { WorkersToolbar } from "./components/workers-toolbar";
 export { WorkersPagination } from "./components/workers-pagination";

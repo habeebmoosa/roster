@@ -10,7 +10,7 @@ import {
 } from "@/features/workers";
 import { env } from "@/lib/env";
 import { auth } from "@/server/auth";
-import { getAgentDefinition } from "@/server/db/repositories/agent.repository";
+import { getAgentDefinition, getAgentStatus } from "@/server/db/repositories/agent.repository";
 import { countConversationsSince } from "@/server/db/repositories/conversation.repository";
 import { listAgentConnectors } from "@/server/mcp/connect-service";
 import { sumCostSince, sumTokensSince } from "@/server/db/repositories/usage-event.repository";
@@ -26,7 +26,8 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
 
   const userId = session?.user?.id;
   const since30d = new Date(Date.now() - THIRTY_DAYS_MS);
-  const [providerKeys, connectors, conversations30d, spend30dUsd, tokens30d] = await Promise.all([
+  const [status, providerKeys, connectors, conversations30d, spend30dUsd, tokens30d] = await Promise.all([
+    getAgentStatus(id),
     userId ? listUserProviders(userId) : Promise.resolve([]),
     userId ? listAgentConnectors(userId, id) : Promise.resolve([]),
     userId ? countConversationsSince(userId, id, since30d) : Promise.resolve(null),
@@ -36,8 +37,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="flex flex-col gap-4 py-6">
-      {/* No pause/disable concept exists yet — every agent is honestly "Active" today. */}
-      <DetailHeader name={definition.name} role={definition.role} status="Active" />
+      <DetailHeader agentId={id} name={definition.name} role={definition.role} status={status ?? "active"} />
 
       {/* uptimePct: no uptime concept exists yet — honestly "—", never a fabricated number. */}
       <DetailStats

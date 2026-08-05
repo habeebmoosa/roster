@@ -8,7 +8,7 @@ const ROW: WorkerRow = {
   id: "customer-support",
   name: "Ada — Customer Support",
   role: "Customer Support Specialist",
-  status: "Active",
+  status: "active",
   model: "gemini-2.0-flash",
   conversations30d: 42,
   lastActivity: "12m ago",
@@ -45,5 +45,10 @@ describe("WorkersTable", () => {
     render(<WorkersTable rows={[{ ...ROW, model: null }]} />);
     expect(screen.getByText("Not configured")).toBeInTheDocument();
     expect(screen.queryByText("gemini-2.0-flash")).not.toBeInTheDocument();
+  });
+
+  it("shows a Paused badge for a paused agent", () => {
+    render(<WorkersTable rows={[{ ...ROW, status: "paused" }]} />);
+    expect(screen.getByText("Paused")).toBeInTheDocument();
   });
 });

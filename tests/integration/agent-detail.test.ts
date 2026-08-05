@@ -2,7 +2,9 @@ import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/server/db/prisma";
 import {
   getAgentDefinition,
+  getAgentStatus,
   listAgentSummaries,
+  updateAgentStatus,
   upsertAgent,
 } from "@/server/db/repositories/agent.repository";
 
@@ -93,6 +95,54 @@ describe("upsertAgent — model preservation (regression: this silently clobbere
       expect(after?.model).toEqual({ provider: "anthropic", model: "claude-sonnet-5" });
     } finally {
       await upsertAgent(original!);
+    }
+  });
+});
+
+describe("getAgentStatus / updateAgentStatus", () => {
+  it("defaults to active for a seeded agent, and is not affected by upsertAgent", async () => {
+    const original = await getAgentDefinition("content-writer");
+    try {
+      expect(await getAgentStatus("content-writer")).toBe("active");
+      await upsertAgent(original!); // re-upserting must never silently reset status
+      expect(await getAgentStatus("content-writer")).toBe("active");
+    } finally {
+      await upsertAgent(original!);
+      await updateAgentStatus("content-writer", "active");
+    }
+  });
+
+  it("pauses and resumes an agent, and re-upserting its definition doesn't undo the pause", async () => {
+    const original = await getAgentDefinition("content-writer");
+    try {
+      await updateAgentStatus("content-writer", "paused");
+      expect(await getAgentStatus("content-writer")).toBe("paused");
+
+      // A reseed/definition update must never silently resume a paused agent —
+      // status is runtime state, orthogonal to the portable definition spec.
+      await upsertAgent(original!);
+      expect(await getAgentStatus("content-writer")).toBe("paused");
+
+      await updateAgentStatus("content-writer", "active");
+      expect(await getAgentStatus("content-writer")).toBe("active");
+    } finally {
+      await upsertAgent(original!);
+      await updateAgentStatus("content-writer", "active");
+    }
+  });
+
+  it("returns null for an agent that doesn't exist", async () => {
+    expect(await getAgentStatus("__does_not_exist__")).toBeNull();
+  });
+
+  it("surfaces each agent's real status via listAgentSummaries", async () => {
+    try {
+      await updateAgentStatus("content-writer", "paused");
+      const summaries = await listAgentSummaries();
+      expect(summaries.find((a) => a.id === "content-writer")?.status).toBe("paused");
+      expect(summaries.find((a) => a.id === "customer-support")?.status).toBe("active");
+    } finally {
+      await updateAgentStatus("content-writer", "active");
     }
   });
 });
