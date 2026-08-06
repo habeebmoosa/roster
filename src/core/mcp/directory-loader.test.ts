@@ -11,7 +11,7 @@ describe("MCP directory loader", () => {
 
   it("loads every MCP server definition under mcp-servers/", () => {
     const defs = loadAllMcpServerDefinitions("mcp-servers");
-    expect(defs.length).toBeGreaterThanOrEqual(25);
+    expect(defs.length).toBeGreaterThanOrEqual(27);
     expect(defs.some((d) => d.id === "linear")).toBe(true);
     expect(defs.some((d) => d.id === "github")).toBe(true);
     expect(defs.every((d) => d.id.length > 0)).toBe(true);

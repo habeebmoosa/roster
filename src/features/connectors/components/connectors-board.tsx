@@ -1,16 +1,27 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Button, EmptyState } from "@/ui";
 import type { Connector } from "../types";
 import { AddCustomConnectorDialog } from "./add-custom-connector-dialog";
 import { ConnectRedirectToast } from "./connect-redirect-toast";
 import { ConnectorCard } from "./connector-card";
+import { ConnectorCategoryFilter } from "./connector-category-filter";
 import { ConnectorDetailDialog } from "./connector-detail-dialog";
 
 export function ConnectorsBoard({ connectors }: { connectors: Connector[] }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories = useMemo(
+    () => [...new Set(connectors.flatMap((c) => c.categories))].sort(),
+    [connectors],
+  );
+  const filtered =
+    selectedCategory === null
+      ? connectors
+      : connectors.filter((c) => c.categories.includes(selectedCategory));
 
   const selected = connectors.find((c) => c.id === openId) ?? null;
 
@@ -20,8 +31,17 @@ export function ConnectorsBoard({ connectors }: { connectors: Connector[] }) {
         <ConnectRedirectToast connectors={connectors} />
       </Suspense>
 
-      <div className="flex justify-end">
-        <Button variant="secondary" onClick={() => setAddOpen(true)}>
+      <div className="flex items-start justify-between gap-4">
+        {categories.length > 0 ? (
+          <ConnectorCategoryFilter
+            categories={categories}
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
+        ) : (
+          <div />
+        )}
+        <Button variant="secondary" onClick={() => setAddOpen(true)} className="shrink-0">
           + Add custom connector
         </Button>
       </div>
@@ -33,7 +53,7 @@ export function ConnectorsBoard({ connectors }: { connectors: Connector[] }) {
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {connectors.map((connector) => (
+          {filtered.map((connector) => (
             <ConnectorCard
               key={connector.id}
               connector={connector}

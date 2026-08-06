@@ -65,4 +65,73 @@ describe("ConnectorsBoard", () => {
     render(<ConnectorsBoard connectors={[]} />);
     expect(screen.getByText("No connectors available")).toBeInTheDocument();
   });
+
+  it("does not render a category filter when there are no connectors", () => {
+    render(<ConnectorsBoard connectors={[]} />);
+    expect(screen.queryByRole("button", { name: /Filter by/ })).not.toBeInTheDocument();
+  });
+
+  it("filters the grid to connectors matching a selected category", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConnectorsBoard
+        connectors={[
+          connector({ id: "notion", name: "Notion", categories: ["Docs"] }),
+          connector({ id: "linear", name: "Linear", categories: ["Engineering"] }),
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter by" }));
+    await user.click(screen.getByRole("menuitem", { name: "Engineering" }));
+
+    expect(screen.getByText("Linear")).toBeInTheDocument();
+    expect(screen.queryByText("Notion")).not.toBeInTheDocument();
+  });
+
+  it("selecting a new category replaces the previous filter rather than adding to it", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConnectorsBoard
+        connectors={[
+          connector({ id: "notion", name: "Notion", categories: ["Docs"] }),
+          connector({ id: "linear", name: "Linear", categories: ["Engineering"] }),
+          connector({ id: "figma", name: "Figma", categories: ["Docs", "Engineering"] }),
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter by" }));
+    await user.click(screen.getByRole("menuitem", { name: "Docs" }));
+    expect(screen.getByText("Notion")).toBeInTheDocument();
+    expect(screen.getByText("Figma")).toBeInTheDocument();
+    expect(screen.queryByText("Linear")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Filter by: Docs" }));
+    await user.click(screen.getByRole("menuitem", { name: "Engineering" }));
+    expect(screen.getByText("Linear")).toBeInTheDocument();
+    expect(screen.getByText("Figma")).toBeInTheDocument();
+    expect(screen.queryByText("Notion")).not.toBeInTheDocument();
+  });
+
+  it("clicking All categories clears an active category filter", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConnectorsBoard
+        connectors={[
+          connector({ id: "notion", name: "Notion", categories: ["Docs"] }),
+          connector({ id: "linear", name: "Linear", categories: ["Engineering"] }),
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Filter by" }));
+    await user.click(screen.getByRole("menuitem", { name: "Engineering" }));
+    expect(screen.queryByText("Notion")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Filter by: Engineering" }));
+    await user.click(screen.getByRole("menuitem", { name: "All categories" }));
+    expect(screen.getByText("Notion")).toBeInTheDocument();
+    expect(screen.getByText("Linear")).toBeInTheDocument();
+  });
 });
