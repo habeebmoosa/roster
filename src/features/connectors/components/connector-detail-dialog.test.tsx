@@ -88,6 +88,16 @@ describe("ConnectorDetailDialog", () => {
     );
   });
 
+  it("renders the vendor icon instead of the initial-letter badge when iconUrl is set", () => {
+    const { container } = render(
+      <ConnectorDetailDialog
+        connector={{ ...NOTION, iconUrl: "/connector-logos/notion.svg" }}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector("img")).toHaveAttribute("src", "/connector-logos/notion.svg");
+  });
+
   it("shows a Disconnect button when already connected", () => {
     render(<ConnectorDetailDialog connector={{ ...NOTION, connected: true }} onClose={() => {}} />);
     expect(screen.getByRole("button", { name: "Disconnect" })).toBeInTheDocument();

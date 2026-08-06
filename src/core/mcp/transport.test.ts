@@ -88,4 +88,20 @@ describe("McpTransport error handling", () => {
     expect(new McpProtocolError(-32601, "not found")).not.toBeInstanceOf(McpTransportError);
     expect(new McpTransportError("bad status", 500)).not.toBeInstanceOf(McpProtocolError);
   });
+
+  it("aborts a request that never responds, instead of hanging indefinitely", async () => {
+    const server = createServer(() => {
+      // Deliberately never calls res.end() — simulates a stalled/misbehaving server.
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+
+    try {
+      const transport = new McpTransport(`http://127.0.0.1:${port}`, { timeoutMs: 50 });
+      await expect(transport.request("initialize", {})).rejects.toThrow(McpTransportError);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });

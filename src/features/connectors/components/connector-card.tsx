@@ -1,15 +1,9 @@
 import { Badge, Card } from "@/ui";
-import type { BadgeVariant } from "@/ui";
 import type { Connector } from "../types";
-
-const TRUST_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
-  verified: { label: "Verified", variant: "success" },
-  community: { label: "Community", variant: "accent" },
-  custom: { label: "Custom", variant: "neutral" },
-};
+import { trustTierCopy } from "../trust";
 
 export function ConnectorCard({ connector, onOpen }: { connector: Connector; onOpen: () => void }) {
-  const trust = TRUST_BADGE[connector.trustTier] ?? TRUST_BADGE.custom!;
+  const trust = trustTierCopy(connector.trustTier);
 
   return (
     <Card
@@ -25,9 +19,16 @@ export function ConnectorCard({ connector, onOpen }: { connector: Connector; onO
         }
       }}
     >
-      <span className="bg-accent-soft text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold">
-        {connector.name[0]}
-      </span>
+      {connector.iconUrl ? (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white p-1.5 ring-1 ring-black/5">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a local static asset or a curated vendor URL, not a runtime-optimizable image */}
+          <img src={connector.iconUrl} alt="" className="h-full w-full object-contain" />
+        </span>
+      ) : (
+        <span className="bg-accent-soft text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold">
+          {connector.name[0]}
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="text-text truncate text-sm font-semibold">{connector.name}</p>

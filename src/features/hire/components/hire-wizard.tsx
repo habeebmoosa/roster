@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { getProvider } from "@/core/providers/catalog";
+import type { McpServerListItem } from "@/server/mcp/connect-service";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
 import { Card, Steps } from "@/ui";
 import { useHireWizard } from "../hooks/use-hire-wizard";
 import { StepAbilities } from "./step-abilities";
 import { StepBasics } from "./step-basics";
+import { StepConnectors } from "./step-connectors";
 import { StepKnowledge } from "./step-knowledge";
 import { StepModel } from "./step-model";
 import { StepReview } from "./step-review";
@@ -19,11 +21,18 @@ const STEPS = [
   { n: 2, label: "Basics" },
   { n: 3, label: "Knowledge" },
   { n: 4, label: "Abilities" },
-  { n: 5, label: "Model" },
-  { n: 6, label: "Review" },
+  { n: 5, label: "Connectors" },
+  { n: 6, label: "Model" },
+  { n: 7, label: "Review" },
 ];
 
-export function HireWizard({ providerKeys }: { providerKeys: ProviderKeyRecord[] }) {
+export function HireWizard({
+  providerKeys,
+  connectors,
+}: {
+  providerKeys: ProviderKeyRecord[];
+  connectors: McpServerListItem[];
+}) {
   const router = useRouter();
   const wizard = useHireWizard(providerKeys[0]?.provider ?? "");
   const { patch, form } = wizard;
@@ -67,6 +76,13 @@ export function HireWizard({ providerKeys }: { providerKeys: ProviderKeyRecord[]
           <StepAbilities selected={wizard.form.abilities} onToggle={wizard.toggleAbility} />
         ) : null}
         {wizard.step === 5 ? (
+          <StepConnectors
+            connectors={connectors}
+            selected={wizard.form.connectorIds}
+            onToggle={wizard.toggleConnector}
+          />
+        ) : null}
+        {wizard.step === 6 ? (
           <StepModel
             providerKeys={providerKeys}
             provider={wizard.form.provider}
@@ -74,7 +90,7 @@ export function HireWizard({ providerKeys }: { providerKeys: ProviderKeyRecord[]
             onChange={wizard.patch}
           />
         ) : null}
-        {wizard.step === 6 ? (
+        {wizard.step === 7 ? (
           <StepReview
             form={wizard.form}
             generatedId={wizard.generatedId}

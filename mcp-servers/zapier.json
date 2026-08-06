@@ -1,0 +1,17 @@
+{
+  "id": "zapier",
+  "name": "Zapier",
+  "description": "Run actions and search data across thousands of apps connected through Zapier",
+  "iconUrl": "/connector-logos/zapier.svg",
+  "developer": "Zapier Inc.",
+  "connectorUrl": "https://mcp.zapier.com/api/v1/connect",
+  "authType": "static_headers",
+  "categories": ["Productivity"],
+  "trustTier": "verified",
+  "documentationUrl": "https://zapier.com/mcp/remote",
+  "tools": [
+    { "name": "find-data", "description": "Search for records across any connected app" },
+    { "name": "run-action", "description": "Run a configured action in a connected app (e.g. create a record, send a message)" },
+    { "name": "list-connected-apps", "description": "List apps currently connected to your Zapier account" }
+  ]
+}

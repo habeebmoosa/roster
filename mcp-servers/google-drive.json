@@ -1,0 +1,19 @@
+{
+  "id": "google-drive",
+  "name": "Google Drive",
+  "description": "Search, read, and create files in Google Drive",
+  "iconUrl": "/connector-logos/google-drive.svg",
+  "developer": "Google LLC",
+  "connectorUrl": "https://drivemcp.googleapis.com/mcp/v1",
+  "authType": "oauth_dcr",
+  "categories": ["Storage", "Docs"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.google.com/workspace/drive/api/guides/configure-mcp-server",
+  "tools": [
+    { "name": "search-files", "description": "Search files and folders by name, type, or content" },
+    { "name": "get-file", "description": "Fetch a file's metadata and a natural-language representation of its content" },
+    { "name": "create-file", "description": "Create a new file, optionally inside a folder" },
+    { "name": "list-folder", "description": "List the contents of a folder" }
+  ],
+  "resources": [{ "name": "file", "description": "A single file's content and metadata" }]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "sentry",
+  "name": "Sentry",
+  "description": "Search and triage application errors and performance issues in Sentry",
+  "iconUrl": "/connector-logos/sentry.svg",
+  "developer": "Functional Software, Inc. (Sentry)",
+  "connectorUrl": "https://mcp.sentry.dev/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://docs.sentry.io/product/sentry-mcp/",
+  "tools": [
+    { "name": "search-issues", "description": "Search issues by error message, project, or status" },
+    { "name": "get-issue", "description": "Fetch a single issue's stack trace and event detail" },
+    { "name": "list-projects", "description": "List projects in an organization" },
+    { "name": "start-seer-fix", "description": "Kick off an AI-assisted root-cause analysis for an issue" }
+  ],
+  "resources": [{ "name": "issue", "description": "A single issue's full detail and recent events" }]
+}

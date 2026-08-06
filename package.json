@@ -1,6 +1,6 @@
 {
   "name": "roster",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "Roster — hireable, specialized AI employees that perform like experts on any LLM you bring.",
   "type": "module",
@@ -96,6 +96,7 @@
     "prettier": "^3",
     "prettier-plugin-tailwindcss": "^0.6",
     "prisma": "^6",
+    "simple-icons": "^16.28.0",
     "tailwindcss": "^4",
     "tsx": "^4",
     "typescript": "^5",

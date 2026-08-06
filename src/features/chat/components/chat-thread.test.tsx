@@ -27,13 +27,62 @@ describe("ChatThread", () => {
     expect(screen.getByText("I can help with that.")).toBeInTheDocument();
   });
 
-  it("shows a streaming placeholder for the last empty assistant message while running", () => {
+  it("shows a typing indicator for the last empty assistant message while running", () => {
     const messages: ChatMessage[] = [
       { role: "user", content: "Hi" },
       { role: "assistant", content: "" },
     ];
     render(<ChatThread messages={messages} employee={ADA} running={true} />);
-    expect(screen.getByText("…")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Thinking…");
+  });
+
+  it("does not show the typing indicator once a reasoning part has arrived", () => {
+    const messages: ChatMessage[] = [
+      { role: "user", content: "Hi" },
+      {
+        role: "assistant",
+        content: "",
+        parts: [{ type: "reasoning", text: "Let me think.", done: false, startedAt: 0 }],
+      },
+    ];
+    render(<ChatThread messages={messages} employee={ADA} running={true} />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("Thinking")).toBeInTheDocument();
+  });
+
+  it("renders a tool-call chip and a reasoning block in arrival order alongside the reply", () => {
+    const messages: ChatMessage[] = [
+      { role: "user", content: "What's the status of ticket 123?" },
+      {
+        role: "assistant",
+        content: "Your ticket is resolved.",
+        parts: [
+          { type: "reasoning", text: "Let me check.", done: true, startedAt: 0, endedAt: 2000 },
+          {
+            type: "tool-call",
+            toolCallId: "call_1",
+            toolName: "mcp_linear_search",
+            source: "mcp",
+            connectorName: "Linear",
+            input: { query: "ticket 123" },
+            output: { status: "resolved" },
+            state: "output-available",
+          },
+          { type: "text", text: "Your ticket is resolved." },
+        ],
+      },
+    ];
+    render(<ChatThread messages={messages} employee={ADA} running={false} />);
+    expect(screen.getByText("Thought for 2s")).toBeInTheDocument();
+    expect(screen.getByText("mcp_linear_search")).toBeInTheDocument();
+    expect(screen.getByText("via Linear")).toBeInTheDocument();
+    expect(screen.getByText("Your ticket is resolved.")).toBeInTheDocument();
+  });
+
+  it("falls back to rendering content when parts is empty (messages that predate the parts model)", () => {
+    const messages: ChatMessage[] = [{ role: "assistant", content: "An old reply.", parts: [] }];
+    render(<ChatThread messages={messages} employee={ADA} running={false} />);
+    expect(screen.getByText("An old reply.")).toBeInTheDocument();
   });
 
   it("renders step events above the assistant's reply", () => {

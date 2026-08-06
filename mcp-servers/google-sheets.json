@@ -1,0 +1,19 @@
+{
+  "id": "google-sheets",
+  "name": "Google Sheets",
+  "description": "Search, read, and update spreadsheets in Google Sheets",
+  "iconUrl": "/connector-logos/google-sheets.svg",
+  "developer": "Google LLC",
+  "connectorUrl": "https://sheetsmcp.googleapis.com/mcp/v1",
+  "authType": "oauth_dcr",
+  "categories": ["Docs", "Productivity"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+  "tools": [
+    { "name": "search-spreadsheets", "description": "Search spreadsheets by title or content" },
+    { "name": "get-values", "description": "Fetch values from a sheet or cell range" },
+    { "name": "update-spreadsheet", "description": "Write values into a sheet or cell range" },
+    { "name": "create-spreadsheet", "description": "Create a new spreadsheet" }
+  ],
+  "resources": [{ "name": "sheet", "description": "A single sheet's values and structure" }]
+}

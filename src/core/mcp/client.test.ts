@@ -84,4 +84,26 @@ describe("McpClient", () => {
 
     expect(contents[0]?.text).toBe("resource A content");
   });
+
+  it("skips resources/list entirely when the server never declared a resources capability", async () => {
+    mock = await startMockMcpServer({ capabilities: { tools: {} } });
+    const client = new McpClient(mock.url);
+    await client.initialize();
+
+    const resources = await client.listResources();
+
+    expect(resources).toEqual([]);
+    expect(mock.requests.map((r) => r.method)).not.toContain("resources/list");
+  });
+
+  it("skips tools/list entirely when the server never declared a tools capability", async () => {
+    mock = await startMockMcpServer({ capabilities: { resources: {} } });
+    const client = new McpClient(mock.url);
+    await client.initialize();
+
+    const tools = await client.listTools();
+
+    expect(tools).toEqual([]);
+    expect(mock.requests.map((r) => r.method)).not.toContain("tools/list");
+  });
 });

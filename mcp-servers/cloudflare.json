@@ -1,0 +1,19 @@
+{
+  "id": "cloudflare",
+  "name": "Cloudflare",
+  "description": "Manage Cloudflare DNS zones, Workers, and account analytics",
+  "iconUrl": "/connector-logos/cloudflare.svg",
+  "developer": "Cloudflare, Inc.",
+  "connectorUrl": "https://mcp.cloudflare.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/",
+  "tools": [
+    { "name": "list-zones", "description": "List DNS zones in an account" },
+    { "name": "get-dns-records", "description": "Fetch DNS records for a zone" },
+    { "name": "list-workers", "description": "List deployed Workers scripts" },
+    { "name": "get-analytics", "description": "Fetch traffic and performance analytics for a zone" }
+  ],
+  "resources": [{ "name": "zone", "description": "A DNS zone's configuration and records" }]
+}

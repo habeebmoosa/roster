@@ -8,7 +8,7 @@ const ROW: WorkerRow = {
   id: "customer-support",
   name: "Ada — Customer Support",
   role: "Customer Support Specialist",
-  status: "Active",
+  status: "active",
   model: "gpt-4o-mini",
   conversations30d: 12,
   lastActivity: "1h ago",
@@ -40,5 +40,10 @@ describe("WorkerPreview", () => {
     render(<WorkerPreview rows={[{ ...ROW, model: null }]} />);
     expect(screen.getByText("Not configured")).toBeInTheDocument();
     expect(screen.queryByText("gpt-4o-mini")).not.toBeInTheDocument();
+  });
+
+  it("shows a Paused badge for a paused agent", () => {
+    render(<WorkerPreview rows={[{ ...ROW, status: "paused" }]} />);
+    expect(screen.getByText("Paused")).toBeInTheDocument();
   });
 });

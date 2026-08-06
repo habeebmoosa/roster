@@ -1,0 +1,19 @@
+{
+  "id": "neon",
+  "name": "Neon",
+  "description": "Manage Neon Postgres projects and branches, and run SQL queries",
+  "iconUrl": "/connector-logos/neon.svg",
+  "developer": "Neon, Inc.",
+  "connectorUrl": "https://mcp.neon.tech/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering", "Storage"],
+  "trustTier": "verified",
+  "documentationUrl": "https://neon.com/docs/ai/neon-mcp-server",
+  "tools": [
+    { "name": "list-projects", "description": "List Neon projects in your account" },
+    { "name": "run-sql", "description": "Run a SQL query against a database branch" },
+    { "name": "create-branch", "description": "Create a new database branch" },
+    { "name": "describe-table-schema", "description": "Fetch a table's schema" }
+  ],
+  "resources": [{ "name": "branch", "description": "A database branch's connection detail and schema" }]
+}

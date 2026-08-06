@@ -8,12 +8,30 @@ type RawJsonSchema = Parameters<typeof jsonSchema>[0];
 export interface McpServerToolBinding {
   /** The McpServer.id this client is connected to — used to namespace tool ids and avoid collisions across servers. */
   serverId: string;
+  /** This server's display name — carried onto every tool call's `toolMetadata` so the chat UI can attribute a call to its connector without parsing the namespaced tool id back apart. */
+  serverName: string;
   /** An already-`initialize()`d client for this server. */
   client: McpClient;
   /** This server's tools, from a prior `listTools()` call. */
   tools: McpTool[];
   /** This server's resources, from a prior `listResources()` call — omit or leave empty for a server with none. */
   resources?: McpResource[];
+}
+
+/**
+ * Attached to every MCP tool via `tool({ metadata })`, which the AI SDK
+ * propagates onto that call's `toolMetadata` on every tool-call/tool-result
+ * event and UI message part — documented as "useful for sources of dynamic
+ * tools (e.g. an MCP server) to identify themselves." Built-in tools carry no
+ * metadata at all, so "has `toolMetadata`" is how the UI tells an MCP-sourced
+ * call from a built-in one.
+ */
+export interface McpToolMetadata {
+  source: "mcp";
+  serverId: string;
+  serverName: string;
+  // Satisfies `tool()`'s `metadata?: JSONObject` constraint while keeping the three fields above named/typed for callers.
+  [key: string]: string;
 }
 
 /** A namespaced tool id such that two servers can each expose a tool named e.g. "search" without colliding. */
@@ -31,11 +49,14 @@ export function mcpToolId(serverId: string, toolName: string): string {
 export function wrapMcpToolsForAgent(bindings: McpServerToolBinding[]): Record<string, Tool> {
   const result: Record<string, Tool> = {};
 
-  for (const { serverId, client, tools, resources } of bindings) {
+  for (const { serverId, serverName, client, tools, resources } of bindings) {
+    const metadata: McpToolMetadata = { source: "mcp", serverId, serverName };
+
     for (const mcpTool of tools) {
       result[mcpToolId(serverId, mcpTool.name)] = tool({
         description: mcpTool.description ?? `Call "${mcpTool.name}" on the "${serverId}" server.`,
         inputSchema: jsonSchema(mcpTool.inputSchema as RawJsonSchema),
+        metadata,
         execute: async (args) => {
           const callResult = await client.callTool(mcpTool.name, args as Record<string, unknown>);
           return {
@@ -52,6 +73,7 @@ export function wrapMcpToolsForAgent(bindings: McpServerToolBinding[]): Record<s
       result[mcpToolId(serverId, "list_resources")] = tool({
         description: `List resources available from the "${serverId}" server (files, records, or other data it exposes for reading).`,
         inputSchema: z.object({}),
+        metadata,
         execute: async () =>
           resources.map((r) => ({
             uri: r.uri,
@@ -64,6 +86,7 @@ export function wrapMcpToolsForAgent(bindings: McpServerToolBinding[]): Record<s
       result[mcpToolId(serverId, "read_resource")] = tool({
         description: `Read one resource from the "${serverId}" server by its URI — use ${mcpToolId(serverId, "list_resources")} first to see what's available. The result becomes context for continuing this task, the same way retrieved knowledge does.`,
         inputSchema: z.object({ uri: z.string().min(1) }),
+        metadata,
         execute: async ({ uri }) => {
           const contents = await client.readResource(uri);
           return contents.map((c) => ({

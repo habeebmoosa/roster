@@ -181,6 +181,50 @@ describe("runAgent — bypass path (single-step plan)", () => {
     const call = model.doStreamCalls[0]!;
     expect(call.tools ?? []).toEqual([]);
   });
+
+  it("passes providerOptions through to the model call when given (reasoning-capable models)", async () => {
+    const model = bypassModel("Hi");
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "hi" }],
+      providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 4096 } } },
+    });
+    for await (const _chunk of result.textStream) void _chunk;
+
+    const call = model.doStreamCalls[0]!;
+    expect(call.providerOptions).toEqual({
+      anthropic: { thinking: { type: "enabled", budgetTokens: 4096 } },
+    });
+  });
+
+  it("does not pass a providerOptions option when none are given", async () => {
+    const model = bypassModel("Hi");
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "hi" }],
+    });
+    for await (const _chunk of result.textStream) void _chunk;
+
+    const call = model.doStreamCalls[0]!;
+    expect(call.providerOptions ?? {}).toEqual({});
+  });
+
+  it("exposes fullStream with the raw stream parts, for reasoning/tool-call visibility", async () => {
+    const model = bypassModel("Hi");
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    expect(result.fullStream).toBeDefined();
+    const types: string[] = [];
+    for await (const part of result.fullStream!) types.push(part.type);
+    expect(types).toContain("text-delta");
+    expect(types).toContain("finish");
+  });
 });
 
 describe("runAgent — multi-step workflow path", () => {
@@ -278,5 +322,23 @@ describe("runAgent — multi-step workflow path", () => {
     // structured-output call); calls 1+ are each step's executeStep call.
     expect(model.doGenerateCalls[1]?.tools?.map((t) => t.name)).toContain("echo");
     expect(model.doGenerateCalls[2]?.tools?.map((t) => t.name)).toContain("echo");
+  });
+
+  it("never exposes fullStream — this path never streams live", async () => {
+    const model = multiStepModel(
+      [
+        { goal: "Step one", needsRetrieval: false },
+        { goal: "Step two", needsRetrieval: false },
+      ],
+      ["first", "second"],
+    );
+
+    const result = await runAgent({
+      definition,
+      model,
+      messages: [{ role: "user", content: "Do a two-part task" }],
+    });
+
+    expect(result.fullStream).toBeUndefined();
   });
 });

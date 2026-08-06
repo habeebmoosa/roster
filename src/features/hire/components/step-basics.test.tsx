@@ -13,6 +13,7 @@ const BASE_FORM: HireFormState = {
   voice: "",
   expertise: [],
   abilities: [],
+  connectorIds: [],
   provider: "",
   model: "",
 };

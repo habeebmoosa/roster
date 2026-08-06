@@ -1,0 +1,20 @@
+{
+  "id": "supabase",
+  "name": "Supabase",
+  "description": "Manage Supabase projects and tables, and run SQL queries against your Postgres database",
+  "iconUrl": "/connector-logos/supabase.svg",
+  "developer": "Supabase, Inc.",
+  "connectorUrl": "https://mcp.supabase.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering", "Storage"],
+  "trustTier": "verified",
+  "documentationUrl": "https://supabase.com/docs/guides/getting-started/mcp",
+  "tools": [
+    { "name": "list-projects", "description": "List Supabase projects in your organization" },
+    { "name": "execute-sql", "description": "Run a SQL query against a project's Postgres database" },
+    { "name": "list-tables", "description": "List tables and their schema in a database" },
+    { "name": "get-logs", "description": "Fetch recent logs for a project's services" },
+    { "name": "create-branch", "description": "Create a development branch of a project's database" }
+  ],
+  "resources": [{ "name": "table", "description": "A database table's schema and sample rows" }]
+}

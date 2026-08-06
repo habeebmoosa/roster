@@ -2,6 +2,7 @@
   "id": "intercom",
   "name": "Intercom",
   "description": "Search conversations and manage support tickets in Intercom",
+  "iconUrl": "/connector-logos/intercom.svg",
   "developer": "Intercom, Inc.",
   "connectorUrl": "https://mcp.intercom.com/mcp",
   "authType": "oauth_dcr",

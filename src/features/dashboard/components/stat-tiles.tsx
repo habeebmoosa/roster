@@ -3,8 +3,9 @@ import { StatTile } from "@/ui";
 export interface StatTilesProps {
   activeEmployees: number;
   totalEmployees: number;
-  /** No usage-tracking pipeline exists yet — null renders "—", never a fabricated number. */
+  /** Real (Conversation.createdAt) — null only when there's no signed-in user to scope the count to. */
   conversations30d: number | null;
+  /** Real, from UsageEvent — null when nothing priced landed this month, never a guessed number. */
   spendThisMonthUsd: number | null;
   evalSuccessRatePct: number | null;
 }

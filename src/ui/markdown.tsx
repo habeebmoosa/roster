@@ -33,10 +33,24 @@ const components: Components = {
   },
 };
 
+const SIZE_CLASSES = {
+  sm: "text-sm leading-relaxed",
+  xs: "text-xs leading-relaxed",
+} as const;
+
 /** Renders assistant chat replies as real markdown (bold, lists, code, links) — never raw HTML injection, react-markdown renders straight to React elements. */
-export function Markdown({ children, className }: { children: string; className?: string }) {
+export function Markdown({
+  children,
+  className,
+  size = "sm",
+}: {
+  children: string;
+  className?: string;
+  /** A variant prop, not a className override — Tailwind won't reliably let a passed-in `text-*` size class beat this component's own, so callers that want a different size (e.g. a reasoning block) ask for it here. */
+  size?: keyof typeof SIZE_CLASSES;
+}) {
   return (
-    <div className={cn("flex flex-col gap-3 text-sm leading-relaxed", className)}>
+    <div className={cn("flex flex-col gap-3", SIZE_CLASSES[size], className)}>
       <ReactMarkdown components={components}>{children}</ReactMarkdown>
     </div>
   );

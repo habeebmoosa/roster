@@ -1,0 +1,19 @@
+{
+  "id": "google-calendar",
+  "name": "Google Calendar",
+  "description": "Search, create, and update events on Google Calendar",
+  "iconUrl": "/connector-logos/google-calendar.svg",
+  "developer": "Google LLC",
+  "connectorUrl": "https://calendarmcp.googleapis.com/mcp/v1",
+  "authType": "oauth_dcr",
+  "categories": ["Productivity"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+  "tools": [
+    { "name": "list-events", "description": "List upcoming events on a calendar within a date range" },
+    { "name": "get-event", "description": "Fetch a single event's full detail, including attendees" },
+    { "name": "create-event", "description": "Create a new event, optionally with attendees" },
+    { "name": "update-event", "description": "Update an event's time, attendees, or details" }
+  ],
+  "resources": [{ "name": "event", "description": "A single calendar event's full detail" }]
+}

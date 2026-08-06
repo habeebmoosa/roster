@@ -1,0 +1,23 @@
+{
+  "id": "github",
+  "name": "GitHub",
+  "description": "Search, read, and manage repositories, issues, and pull requests on GitHub",
+  "iconUrl": "/connector-logos/github.svg",
+  "developer": "GitHub, Inc.",
+  "connectorUrl": "https://api.githubcopilot.com/mcp/",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering", "Docs"],
+  "trustTier": "verified",
+  "documentationUrl": "https://github.com/github/github-mcp-server",
+  "tools": [
+    { "name": "search-repositories", "description": "Search public and accessible repositories by name or content" },
+    { "name": "get-file-contents", "description": "Fetch a file's contents from a repository at a given ref" },
+    { "name": "list-issues", "description": "List issues in a repository, filtered by state or labels" },
+    { "name": "create-issue", "description": "Create a new issue in a repository" },
+    { "name": "get-pull-request", "description": "Fetch a pull request's diff, reviews, and status checks" }
+  ],
+  "resources": [
+    { "name": "repository", "description": "A repository's structure and metadata" },
+    { "name": "pull-request", "description": "A single pull request's full detail" }
+  ]
+}

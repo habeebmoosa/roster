@@ -2,6 +2,7 @@
   "id": "stripe",
   "name": "Stripe",
   "description": "Look up customers, payments, subscriptions, and invoices in Stripe",
+  "iconUrl": "/connector-logos/stripe.svg",
   "developer": "Stripe, Inc.",
   "connectorUrl": "https://mcp.stripe.com",
   "authType": "oauth_dcr",

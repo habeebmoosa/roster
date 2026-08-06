@@ -1,9 +1,24 @@
 import { McpProtocolError, McpTransportError } from "./errors";
 import { isJsonRpcErrorResponse, type JsonRpcRequest, type JsonRpcResponse } from "./types";
 
+/**
+ * A server that never responds (or whose connection quietly stalls) would
+ * otherwise hang for however long the OS/undici socket takes to notice —
+ * observed in the wild taking over 60s before erroring, blocking the
+ * connect flow the whole time. Bounding every request keeps a single bad
+ * server from making "Connect" (or a chat turn's tool refresh) feel frozen.
+ * 30s (not shorter) leaves room for a custom server's own cold start —
+ * observed in the wild on a scale-to-zero dev deployment, where the first
+ * request after a period of idleness can take several times longer than a
+ * warm one before the server responds at all.
+ */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export interface McpTransportOptions {
   /** Extra headers sent on every request — e.g. an Authorization bearer token (wired in 10.3/10.4). */
   headers?: Record<string, string>;
+  /** Per-request abort timeout in ms. Defaults to DEFAULT_TIMEOUT_MS. */
+  timeoutMs?: number;
 }
 
 /**
@@ -43,11 +58,21 @@ export class McpTransport {
     };
     if (this.sessionId) headers["mcp-session-id"] = this.sessionId;
 
-    const response = await fetch(this.serverUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.serverUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw new McpTransportError(
+        err instanceof Error && err.name === "TimeoutError"
+          ? `MCP server didn't respond within ${this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS}ms`
+          : `MCP server request failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     const returnedSessionId = response.headers.get("mcp-session-id");
     if (returnedSessionId) this.sessionId = returnedSessionId;

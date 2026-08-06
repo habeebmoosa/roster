@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProviderKeyRecord } from "@/server/db/repositories/provider-key.repository";
+import type { McpServerListItem } from "@/server/mcp/connect-service";
 import { HireWizard } from "./hire-wizard";
 
 const push = vi.fn();
@@ -27,6 +28,28 @@ const OPENAI_KEY: ProviderKeyRecord = {
   createdAt: new Date("2026-01-01"),
 };
 
+const LINEAR_CONNECTOR: McpServerListItem = {
+  id: "linear",
+  name: "Linear",
+  description: "Issue tracking",
+  iconUrl: null,
+  developer: null,
+  connectorUrl: "https://mcp.linear.app/mcp",
+  authType: "oauth_dcr",
+  categories: [],
+  trustTier: "verified",
+  cachedTools: [],
+  cachedResources: [],
+  documentationUrl: null,
+  supportUrl: null,
+  privacyPolicyUrl: null,
+  preRegisteredClientId: null,
+  createdByUserId: null,
+  createdAt: new Date("2026-01-01"),
+  connected: true,
+  connectionStatus: "active",
+};
+
 describe("HireWizard", () => {
   beforeEach(() => {
     push.mockClear();
@@ -38,7 +61,7 @@ describe("HireWizard", () => {
     vi.unstubAllGlobals();
   });
 
-  it("walks all 6 steps for a templated role and creates the employee", async () => {
+  it("walks all 7 steps for a templated role, selecting a connector, and creates the employee", async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -48,7 +71,7 @@ describe("HireWizard", () => {
         ),
     );
     const user = userEvent.setup();
-    render(<HireWizard providerKeys={[OPENAI_KEY]} />);
+    render(<HireWizard providerKeys={[OPENAI_KEY]} connectors={[LINEAR_CONNECTOR]} />);
 
     // Step 1 — Role
     expect(screen.getByText("What role is this employee for?")).toBeInTheDocument();
@@ -68,13 +91,18 @@ describe("HireWizard", () => {
     expect(screen.getByRole("heading", { name: "Abilities" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    // Step 5 — Provider & model
+    // Step 5 — Connectors
+    expect(screen.getByRole("heading", { name: "Connectors" })).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Linear" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    // Step 6 — Provider & model
     expect(screen.getByText("Provider & model")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await user.type(screen.getByLabelText("Model"), "gpt-4o-mini");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    // Step 6 — Review & create
+    // Step 7 — Review & create
     expect(screen.getByText("Review & create")).toBeInTheDocument();
     expect(screen.getByText("/workers/ada-customer-support")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create employee" }));
@@ -93,11 +121,15 @@ describe("HireWizard", () => {
       name: "Ada — Customer Support",
       model: { provider: "openai", model: "gpt-4o-mini" },
     });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/ada-customer-support/connectors/linear",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("Back returns to the previous step without losing entered data", async () => {
     const user = userEvent.setup();
-    render(<HireWizard providerKeys={[OPENAI_KEY]} />);
+    render(<HireWizard providerKeys={[OPENAI_KEY]} connectors={[]} />);
 
     await user.click(screen.getByRole("radio", { name: /Start from scratch/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -113,7 +145,7 @@ describe("HireWizard", () => {
 
   it("Save & exit persists the draft and navigates to /workers", async () => {
     const user = userEvent.setup();
-    render(<HireWizard providerKeys={[OPENAI_KEY]} />);
+    render(<HireWizard providerKeys={[OPENAI_KEY]} connectors={[]} />);
 
     await user.click(screen.getByRole("button", { name: "Save & exit" }));
     expect(push).toHaveBeenCalledWith("/workers");
@@ -122,7 +154,7 @@ describe("HireWizard", () => {
 
   it("shows an inline add-provider form on the model step when no provider is connected, instead of sending the user away", async () => {
     const user = userEvent.setup();
-    render(<HireWizard providerKeys={[]} />);
+    render(<HireWizard providerKeys={[]} connectors={[]} />);
 
     await user.click(screen.getByRole("radio", { name: /Start from scratch/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -130,6 +162,7 @@ describe("HireWizard", () => {
     await user.type(screen.getByLabelText("Role title"), "Ops");
     await user.type(screen.getByLabelText("Identity"), "Sharp.");
     await user.type(screen.getByLabelText("Voice"), "Direct.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -140,7 +173,7 @@ describe("HireWizard", () => {
 
   it("adopts a provider connected inline (via a refreshed providerKeys prop) without losing wizard progress", async () => {
     const user = userEvent.setup();
-    const { rerender } = render(<HireWizard providerKeys={[]} />);
+    const { rerender } = render(<HireWizard providerKeys={[]} connectors={[]} />);
 
     await user.click(screen.getByRole("radio", { name: /Start from scratch/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -151,16 +184,18 @@ describe("HireWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
 
     // Simulates the parent server component re-fetching providerKeys after
     // AddProviderForm's router.refresh() — the wizard's own step/form state
-    // (still on step 5, "Bo" already typed) must survive this re-render.
-    rerender(<HireWizard providerKeys={[OPENAI_KEY]} />);
+    // (still on step 6, "Bo" already typed) must survive this re-render.
+    rerender(<HireWizard providerKeys={[OPENAI_KEY]} connectors={[]} />);
 
     expect(screen.getByRole("option", { name: "OpenAI" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).not.toBeDisabled();
 
+    await user.click(screen.getByRole("button", { name: "Back" }));
     await user.click(screen.getByRole("button", { name: "Back" }));
     await user.click(screen.getByRole("button", { name: "Back" }));
     await user.click(screen.getByRole("button", { name: "Back" }));

@@ -1,0 +1,19 @@
+{
+  "id": "google-docs",
+  "name": "Google Docs",
+  "description": "Search, read, and edit documents in Google Docs",
+  "iconUrl": "/connector-logos/google-docs.svg",
+  "developer": "Google LLC",
+  "connectorUrl": "https://docsmcp.googleapis.com/mcp/v1",
+  "authType": "oauth_dcr",
+  "categories": ["Docs", "Productivity"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+  "tools": [
+    { "name": "search-documents", "description": "Search documents by title or content" },
+    { "name": "get-document", "description": "Fetch a document's full content and structure" },
+    { "name": "create-document", "description": "Create a new document, optionally from a template" },
+    { "name": "update-document", "description": "Insert or replace text in a document" }
+  ],
+  "resources": [{ "name": "document", "description": "A single document's full content" }]
+}

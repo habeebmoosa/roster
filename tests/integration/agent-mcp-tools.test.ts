@@ -73,6 +73,12 @@ describe("resolveMcpToolsForAgent", () => {
     const result = await callTool(tools[`mcp_${SERVER_ID}_echo`]!, { greeting: "hi" });
     expect(result).toMatchObject({ isError: false });
     expect(result.content).toContain("greeting");
+
+    expect(tools[`mcp_${SERVER_ID}_echo`]?.metadata).toEqual({
+      source: "mcp",
+      serverId: SERVER_ID,
+      serverName: "Test Agent MCP Server",
+    });
   });
 
   it("also resolves resource list/read tools from the same connected server", async () => {

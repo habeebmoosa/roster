@@ -1,4 +1,11 @@
-import { stepCountIs, streamText, type LanguageModel, type ToolSet } from "ai";
+import {
+  stepCountIs,
+  streamText,
+  type AsyncIterableStream,
+  type LanguageModel,
+  type TextStreamPart,
+  type ToolSet,
+} from "ai";
 import {
   decomposeTask,
   isSingleStepPlan,
@@ -9,6 +16,9 @@ import {
 } from "@/core/workflow";
 import type { AgentDefinition } from "./definition";
 import { buildSystemPrompt, type EpisodicMemoryEntry } from "./system-prompt";
+
+/** Matches `streamText`'s own `providerOptions` param type — derived rather than importing `@ai-sdk/provider-utils` directly, since that package is only a transitive dependency of `ai`. */
+type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]["providerOptions"]>;
 
 /** A single turn of working memory (the current session's conversation). */
 export interface AgentMessage {
@@ -27,6 +37,8 @@ export interface RunAgentResult {
   usage: Promise<RunAgentUsage>;
   /** Source uris retrieved across the multi-step workflow path, if it ran (undefined on the bypass path — the caller already has its own upfront retrieval result there). */
   retrievedSourceUris?: string[];
+  /** Only set on the bypass path — the raw AI SDK stream (text/reasoning/tool-call/tool-result parts), for the chat UI's live reasoning + tool-call visibility. The multi-step workflow path never streams live, so it has nothing to expose here. */
+  fullStream?: AsyncIterableStream<TextStreamPart<ToolSet>>;
 }
 
 export interface RunAgentInput {
@@ -45,6 +57,8 @@ export interface RunAgentInput {
   onStepEvent?: (event: WorkflowStepEvent) => void;
   /** Built-in + MCP tools resolved for this agent/user (10.7) — the caller (server/agents/service.ts) merges core/tools' registry with any connected, enabled MCP servers. Omit for an agent with none enabled. */
   tools?: ToolSet;
+  /** Provider-specific extended-thinking/reasoning-effort options (server/agents/service.ts resolves whether the chosen model supports it) — only ever applied on the bypass path, the only one that streams live. */
+  providerOptions?: ProviderOptions;
 }
 
 async function* singleChunkStream(text: string): AsyncGenerator<string> {
@@ -81,6 +95,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     groundednessModel,
     onStepEvent,
     tools,
+    providerOptions,
   } = input;
 
   const hasTools = tools && Object.keys(tools).length > 0;
@@ -116,6 +131,7 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
     system: buildSystemPrompt(definition, { retrievedContext, episodicMemory }),
     messages,
     ...(hasTools ? { tools, stopWhen: stepCountIs(MAX_TOOL_STEPS) } : {}),
+    ...(providerOptions ? { providerOptions } : {}),
   });
 
   return {
@@ -127,5 +143,6 @@ export async function runAgent(input: RunAgentInput): Promise<RunAgentResult> {
         outputTokens: u.outputTokens ?? 0,
       })),
     ),
+    fullStream: result.stream,
   };
 }

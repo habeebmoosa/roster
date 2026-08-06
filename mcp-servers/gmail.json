@@ -1,0 +1,19 @@
+{
+  "id": "gmail",
+  "name": "Gmail",
+  "description": "Search, read, and draft email in Gmail",
+  "iconUrl": "/connector-logos/gmail.svg",
+  "developer": "Google LLC",
+  "connectorUrl": "https://gmailmcp.googleapis.com/mcp/v1",
+  "authType": "oauth_dcr",
+  "categories": ["Productivity", "Customer Support"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+  "tools": [
+    { "name": "search-threads", "description": "Search email threads by sender, subject, or content" },
+    { "name": "get-message", "description": "Fetch a single message's full content and headers" },
+    { "name": "create-draft", "description": "Create a draft reply or new message" },
+    { "name": "list-labels", "description": "List a mailbox's labels/folders" }
+  ],
+  "resources": [{ "name": "thread", "description": "An email thread's full message history" }]
+}

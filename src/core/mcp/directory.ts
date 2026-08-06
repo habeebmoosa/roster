@@ -18,7 +18,14 @@ export const mcpServerDefinitionSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "id must be kebab-case (lowercase letters, digits, hyphens)"),
   name: z.string().min(1),
   description: z.string().min(1),
-  iconUrl: z.string().url().optional(),
+  // A root-relative path (a static asset under public/, e.g. a copied vendor
+  // brand SVG — see public/connector-logos/NOTICE.md) or a full URL.
+  iconUrl: z
+    .string()
+    .refine((value) => value.startsWith("/") || z.string().url().safeParse(value).success, {
+      message: "iconUrl must be a root-relative path or a full URL",
+    })
+    .optional(),
   developer: z.string().min(1).optional(),
   connectorUrl: z.string().url(),
   authType: z.enum(["oauth_dcr", "static_headers", "none"]),

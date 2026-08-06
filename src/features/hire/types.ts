@@ -22,6 +22,7 @@ export interface HireFormState {
   voice: string;
   expertise: string[];
   abilities: string[];
+  connectorIds: string[];
   provider: string;
   model: string;
 }

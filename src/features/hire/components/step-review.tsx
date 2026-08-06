@@ -59,6 +59,22 @@ export function StepReview({
           </div>
         </div>
         <div>
+          <p className="text-text-faint text-xs font-semibold tracking-wider uppercase">
+            Connectors
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {form.connectorIds.length ? (
+              form.connectorIds.map((c) => (
+                <Badge key={c} variant="neutral">
+                  {c}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-text-muted">None selected</span>
+            )}
+          </div>
+        </div>
+        <div>
           <p className="text-text-faint text-xs font-semibold tracking-wider uppercase">Model</p>
           <p className="text-text-muted mt-1 font-mono">
             {form.provider} / {form.model}

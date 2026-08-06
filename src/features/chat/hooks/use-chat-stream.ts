@@ -1,8 +1,9 @@
 "use client";
 
-import { parseJsonEventStream } from "ai";
+import { parseJsonEventStream, type UIMessageChunk } from "ai";
 import { useState } from "react";
 import { z } from "zod";
+import { MessagePartsAccumulator } from "@/core/agent";
 import type { WorkflowStepEvent } from "@/core/workflow";
 import type { ChatMessage } from "../types";
 
@@ -14,6 +15,22 @@ export interface UseChatStreamOptions {
 
 /** Loose shape shared by every chunk in the UI Message Stream — enough to route on `type`, without re-declaring the SDK's full discriminated union. */
 const chunkSchema = z.object({ type: z.string() }).passthrough();
+
+/** Chunk types that feed the ordered parts[] model — text/reasoning/tool-call blocks. Everything else (start, finish, data-stepEvent, error) is handled separately or ignored. */
+const PART_CHUNK_TYPES = new Set([
+  "text-start",
+  "text-delta",
+  "text-end",
+  "reasoning-start",
+  "reasoning-delta",
+  "reasoning-end",
+  "tool-input-start",
+  "tool-input-delta",
+  "tool-input-available",
+  "tool-input-error",
+  "tool-output-available",
+  "tool-output-error",
+]);
 
 /**
  * Drives /api/chat: optimistic user turn, streamed assistant turn (text, live
@@ -49,6 +66,8 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
     setError("");
     setRunning(true);
 
+    const accumulator = new MessagePartsAccumulator();
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -70,17 +89,26 @@ export function useChatStream({ agentId, provider, model }: UseChatStreamOptions
         if (done) break;
         if (!value.success) continue; // skip a malformed frame rather than aborting the whole turn
 
-        const chunk = value.value;
-        if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
-          const delta = chunk.delta;
-          updateLastAssistant((m) => ({ ...m, content: m.content + delta }));
-        } else if (chunk.type === "data-stepEvent" && chunk.data) {
+        const chunk = value.value as UIMessageChunk;
+        if (chunk.type === "data-stepEvent" && chunk.data) {
           const event = chunk.data as WorkflowStepEvent;
           updateLastAssistant((m) => ({ ...m, stepEvents: [...(m.stepEvents ?? []), event] }));
-        } else if (chunk.type === "error" && typeof chunk.errorText === "string") {
+          continue;
+        }
+        if (chunk.type === "error" && typeof chunk.errorText === "string") {
           const errorText = chunk.errorText;
           updateLastAssistant((m) => ({ ...m, error: errorText }));
+          continue;
         }
+
+        if (!PART_CHUNK_TYPES.has(chunk.type)) continue;
+
+        // Builds the ordered parts[] — `content` stays a plain-text mirror of
+        // just the text deltas, for anything still reading it directly.
+        accumulator.apply(chunk);
+        const delta = chunk.type === "text-delta" && typeof chunk.delta === "string" ? chunk.delta : "";
+        const parts = [...accumulator.parts];
+        updateLastAssistant((m) => ({ ...m, content: m.content + delta, parts }));
       }
     } catch {
       setError("Network error.");

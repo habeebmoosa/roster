@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadAgentDefinitionFile } from "@/core/agent/loader";
 import { prisma } from "@/server/db/prisma";
-import { upsertAgent } from "@/server/db/repositories/agent.repository";
+import { updateAgentStatus, upsertAgent } from "@/server/db/repositories/agent.repository";
+import { listUsageEventsForUser } from "@/server/db/repositories/usage-event.repository";
 import { addProviderKey } from "@/server/providers/service";
 import { streamRestChat } from "@/server/rest/chat-stream";
 import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-server";
@@ -35,6 +36,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.usageEvent.deleteMany({ where: { userId: { in: [userId, userWithNoKey] } } });
   await prisma.user.deleteMany({ where: { id: { in: [userId, userWithNoKey] } } });
   await mock.close();
   await prisma.$disconnect();
@@ -64,6 +66,19 @@ describe("streamRestChat", () => {
     const text = frames.map((f) => (f as { content: string }).content).join("");
     expect(text).toBe("Hello world");
     expect(frames.every((f) => (f as { type: string }).type === "delta")).toBe(true);
+
+    // The REST API never creates a Conversation, so this is the only place
+    // its usage gets captured — a null conversationId, source "rest".
+    const usageEvents = await listUsageEventsForUser(userId);
+    expect(usageEvents).toHaveLength(1);
+    expect(usageEvents[0]).toMatchObject({
+      agentId: "customer-support",
+      conversationId: null,
+      source: "rest",
+      provider: "custom",
+      model: "mock-model",
+      costUsd: null,
+    });
   });
 
   it("streams an ephemeral-key reply without touching the user's stored keys", async () => {
@@ -93,5 +108,25 @@ describe("streamRestChat", () => {
     const frames = await readFrames(stream);
     expect(frames).toHaveLength(1);
     expect(frames[0]).toMatchObject({ type: "error", error: { code: "unknown_provider" } });
+  });
+
+  it("frames a paused agent as an error event", async () => {
+    try {
+      await updateAgentStatus("customer-support", "paused");
+
+      const stream = streamRestChat({
+        userId,
+        agentId: "customer-support",
+        provider: "custom",
+        model: "mock-model",
+        messages: [{ role: "user", content: "hi" }],
+      });
+
+      const frames = await readFrames(stream);
+      expect(frames).toHaveLength(1);
+      expect(frames[0]).toMatchObject({ type: "error", error: { code: "agent_paused" } });
+    } finally {
+      await updateAgentStatus("customer-support", "active");
+    }
   });
 });

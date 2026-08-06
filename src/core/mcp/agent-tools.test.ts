@@ -23,9 +23,27 @@ describe("wrapMcpToolsForAgent", () => {
     await client.initialize();
     const tools = await client.listTools();
 
-    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools }]);
+    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", serverName: "Acme", client, tools }]);
 
     expect(Object.keys(wrapped).sort()).toEqual(["mcp_acme_echo", "mcp_acme_fail"]);
+  });
+
+  it("tags every tool — including the resource pair — with its source server's id and name", async () => {
+    mock = await startMockMcpServer();
+    const client = new McpClient(mock.url);
+    await client.initialize();
+    const tools = await client.listTools();
+    const resources = await client.listResources();
+
+    const wrapped = wrapMcpToolsForAgent([
+      { serverId: "acme", serverName: "Acme CRM", client, tools, resources },
+    ]);
+
+    const expected = { source: "mcp", serverId: "acme", serverName: "Acme CRM" };
+    expect(wrapped.mcp_acme_echo?.metadata).toEqual(expected);
+    expect(wrapped.mcp_acme_fail?.metadata).toEqual(expected);
+    expect(wrapped[mcpToolId("acme", "list_resources")]?.metadata).toEqual(expected);
+    expect(wrapped[mcpToolId("acme", "read_resource")]?.metadata).toEqual(expected);
   });
 
   it("returns the tool's result content as a normal (non-throwing) value, even when isError is true", async () => {
@@ -33,7 +51,7 @@ describe("wrapMcpToolsForAgent", () => {
     const client = new McpClient(mock.url);
     await client.initialize();
     const tools = await client.listTools();
-    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools }]);
+    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", serverName: "Acme", client, tools }]);
 
     const failResult = await callTool(wrapped.mcp_acme_fail!, {});
     expect(failResult).toMatchObject({ isError: true });
@@ -45,7 +63,7 @@ describe("wrapMcpToolsForAgent", () => {
     const client = new McpClient(mock.url);
     await client.initialize();
     const tools = await client.listTools();
-    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools }]);
+    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", serverName: "Acme", client, tools }]);
 
     const echoResult = await callTool(wrapped.mcp_acme_echo!, { greeting: "hi" });
     expect(echoResult.isError).toBe(false);
@@ -60,6 +78,7 @@ describe("wrapMcpToolsForAgent", () => {
     const wrapped = wrapMcpToolsForAgent([
       {
         serverId: "acme",
+        serverName: "Acme",
         client,
         tools: [{ name: "does-not-exist", description: "d", inputSchema: { type: "object" } }],
       },
@@ -75,7 +94,9 @@ describe("wrapMcpToolsForAgent", () => {
     await client.initialize();
     const tools = await client.listTools();
 
-    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools, resources: [] }]);
+    const wrapped = wrapMcpToolsForAgent([
+      { serverId: "acme", serverName: "Acme", client, tools, resources: [] },
+    ]);
 
     expect(wrapped).not.toHaveProperty(mcpToolId("acme", "list_resources"));
     expect(wrapped).not.toHaveProperty(mcpToolId("acme", "read_resource"));
@@ -88,7 +109,9 @@ describe("wrapMcpToolsForAgent", () => {
     const tools = await client.listTools();
     const resources = await client.listResources();
 
-    const wrapped = wrapMcpToolsForAgent([{ serverId: "acme", client, tools, resources }]);
+    const wrapped = wrapMcpToolsForAgent([
+      { serverId: "acme", serverName: "Acme", client, tools, resources },
+    ]);
 
     const listed = await callTool<Record<string, never>, Array<{ uri: string }>>(
       wrapped[mcpToolId("acme", "list_resources")]!,

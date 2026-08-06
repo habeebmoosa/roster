@@ -1,9 +1,13 @@
 import type { LanguageModel, Tool } from "ai";
 import { type AgentDefinition, type AgentMessage, runAgent } from "@/core/agent";
-import { resolveModel } from "@/core/providers";
+import { resolveModel, resolveReasoningOptions } from "@/core/providers";
 import { resolveBuiltInTools } from "@/core/tools";
 import type { WorkflowStepEvent } from "@/core/workflow";
-import { getAgentDefinition, listAgentSummaries } from "@/server/db/repositories/agent.repository";
+import {
+  getAgentDefinition,
+  getAgentStatus,
+  listAgentSummaries,
+} from "@/server/db/repositories/agent.repository";
 import { listEpisodicMemories } from "@/server/db/repositories/episodic-memory.repository";
 import { resolveMcpToolsForAgent } from "@/server/mcp/agent-tools-service";
 import { getEmbeddingResolveInputForUser, getModelForUser } from "@/server/providers/service";
@@ -13,6 +17,14 @@ export class AgentNotFoundError extends Error {
   constructor(agentId: string) {
     super(`Agent not found: ${agentId}`);
     this.name = "AgentNotFoundError";
+  }
+}
+
+/** A real, existing agent that's currently paused — distinct from ByokError: this is never discoverable by the model call itself, so it's checked upfront, before doing any of the (potentially expensive) retrieval/tool-resolution work below. */
+export class AgentPausedError extends Error {
+  constructor(agentId: string) {
+    super(`Agent is paused: ${agentId}`);
+    this.name = "AgentPausedError";
   }
 }
 
@@ -92,11 +104,15 @@ async function resolveToolsForAgent(
  * the user's chosen model (BYOK), retrieve grounding context and episodic
  * memory if the agent has any, resolve its built-in + MCP tools, and stream
  * through the core `runAgent()`. Provider issues surface as ByokError (mapped
- * by the caller); a missing agent throws {@link AgentNotFoundError}.
+ * by the caller); a missing agent throws {@link AgentNotFoundError}; a
+ * paused agent throws {@link AgentPausedError}.
  */
 export async function streamAgentChat(input: StreamAgentChatInput) {
   const definition = await getAgentDefinition(input.agentId);
   if (!definition) throw new AgentNotFoundError(input.agentId);
+  if ((await getAgentStatus(input.agentId)) === "paused") {
+    throw new AgentPausedError(input.agentId);
+  }
 
   const model = input.ephemeralKey
     ? resolveModel({
@@ -121,5 +137,6 @@ export async function streamAgentChat(input: StreamAgentChatInput) {
     episodicMemory,
     tools,
     onStepEvent: input.onStepEvent,
+    providerOptions: resolveReasoningOptions(input.provider, input.model),
   });
 }
