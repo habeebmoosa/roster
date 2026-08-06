@@ -2,6 +2,7 @@
   "id": "box",
   "name": "Box",
   "description": "Search, read, and manage files and folders stored in Box",
+  "iconUrl": "/connector-logos/box.svg",
   "developer": "Box, Inc.",
   "connectorUrl": "https://mcp.box.com/mcp",
   "authType": "oauth_dcr",

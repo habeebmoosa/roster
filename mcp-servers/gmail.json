@@ -2,6 +2,7 @@
   "id": "gmail",
   "name": "Gmail",
   "description": "Search, read, and draft email in Gmail",
+  "iconUrl": "/connector-logos/gmail.svg",
   "developer": "Google LLC",
   "connectorUrl": "https://gmailmcp.googleapis.com/mcp/v1",
   "authType": "oauth_dcr",

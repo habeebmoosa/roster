@@ -2,6 +2,7 @@
   "id": "hubspot",
   "name": "HubSpot",
   "description": "Search and update contacts, companies, and deals in HubSpot",
+  "iconUrl": "/connector-logos/hubspot.svg",
   "developer": "HubSpot, Inc.",
   "connectorUrl": "https://mcp.hubspot.com",
   "authType": "oauth_dcr",

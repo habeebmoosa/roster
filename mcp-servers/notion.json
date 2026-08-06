@@ -2,6 +2,7 @@
   "id": "notion",
   "name": "Notion",
   "description": "Search, read, and update Notion pages and databases",
+  "iconUrl": "/connector-logos/notion.svg",
   "developer": "Notion Labs, Inc.",
   "connectorUrl": "https://mcp.notion.com/mcp",
   "authType": "oauth_dcr",

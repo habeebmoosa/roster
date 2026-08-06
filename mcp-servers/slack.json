@@ -2,6 +2,7 @@
   "id": "slack",
   "name": "Slack",
   "description": "Search messages and channels, and send messages in Slack",
+  "iconUrl": "/connector-logos/slack.svg",
   "developer": "Slack Technologies, LLC",
   "connectorUrl": "https://mcp.slack.com/mcp",
   "authType": "oauth_dcr",

@@ -2,6 +2,7 @@
   "id": "zapier",
   "name": "Zapier",
   "description": "Run actions and search data across thousands of apps connected through Zapier",
+  "iconUrl": "/connector-logos/zapier.svg",
   "developer": "Zapier Inc.",
   "connectorUrl": "https://mcp.zapier.com/api/v1/connect",
   "authType": "static_headers",

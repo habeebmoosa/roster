@@ -2,6 +2,7 @@
   "id": "google-calendar",
   "name": "Google Calendar",
   "description": "Search, create, and update events on Google Calendar",
+  "iconUrl": "/connector-logos/google-calendar.svg",
   "developer": "Google LLC",
   "connectorUrl": "https://calendarmcp.googleapis.com/mcp/v1",
   "authType": "oauth_dcr",

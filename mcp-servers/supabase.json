@@ -2,6 +2,7 @@
   "id": "supabase",
   "name": "Supabase",
   "description": "Manage Supabase projects and tables, and run SQL queries against your Postgres database",
+  "iconUrl": "/connector-logos/supabase.svg",
   "developer": "Supabase, Inc.",
   "connectorUrl": "https://mcp.supabase.com/mcp",
   "authType": "oauth_dcr",

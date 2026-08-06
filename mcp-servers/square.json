@@ -2,6 +2,7 @@
   "id": "square",
   "name": "Square",
   "description": "Manage Square catalog, inventory, orders, and customer records",
+  "iconUrl": "/connector-logos/square.svg",
   "developer": "Block, Inc. (Square)",
   "connectorUrl": "https://mcp.squareup.com/sse",
   "authType": "oauth_dcr",

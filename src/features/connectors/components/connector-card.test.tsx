@@ -41,6 +41,23 @@ describe("ConnectorCard", () => {
     expect(screen.getByText("Connected")).toBeInTheDocument();
   });
 
+  it("shows the initial-letter badge when there is no iconUrl", () => {
+    const { container } = render(<ConnectorCard connector={NOTION} onOpen={() => {}} />);
+    expect(screen.getByText("N")).toBeInTheDocument();
+    expect(container.querySelector("img")).not.toBeInTheDocument();
+  });
+
+  it("renders the vendor icon instead of the initial-letter badge when iconUrl is set", () => {
+    const { container } = render(
+      <ConnectorCard
+        connector={{ ...NOTION, iconUrl: "/connector-logos/notion.svg" }}
+        onOpen={() => {}}
+      />,
+    );
+    expect(container.querySelector("img")).toHaveAttribute("src", "/connector-logos/notion.svg");
+    expect(screen.queryByText("N")).not.toBeInTheDocument();
+  });
+
   it("calls onOpen when the card is clicked", async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();

@@ -2,6 +2,7 @@
   "id": "figma",
   "name": "Figma",
   "description": "Read design files, components, and comments from Figma",
+  "iconUrl": "/connector-logos/figma.svg",
   "developer": "Figma, Inc.",
   "connectorUrl": "https://mcp.figma.com/mcp",
   "authType": "oauth_dcr",

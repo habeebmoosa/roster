@@ -2,6 +2,7 @@
   "id": "sentry",
   "name": "Sentry",
   "description": "Search and triage application errors and performance issues in Sentry",
+  "iconUrl": "/connector-logos/sentry.svg",
   "developer": "Functional Software, Inc. (Sentry)",
   "connectorUrl": "https://mcp.sentry.dev/mcp",
   "authType": "oauth_dcr",

@@ -218,9 +218,16 @@ export function ConnectorDetailDialog({
 
           <div className="mt-4 flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="bg-accent-soft text-accent flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-xl font-bold">
-                {connector.name[0]}
-              </span>
+              {connector.iconUrl ? (
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white p-2.5 ring-1 ring-black/5">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a local static asset or a curated vendor URL, not a runtime-optimizable image */}
+                  <img src={connector.iconUrl} alt="" className="h-full w-full object-contain" />
+                </span>
+              ) : (
+                <span className="bg-accent-soft text-accent flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-xl font-bold">
+                  {connector.name[0]}
+                </span>
+              )}
               <div className="min-w-0 pt-0.5">
                 <div className="flex items-center gap-2">
                   <h2 className="text-text text-xl font-semibold">{connector.name}</h2>

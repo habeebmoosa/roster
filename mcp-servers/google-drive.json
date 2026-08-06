@@ -2,6 +2,7 @@
   "id": "google-drive",
   "name": "Google Drive",
   "description": "Search, read, and create files in Google Drive",
+  "iconUrl": "/connector-logos/google-drive.svg",
   "developer": "Google LLC",
   "connectorUrl": "https://drivemcp.googleapis.com/mcp/v1",
   "authType": "oauth_dcr",

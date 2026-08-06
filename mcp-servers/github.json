@@ -2,6 +2,7 @@
   "id": "github",
   "name": "GitHub",
   "description": "Search, read, and manage repositories, issues, and pull requests on GitHub",
+  "iconUrl": "/connector-logos/github.svg",
   "developer": "GitHub, Inc.",
   "connectorUrl": "https://api.githubcopilot.com/mcp/",
   "authType": "oauth_dcr",

@@ -2,6 +2,7 @@
   "id": "asana",
   "name": "Asana",
   "description": "Manage Asana tasks, projects, and status updates",
+  "iconUrl": "/connector-logos/asana.svg",
   "developer": "Asana, Inc.",
   "connectorUrl": "https://mcp.asana.com/sse",
   "authType": "oauth_dcr",

@@ -2,6 +2,7 @@
   "id": "linear",
   "name": "Linear",
   "description": "Create, search, and update Linear issues and projects",
+  "iconUrl": "/connector-logos/linear.svg",
   "developer": "Linear Orbit, Inc.",
   "connectorUrl": "https://mcp.linear.app/sse",
   "authType": "oauth_dcr",

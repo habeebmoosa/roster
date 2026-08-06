@@ -2,6 +2,7 @@
   "id": "google-docs",
   "name": "Google Docs",
   "description": "Search, read, and edit documents in Google Docs",
+  "iconUrl": "/connector-logos/google-docs.svg",
   "developer": "Google LLC",
   "connectorUrl": "https://docsmcp.googleapis.com/mcp/v1",
   "authType": "oauth_dcr",

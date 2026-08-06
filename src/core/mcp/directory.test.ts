@@ -58,6 +58,20 @@ describe("parseMcpServerDefinition", () => {
     ).toThrow(/Invalid MCP server definition/);
   });
 
+  it("accepts a root-relative iconUrl pointing at a local static asset", () => {
+    const definition = parseMcpServerDefinition({
+      ...VALID_DEFINITION,
+      iconUrl: "/connector-logos/acme-crm.svg",
+    });
+    expect(definition.iconUrl).toBe("/connector-logos/acme-crm.svg");
+  });
+
+  it("rejects an iconUrl that is neither a root-relative path nor a full URL", () => {
+    expect(() =>
+      parseMcpServerDefinition({ ...VALID_DEFINITION, iconUrl: "not-a-url" }),
+    ).toThrow(/iconUrl/);
+  });
+
   it("rejects a missing required field", () => {
     const withoutDescription: Record<string, unknown> = { ...VALID_DEFINITION };
     delete withoutDescription.description;

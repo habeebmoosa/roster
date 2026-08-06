@@ -2,6 +2,7 @@
   "id": "cloudflare",
   "name": "Cloudflare",
   "description": "Manage Cloudflare DNS zones, Workers, and account analytics",
+  "iconUrl": "/connector-logos/cloudflare.svg",
   "developer": "Cloudflare, Inc.",
   "connectorUrl": "https://mcp.cloudflare.com/mcp",
   "authType": "oauth_dcr",

@@ -2,6 +2,7 @@
   "id": "neon",
   "name": "Neon",
   "description": "Manage Neon Postgres projects and branches, and run SQL queries",
+  "iconUrl": "/connector-logos/neon.svg",
   "developer": "Neon, Inc.",
   "connectorUrl": "https://mcp.neon.tech/mcp",
   "authType": "oauth_dcr",

@@ -2,6 +2,7 @@
   "id": "vercel",
   "name": "Vercel",
   "description": "Search Vercel docs and inspect your projects, deployments, and logs (read-only)",
+  "iconUrl": "/connector-logos/vercel.svg",
   "developer": "Vercel Inc.",
   "connectorUrl": "https://mcp.vercel.com",
   "authType": "oauth_dcr",
