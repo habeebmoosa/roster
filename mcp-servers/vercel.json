@@ -1,0 +1,18 @@
+{
+  "id": "vercel",
+  "name": "Vercel",
+  "description": "Search Vercel docs and inspect your projects, deployments, and logs (read-only)",
+  "developer": "Vercel Inc.",
+  "connectorUrl": "https://mcp.vercel.com",
+  "authType": "oauth_dcr",
+  "categories": ["Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://vercel.com/docs/mcp/vercel-mcp",
+  "tools": [
+    { "name": "list-projects", "description": "List projects in a team" },
+    { "name": "get-deployment", "description": "Fetch a deployment's status and build detail" },
+    { "name": "get-deployment-logs", "description": "Fetch runtime or build logs for a deployment" },
+    { "name": "search-docs", "description": "Search Vercel's documentation" }
+  ],
+  "resources": [{ "name": "deployment", "description": "A single deployment's full detail" }]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "square",
+  "name": "Square",
+  "description": "Manage Square catalog, inventory, orders, and customer records",
+  "developer": "Block, Inc. (Square)",
+  "connectorUrl": "https://mcp.squareup.com/sse",
+  "authType": "oauth_dcr",
+  "categories": ["Payments", "Finance"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developer.squareup.com/docs/mcp",
+  "tools": [
+    { "name": "search-customers", "description": "Search customer profiles by name or contact info" },
+    { "name": "list-orders", "description": "List recent orders, filtered by status or location" },
+    { "name": "get-catalog-item", "description": "Fetch a catalog item's price and variations" },
+    { "name": "list-inventory", "description": "List inventory counts for items at a location" }
+  ],
+  "resources": [{ "name": "order", "description": "A single order's full detail" }]
+}

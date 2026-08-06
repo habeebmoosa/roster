@@ -45,7 +45,7 @@ afterAll(async () => {
 describe("mcp-server repository", () => {
   it("seeds the real curated directory with the expected trust tiers and tool counts", async () => {
     const servers = await listMcpServers();
-    expect(servers.length).toBeGreaterThanOrEqual(9);
+    expect(servers.length).toBeGreaterThanOrEqual(25);
     const notion = servers.find((s) => s.id === "notion");
     expect(notion?.trustTier).toBe("verified");
     expect(notion?.cachedTools.length).toBeGreaterThan(0);

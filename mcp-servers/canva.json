@@ -1,0 +1,18 @@
+{
+  "id": "canva",
+  "name": "Canva",
+  "description": "Search, create, and export designs from your Canva account",
+  "developer": "Canva Pty Ltd",
+  "connectorUrl": "https://mcp.canva.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Docs"],
+  "trustTier": "verified",
+  "documentationUrl": "https://www.canva.dev/docs/mcp/",
+  "tools": [
+    { "name": "search-designs", "description": "Search your designs by title or content" },
+    { "name": "create-design", "description": "Create a new design from a template or blank canvas" },
+    { "name": "list-brand-templates", "description": "List available brand templates" },
+    { "name": "export-design", "description": "Export a design as an image or PDF" }
+  ],
+  "resources": [{ "name": "design", "description": "A single design's content and assets" }]
+}

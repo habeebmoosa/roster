@@ -1,0 +1,18 @@
+{
+  "id": "paypal",
+  "name": "PayPal",
+  "description": "Look up transactions, invoices, and disputes in your PayPal account",
+  "developer": "PayPal, Inc.",
+  "connectorUrl": "https://mcp.paypal.com/mcp",
+  "authType": "static_headers",
+  "categories": ["Payments", "Finance"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developer.paypal.com/ai-tools/mcp-server",
+  "tools": [
+    { "name": "list-transactions", "description": "List recent transactions, filtered by date or status" },
+    { "name": "get-invoice", "description": "Fetch an invoice's status and line items" },
+    { "name": "create-invoice", "description": "Create and send a new invoice" },
+    { "name": "list-disputes", "description": "List open disputes and their status" }
+  ],
+  "resources": [{ "name": "transaction", "description": "A single transaction's full detail" }]
+}

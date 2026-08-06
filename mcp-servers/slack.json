@@ -1,0 +1,18 @@
+{
+  "id": "slack",
+  "name": "Slack",
+  "description": "Search messages and channels, and send messages in Slack",
+  "developer": "Slack Technologies, LLC",
+  "connectorUrl": "https://mcp.slack.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Productivity", "Customer Support"],
+  "trustTier": "verified",
+  "documentationUrl": "https://api.slack.com",
+  "tools": [
+    { "name": "search-messages", "description": "Search messages across channels by keyword" },
+    { "name": "list-channels", "description": "List channels in a workspace" },
+    { "name": "get-channel-history", "description": "Fetch recent messages in a channel" },
+    { "name": "post-message", "description": "Send a message to a channel or user" }
+  ],
+  "resources": [{ "name": "channel", "description": "A channel's recent message history" }]
+}

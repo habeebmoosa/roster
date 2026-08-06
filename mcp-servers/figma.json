@@ -1,0 +1,18 @@
+{
+  "id": "figma",
+  "name": "Figma",
+  "description": "Read design files, components, and comments from Figma",
+  "developer": "Figma, Inc.",
+  "connectorUrl": "https://mcp.figma.com/mcp",
+  "authType": "oauth_dcr",
+  "categories": ["Docs", "Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://developers.figma.com/docs/figma-mcp-server/",
+  "tools": [
+    { "name": "get-file", "description": "Fetch a design file's structure and layers" },
+    { "name": "get-code-connect", "description": "Fetch the code representation mapped to a component" },
+    { "name": "list-comments", "description": "List comments on a file" },
+    { "name": "get-image", "description": "Render a frame or component as an image" }
+  ],
+  "resources": [{ "name": "file", "description": "A single design file's full structure" }]
+}

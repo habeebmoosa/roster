@@ -1,0 +1,15 @@
+{
+  "id": "twilio",
+  "name": "Twilio",
+  "description": "Search Twilio's public API documentation and reference for SMS, voice, and messaging",
+  "developer": "Twilio Inc.",
+  "connectorUrl": "https://mcp.twilio.com/docs",
+  "authType": "none",
+  "categories": ["Docs", "Engineering"],
+  "trustTier": "verified",
+  "documentationUrl": "https://www.twilio.com/docs/ai/mcp",
+  "tools": [
+    { "name": "search-docs", "description": "Search Twilio's public API documentation and guides" },
+    { "name": "get-api-reference", "description": "Fetch the reference for a specific API endpoint" }
+  ]
+}
