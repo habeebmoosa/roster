@@ -1,135 +1,78 @@
 # Roster
 
-Hireable, specialized **AI employees** that perform like experts on _any_ LLM you bring —
-because the expertise is engineered into the agent, not the model.
+**Hireable AI employees that work like domain experts on _any_ LLM you bring.**
 
-See [`Product-Overview.md`](./Product-Overview.md) for the pitch, [`MVP-Plan.md`](./MVP-Plan.md)
-for the full build plan, and [`CLAUDE.md`](./CLAUDE.md) for a quick orientation.
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-> **Status: MVP complete — all 13 phases done.** BYOK, the agent engine,
-> memory/retrieval, tools, chat, the REST API, and Phase 13's launch polish
-> (onboarding fix, Sentry, analytics, UI polish, deployment hardening) are all
-> shipped. See [`MVP-Plan.md`](./MVP-Plan.md) §9 for the Definition of Done
-> checklist (two items are inherently live-model results, not run from this
-> environment) and §8 for the full phase-by-phase detail.
+Roster is an open-source platform of specialized AI agents — Customer Support, Content
+Writer, Research Analyst, Financial Analyst and Team Organizer. You connect your own
+provider key (BYOK), pick an employee, and work through chat or a REST API.
 
-## Tech stack
+The model is a commodity; the scaffolding around it is the product. Most agent failures
+are _context_ failures, not model failures, so Roster invests in the environment instead
+of chasing the "best" model — which is what lets cheap and open-weight models perform
+close to frontier ones.
 
-- **Next.js 15** (App Router) + **TypeScript** (strict)
-- **PostgreSQL + pgvector**, provider-agnostic (any Postgres via `DATABASE_URL`)
-- **Prisma** for the client + migrations
-- **Tailwind CSS v4** only (hand-rolled UI kit, no component library)
-- **Zod** for env/input validation
-- **Vitest** (unit + integration) + **Playwright** (e2e)
+![Architecture](docs/architecture.png)
 
-## Prerequisites
+## What makes it different
 
-- Node.js 22+
-- Docker (for the local Postgres + pgvector), or any reachable Postgres with `pgvector`
+- **Any LLM, ~15+ providers.** OpenAI, Anthropic, Google, Mistral, Groq, DeepSeek, Together,
+  Fireworks, Bedrock, Azure, Vertex, OpenRouter, Ollama, and any OpenAI-compatible
+  endpoint. Keys are AES-256-GCM encrypted and never logged.
+- **Expertise as data.** Each employee is a portable YAML definition plus procedural
+  _playbooks_ (how an expert decides), not just knowledge. See [docs/agent-spec.md](docs/agent-spec.md).
+- **Disciplined context.** Hybrid retrieval (vector + full-text) → LLM re-rank → top 3–5 →
+  hard token cap. Less context, not more. Permission-scoped at the SQL level.
+- **Structured workflow.** Decompose → execute → validate → retry/rollback, with a
+  single-step bypass for trivial turns and capped retries.
+- **Tools via MCP.** Local built-in tools plus MCP connectors (OAuth 2.1 + PKCE, or static
+  headers) from a curated directory or your own server URL.
+- **Evals as the gate.** A harness runs every change across frontier/mid/cheap tiers.
+- **Chat + REST.** One `runAgent()` powers both the streaming UI and `POST /api/v1/agents/{id}/chat`.
 
 ## Quick start
 
+Prerequisites: Node 22+, Docker.
+
 ```bash
-# 1. Install
+git clone https://github.com/habeebmoosa/roster.git && cd roster
 npm install
-
-# 2. Configure — copy the example and fill in the values
-cp .env.example .env
-#    - AUTH_SECRET:  openssl rand -base64 33
-#    - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: from the Google Cloud console,
-#      with redirect URI  http://localhost:3005/api/auth/callback/google
-
-# 3. Start the local database (Postgres 16 + pgvector)
-npm run db:up
-
-# 4. Apply migrations (enables pgvector + creates tables)
+cp .env.example .env     # fill in AUTH_SECRET, ENCRYPTION_KEY and one sign-in provider
+npm run db:up            # Postgres 16 + pgvector (host port 5434)
 npm run db:migrate
-
-# 5. Run the app
+npm run db:seed          # the five employees + connector directory
 npm run dev
 ```
 
-Then open http://localhost:3005 and check http://localhost:3005/api/health — it should report
-`{ "status": "ok", "checks": { "db": true, "pgvector": true } }`.
+Open http://localhost:3005 (health check: `/api/health`), sign in, add a provider key,
+hire an employee and chat.
 
-## Using a different Postgres
+**Prefer one command?** `docker compose up --build` runs the whole stack — see
+[docs/self-hosting.md](docs/self-hosting.md), which also covers Vercel + Supabase.
 
-The database is fully configurable — point `DATABASE_URL` (and `DIRECT_URL` for migrations) at
-any Postgres (self-hosted on EC2, Supabase, Neon, RDS, …). The only requirement is that the
-`pgvector` extension can be installed. No code changes needed.
+## Tech stack
 
-> The local Docker Postgres is published on host port **5434** (not 5432) so it
-> won't clash with any Postgres you already run locally.
+Next.js 15 (App Router) · TypeScript (strict) · Vercel AI SDK · PostgreSQL + pgvector ·
+Prisma · Auth.js (Google or GitHub) · Tailwind CSS v4 · Zod · Vitest + Playwright.
 
-## Deploying (Vercel + Supabase)
+## Project structure
 
-### Database — Supabase
+```
+src/
+  app/        Next.js routes (delivery layer only)
+  core/       the agent engine — framework-agnostic
+  server/     server-only: db repositories, auth, crypto, rate limiting, services
+  ui/         hand-rolled Tailwind design system
+  features/   self-contained UI domain modules
+agents/       agent definitions — the portable spec
+mcp-servers/  curated MCP connector directory
+evals/        labeled eval sets
+prisma/       schema + migrations (incl. custom pgvector migration)
+docs/         design docs, agent spec, self-hosting
+```
 
-1. Create a Supabase project, then enable the `vector` extension (Database →
-   Extensions → search "vector" → Enable).
-2. Set `DATABASE_URL` to Supabase's **pooled** connection string (the
-   "Transaction" pooler, port `6543`), with `?pgbouncer=true` appended.
-   Vercel's serverless functions each open their own DB connection — without
-   pooling, a burst of concurrent requests exhausts Supabase's connection
-   limit fast.
-3. Set `DIRECT_URL` to Supabase's **direct** connection string (port `5432`,
-   no pooler). Migrations need a real, non-pooled connection — some
-   migration operations aren't compatible with PgBouncer's transaction mode.
-4. Run migrations against the real database once, from your machine or CI —
-   **`npx prisma migrate deploy`**, never `migrate dev` outside local
-   development.
-
-### App — Vercel
-
-1. Import the repo; the Next.js preset is auto-detected, no build config
-   needed.
-2. Set every required env var (checklist below) in the project's
-   Environment Variables settings.
-3. Function duration: the two streaming routes (`/api/chat`,
-   `/api/v1/agents/{id}/chat`) are set to `maxDuration = 60`; three more that
-   each make one outbound call to a third party you don't control
-   (`/api/providers`, the MCP OAuth start/callback routes) are set to `30`.
-   Every other route is plain DB CRUD and needs no override. Note: Vercel's
-   Hobby plan caps every function at 60s regardless of what's configured —
-   Pro allows higher.
-4. Sentry source-map upload (optional but recommended): set `SENTRY_ORG` /
-   `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` as env vars. The build plugin reads
-   them itself; without them the build still succeeds, just without
-   source-mapped stack traces in Sentry.
-
-### Env/secrets checklist
-
-**Required** (the app won't boot without these — see `src/lib/env.ts`):
-
-- `DATABASE_URL`, `DIRECT_URL` — Supabase, see above
-- `AUTH_SECRET` — `openssl rand -base64 33`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — add the production callback
-  URL (`https://<your-domain>/api/auth/callback/google`) in the Google Cloud
-  console
-- `ENCRYPTION_KEY` — `openssl rand -base64 32` (BYOK vault). **Back this up
-  somewhere durable** — losing or rotating it makes every already-stored
-  provider key permanently undecryptable.
-
-**Optional:**
-
-- `AUTH_URL` — Auth.js infers it in dev; set it explicitly in production
-- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — shared rate
-  limiting across instances. Without these, rate limiting falls back to an
-  in-memory limiter that's per-instance and resets on every redeploy — fine
-  for a single-region low-traffic beta, not correct once you run more than
-  one instance.
-- `NEXT_PUBLIC_SENTRY_DSN` — error tracking; Sentry silently no-ops without
-  it
-- `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` — CI-only, source-map
-  upload
-- `EVAL_*` — CLI-only (`npm run eval`), not read by the deployed app itself
-
-### Post-deploy check
-
-- Visit `/api/health` — expect
-  `{ "status": "ok", "checks": { "db": true, "pgvector": true } }`.
-- Sign in → add a provider key (validates + persists) → hire an employee →
-  send a chat message. That's the full path exercised end to end.
+`core/` never imports from `app/` or Next.js.
 
 ## Scripts
 
@@ -143,21 +86,22 @@ any Postgres (self-hosted on EC2, Supabase, Neon, RDS, …). The only requiremen
 | `npm run test:e2e`                         | Playwright e2e — run `npm run build` first |
 | `npm run db:up` / `npm run db:down`        | Start / stop the local Docker Postgres     |
 | `npm run db:migrate` / `npm run db:deploy` | Prisma migrate (dev / deploy)              |
+| `npm run ingest -- --agent <id>`           | Chunk + embed an employee's knowledge      |
+| `npm run eval` / `npm run eval:gate`       | Run evals across model tiers / CI gate     |
 
-## Project structure
+## Docs
 
-```
-src/
-  app/        Next.js routes (delivery layer only)
-  core/       the agent engine — framework-agnostic (built in Phases 4–7)
-  server/     server-only concerns (db, auth, crypto, ratelimit)
-  ui/         hand-rolled Tailwind components
-  lib/        shared utils, env
-  config/     constants
-agents/       agent definitions — the portable spec
-prisma/       schema + migrations (incl. custom pgvector migration)
-tests/        integration + e2e
-docker/       local Postgres + pgvector
-```
+- [Product overview](docs/Product-Overview.md) · [Design & build plan](docs/MVP-Plan.md)
+- [Agent definition spec](docs/agent-spec.md) · [Self-hosting](docs/self-hosting.md)
+- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Code of Conduct](CODE_OF_CONDUCT.md)
 
-The dependency rule points inward: **`core/` never imports from `app/`** or Next.js.
+## Status
+
+Pre-1.0. The MVP is complete (BYOK, engine, retrieval, workflow, tools, chat, REST API).
+One claim is not yet independently verified: live cross-tier eval results (cheap model
+close to frontier). The harness is in place — run `npm run eval` with your own keys and
+please share results.
+
+## License
+
+[Apache-2.0](LICENSE). Provider and connector logos belong to their owners; see [NOTICE](NOTICE).

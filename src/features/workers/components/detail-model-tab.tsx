@@ -16,7 +16,7 @@ export interface DetailModelTabProps {
    * tab) sets one. Drives both the read-only display and the editor's
    * initial values. Deliberately has no realistic-looking placeholder for
    * the null case — that would be indistinguishable from an actually
-   * configured default (see LLM_PROVIDER_MVP_PLAN.md follow-up notes).
+   * configured default (see docs/plans/LLM_PROVIDER_MVP_PLAN.md follow-up notes).
    */
   currentModel: { provider: string; model: string } | null;
   /** The signed-in user's connected providers — only these are selectable. */

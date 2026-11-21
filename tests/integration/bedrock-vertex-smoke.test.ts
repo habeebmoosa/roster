@@ -5,7 +5,7 @@ import { prisma } from "@/server/db/prisma";
 import { addProviderKey, getResolveInputForUser } from "@/server/providers/service";
 
 /**
- * LLM_PROVIDER_MVP_PLAN.md Phase 7: "end-to-end check across at least one
+ * docs/plans/LLM_PROVIDER_MVP_PLAN.md Phase 7: "end-to-end check across at least one
  * provider per credential shape" — the two shapes provider-rollout-smoke.test.ts
  * deliberately left at the structural (registry.test.ts) level: AWS Bedrock's
  * multi-secret SigV4-signed requests, and Google Vertex's service-account JWT
