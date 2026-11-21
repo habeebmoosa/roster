@@ -61,11 +61,20 @@ describe("parseEnv", () => {
     expect(() => parseEnv(rest)).toThrow(/AUTH_SECRET/);
   });
 
-  it("requires Google OAuth credentials", () => {
+  it("requires at least one sign-in provider", () => {
     const { GOOGLE_CLIENT_ID: _id, GOOGLE_CLIENT_SECRET: _secret, ...rest } = VALID;
     void _id;
     void _secret;
-    expect(() => parseEnv(rest)).toThrow(/GOOGLE_CLIENT/);
+    expect(() => parseEnv(rest)).toThrow(/at least one sign-in provider/);
+  });
+
+  it("accepts GitHub OAuth as the only sign-in provider", () => {
+    const { GOOGLE_CLIENT_ID: _id, GOOGLE_CLIENT_SECRET: _secret, ...rest } = VALID;
+    void _id;
+    void _secret;
+    expect(() =>
+      parseEnv({ ...rest, GITHUB_CLIENT_ID: "gh-id", GITHUB_CLIENT_SECRET: "gh-secret" }),
+    ).not.toThrow();
   });
 
   it("rejects an ENCRYPTION_KEY that is not 32 bytes", () => {
