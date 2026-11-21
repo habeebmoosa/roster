@@ -2,6 +2,11 @@
   "name": "roster",
   "version": "0.1.9",
   "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/habeebmoosa/roster.git"
+  },
   "description": "Roster — hireable, specialized AI employees that perform like experts on any LLM you bring.",
   "type": "module",
   "engines": {
