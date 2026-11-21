@@ -60,7 +60,7 @@
     "@prisma/client": "^6",
     "@sentry/nextjs": "^10.69.0",
     "@upstash/redis": "^1.38.0",
-    "ai": "^7.0.31",
+    "ai": "^7.0.176",
     "gpt-tokenizer": "^3.4.0",
     "lucide-react": "^1.28.0",
     "luxon": "^3.7.2",
