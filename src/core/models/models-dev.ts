@@ -1,6 +1,6 @@
 /**
  * Types + a pure parser for models.dev's public model catalog
- * (https://models.dev/api.json) — LLM_PROVIDER_MVP_PLAN.md Phase 5. Free,
+ * (https://models.dev/api.json) — docs/plans/LLM_PROVIDER_MVP_PLAN.md Phase 5. Free,
  * open, cross-provider source for context window, pricing, modalities, and
  * reasoning/tool support; no auth needed. Confirmed live shape (2026-07-31):
  * a map of ~176 provider keys, each `{ id, name, models: Record<modelId, ...> }`.

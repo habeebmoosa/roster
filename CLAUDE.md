@@ -4,7 +4,7 @@
 
 **Core thesis:** The model is a commodity; the engineering scaffolding around it is the product. Open-weight models reach ~80% of frontier performance when wrapped in a validated, structured environment. Most agent failures are _context_ failures, not model failures — so we invest in the environment, not in picking the "best" model.
 
-> Full detail lives in `Product-Overview.md` (the pitch) and `MVP-Plan.md` (the build plan). This file is the quick orientation for a fresh session.
+> Full detail lives in `docs/Product-Overview.md` (the pitch) and `docs/MVP-Plan.md` (the build plan). This file is the quick orientation for a fresh session.
 
 ## The 5 launch employees
 
@@ -37,7 +37,7 @@ Everything else is plumbing.
 - **AI:** Vercel AI SDK v5 — unified 15+ provider abstraction; `createOpenAICompatible` + provider registry make configurable BYOK (key + baseURL + per-provider config) nearly free
 - **DB:** PostgreSQL + `pgvector`, **provider-agnostic** — any Postgres via `DATABASE_URL` (local Docker, EC2, Supabase, Neon, RDS). Only requirement: pgvector installable
 - **ORM/migrations:** Prisma (pgvector via custom migration + `Unsupported("vector")` + raw/TypedSQL for `<=>` — native vector type not in Prisma yet as of mid-2026)
-- **Auth:** Auth.js (NextAuth v5) + Google OAuth (`@auth/prisma-adapter`)
+- **Auth:** Auth.js (NextAuth v5) + Google or GitHub OAuth (`@auth/prisma-adapter`)
 - **UI:** Tailwind CSS only — hand-rolled light kit, **no shadcn/ui** (keep it light; UI improves phase by phase)
 - **Validation:** Zod (env, API input, agent definitions)
 - **Testing:** Vitest + Playwright + custom eval harness
@@ -58,9 +58,9 @@ Everything else is plumbing.
 - BYOK keys: **AES-256-GCM** encrypted with a server-side secret, validated with a 1-token ping on save, never stored raw, never logged, decrypted only inside the API route at request time.
 - `agent_knowledge.permissions` scopes what each agent may recall — permission-scoping enforced on retrieval.
 
-## Build sequence (13 phases — see `MVP-Plan.md` §8 for full detail)
+## Build sequence (13 phases — see `docs/MVP-Plan.md` §8 for full detail)
 
-Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ All 13 phases complete. MVP done — see `MVP-Plan.md` §9 for the Definition of Done checklist.**
+Foundation → prove BYOK end-to-end → agent skeleton + eval → full product frontend from the design → build the engine capability-by-capability (each measured by the eval harness) → surfaces → ship. Every phase is independently testable and leaves `main` working. **✅ All 13 phases complete. MVP done — see `docs/MVP-Plan.md` §9 for the Definition of Done checklist.**
 
 1. **Foundation** ✅ — scaffolding, tooling, configurable Postgres + Prisma + pgvector, Docker dev DB
 2. **Auth & app shell** ✅ — Google OAuth end-to-end (foundation complete)

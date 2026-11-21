@@ -5,7 +5,7 @@ import { addProviderKey, getResolveInputForUser } from "@/server/providers/servi
 import { startMockOpenAIServer, type MockServer } from "../helpers/mock-openai-server";
 
 /**
- * LLM_PROVIDER_MVP_PLAN.md Phase 6: "each addition: catalog entry + registry
+ * docs/plans/LLM_PROVIDER_MVP_PLAN.md Phase 6: "each addition: catalog entry + registry
  * case + a validation smoke test." Catalog entries and registry cases for
  * every provider landed in Phases 2–3; provider-byok.test.ts already proved
  * one native-kind provider (fireworks) end to end. This proves the rest of
