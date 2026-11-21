@@ -1,0 +1,42 @@
+# Self-hosting: the full stack (Roster + Postgres/pgvector) in one command.
+#
+#   cp .env.example .env     # then set AUTH_SECRET, ENCRYPTION_KEY and one
+#                            # sign-in provider (Google or GitHub)
+#   docker compose up --build
+#
+# Then open http://localhost:3005. For day-to-day development use
+# `npm run db:up` (docker/docker-compose.yml, database only) + `npm run dev`.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: roster
+      POSTGRES_PASSWORD: roster
+      POSTGRES_DB: roster
+    volumes:
+      - roster-app-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roster -d roster"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Override the host-oriented URLs from .env so the app reaches the db service.
+      DATABASE_URL: postgresql://roster:roster@db:5432/roster?schema=public
+      DIRECT_URL: postgresql://roster:roster@db:5432/roster?schema=public
+      NODE_ENV: production
+    ports:
+      - "3005:3005"
+
+volumes:
+  roster-app-pgdata:
